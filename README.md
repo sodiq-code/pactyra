@@ -20,34 +20,14 @@ An agent starts at Tier 1 ($5 authority), earns Tier 2 ($50) after 5 verified su
 
 ## Programs
 
-All three programs are deployed to Solana devnet and verified executable.
+All four programs are deployed to Solana devnet and verified executable.
 
 | Program | Program ID | Deployed | Size |
 |---|---|---|---|
-| `pactyra-core` | `EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC` | ✅ Devnet | 336 KB |
+| `pactyra-core` | `EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC` | ✅ Devnet | 418 KB |
 | `pactyra-verifier` | `5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN` | ✅ Devnet | 217 KB |
-| `reference-treasury` | `6gAZR4omxMUWy5Fb6kCtdmaWASFFXr9WRCoWUcAz7UA9` | ✅ Devnet | 287 KB |
-
-### Devnet transaction evidence
-
-The following transactions were executed on Solana devnet, proving the programs are live and functional:
-
-| Instruction | Transaction Signature |
-|---|---|
-| Initialize protocol | [`XajnkaaFzz...GQv`](https://solana.fm/tx/XajnkaaFzzLgaCSo6jh2RV2sBgs2Ge4uESVbTG7gdZKTkbaQePEs1yWYjyEuVVdbFndzVJmp3swtrEMsmVX2GQv?cluster=devnet) |
-| Register verifier | [`5LUx5i9FKh...aWo`](https://solana.fm/tx/5LUx5i9FKhoZGDtxV7tHbfStmzjpifejDjGLBYM6o7zQi89sjQYz5xbVVXWpMbc1TgYYswMrKAeuqEMBC6gZHaWo?cluster=devnet) |
-| Register agent | [`c6kQt5E2oR...LFW`](https://solana.fm/tx/c6kQt5E2oR96SNebNp5KrREJp4wqMQjCjHCMnnJmZfZQa5K6HfnvNTisxCFo4RaeRspGCCBk3GLgwCA5qkzrLFW?cluster=devnet) |
-| Create policy | [`3dZrGaxyXh...5JM`](https://solana.fm/tx/3dZrGaxyXhz43fdjArfwU4cLGUNQYeqTqxuZ1ya2r9qsJaXc5BCCpKVCwQqyWrmUVYJgSp6YRLcZ5yrgsTDp55JM?cluster=devnet) |
-| Lock bond | [`5MqTqxj3ac...7GkE`](https://solana.fm/tx/5MqTqxj3aczMkcJh7aKsm5zNjrGxmhMM7vEVGacuBHG3PXKMBrTbhbhh5cnk9RKH6yzja21wuE5hnCGVekhY7GkE?cluster=devnet) |
-
-### Verified agent state on devnet
-
-```
-Tier: Probation
-Epoch: 1
-Bond: 5,000,000 base units (5 USDC)
-Max capability: $5
-```
+| `reference-treasury` | `6gAZR4omxMUWy5Fb6kCtdmaWASFFXr9WRCoWUcAz7UA9` | ✅ Devnet | 288 KB |
+| `threshold-multisig` | `FgfW1JkSknJpcCypbhuv531qvVu2z8sNVPH2kZXLpDKc` | ✅ Devnet | 221 KB |
 
 ### Devnet configuration
 
@@ -56,11 +36,26 @@ RPC: https://devnet.helius-rpc.com/?api-key=4196f886-5f5f-4fdb-8fae-128076aa8468
 Wallet: A55wG1G5nLVxn9Ns91ogrqZ6cHVi2yPd7WRi8GCyc3PE
 USDC mint: 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU (6 decimals)
 Pyth Pull Oracle: pythWSnswVUd12oZpeFP8e9CVaEqJg25g1Vtc2biRsT
+Multisig PDA: 7vPjrrEEeszXDNiigpczbzNH376ak5EDfsxvT4UGSpkv (3-of-5 threshold)
 ```
+
+### Devnet transaction evidence
+
+| Instruction | Transaction |
+|---|---|
+| Initialize protocol | [`XajnkaaFzz...GQv`](https://solana.fm/tx/XajnkaaFzzLgaCSo6jh2RV2sBgs2Ge4uESVbTG7gdZKTkbaQePEs1yWYjyEuVVdbFndzVJmp3swtrEMsmVX2GQv?cluster=devnet) |
+| Register verifier | [`5LUx5i9FKh...aWo`](https://solana.fm/tx/5LUx5i9FKhoZGDtxV7tHbfStmzjpifejDjGLBYM6o7zQi89sjQYz5xbVVXWpMbc1TgYYswMrKAeuqEMBC6gZHaWo?cluster=devnet) |
+| Register agent | [`c6kQt5E2oR...LFW`](https://solana.fm/tx/c6kQt5E2oR96SNebNp5KrREJp4wqMQjCjHCMnnJmZfZQa5K6HfnvNTisxCFo4RaeRspGCCBk3GLgwCA5qkzrLFW?cluster=devnet) |
+| Create policy | [`3dZrGaxyXh...5JM`](https://solana.fm/tx/3dZrGaxyXhz43fdjArfwU4cLGUNQYeqTqxuZ1ya2r9qsJaXc5BCCpKVCwQqyWrmUVYJgSp6YRLcZ5yrgsTDp55JM?cluster=devnet) |
+| Lock bond | [`5MqTqxj3ac...7GkE`](https://solana.fm/tx/5MqTqxj3aczMkcJh7aKsm5zNjrGxmhMM7vEVGacuBHG3PXKMBrTbhbhh5cnk9RKH6yzja21wuE5hnCGVekhY7GkE?cluster=devnet) |
+| Create multisig | [`2DirBGA2WG...Myo2`](https://solana.fm/tx/2DirBGA2WGtNXPQxu32wxzbF6C679Q2zeg5srBLZMadSdSAZHL5wH2veQNNTvLYM6MUQ9KaafuvqzgiEu79sMyo2?cluster=devnet) |
+| Transfer authority to multisig | [`4tTr8y31WH...uXNQK`](https://solana.fm/tx/4tTr8y31WHfrXRhamTZ7q4Fiq3qLQfyPwJXdGNqP3TtNvVq6pfsM6KGwFrFzbqzkuBBeyKL9MimrDoVgqB8uXNQK?cluster=devnet) |
 
 ## pactyra-core
 
-### Instructions
+### Instructions (20)
+
+#### Core protocol (9)
 
 | Instruction | Description |
 |---|---|
@@ -70,9 +65,25 @@ Pyth Pull Oracle: pythWSnswVUd12oZpeFP8e9CVaEqJg25g1Vtc2biRsT
 | `create_policy` | Creates an immutable policy defining capability requirements |
 | `lock_bond` | Locks a bond for an agent (re-lockable after slash) |
 | `request_capability` | Issues an evidence-bound capability with TTL, amount limit, target scope, and authority epoch binding |
-| `assert_capability` | The core enforcement instruction — validates 12 security checks before authorizing an action |
+| `assert_capability` | The core enforcement instruction — validates 13 security checks before authorizing an action |
 | `record_outcome` | Records a verified outcome from a registered verifier, triggers authority transitions |
 | `revoke_capability` | Revokes a capability (agent authority root only) |
+
+#### Governance layer (11)
+
+| Instruction | Description |
+|---|---|
+| `delegate_authority` | Grant a session key with bounded scope (max amount, expiry) |
+| `revoke_delegate` | Revoke a session key by setting expiry to now |
+| `freeze_agent` | Set agent status to Frozen — blocks all capability assertions |
+| `unfreeze_agent` | Restore agent to Active status |
+| `supersede_policy` | Mark old policy as Superseded and point to new policy |
+| `deprecate_verifier` | Mark a verifier as inactive in the VerifierRegistry |
+| `replace_protocol_authority` | Transfer VerifierRegistry authority to a new key |
+| `propose_operation` | Create a timelocked operation with 24h delay |
+| `execute_operation` | Execute after timelock expires |
+| `cancel_operation` | Cancel a proposed operation (proposer only) |
+| `close_receipt` | Close an old receipt account and reclaim rent |
 
 ### Authority tiers
 
@@ -97,9 +108,7 @@ Pyth Pull Oracle: pythWSnswVUd12oZpeFP8e9CVaEqJg25g1Vtc2biRsT
 - Agent tier → Probation
 - Authority epoch incremented (invalidates all outstanding capabilities)
 
-### assert_capability security checks
-
-The `assert_capability` instruction performs 12 security checks before authorizing an action:
+### assert_capability security checks (13)
 
 1. Agent active
 2. Capability active
@@ -113,254 +122,54 @@ The `assert_capability` instruction performs 12 security checks before authorizi
 10. Target account in scope
 11. Amount within limit
 12. Bond satisfied
+13. Delegate scope (if a delegate signs: verify delegate pubkey, scope expiry, per-action amount limit)
 
 Replay protection is enforced via a `ConsumedNonce` PDA that is created on each successful assertion, making the same (agent, nonce) pair unusable twice.
 
-## SDK
+### Account types (9)
 
-The `@pactyra/client` TypeScript SDK provides a typed interface to all three programs.
+`Agent`, `Policy`, `Capability`, `Bond`, `Receipt`, `VerifierRegistry`, `VerifierEntry`, `ConsumedNonce`, `DelegateScope`, `TimelockedOperation`
 
-### Installation
+### Error codes (33)
 
-```bash
-cd sdk && npm install
-```
+All error codes cover security check failures, governance operations, and evidence verification.
 
-### Usage
+### Events (23)
 
-```typescript
-import { PactyraClient } from '@pactyra/client';
-import { Connection, Keypair } from '@solana/web3.js';
+All state changes emit onchain events for independent verification: `ProtocolInitialized`, `AgentRegistered`, `PolicyCreated`, `BondLocked`, `CapabilityIssued`, `CapabilityAsserted`, `VerifierRegistered`, `OutcomeRecorded`, `AuthorityUpgraded`, `AuthorityDowngraded`, `BondSlashed`, `CapabilityRevoked`, `DelegateGranted`, `DelegateRevoked`, `AgentFrozen`, `AgentUnfrozen`, `PolicySuperseded`, `VerifierDeprecated`, `ProtocolAuthorityReplaced`, `OperationProposed`, `OperationExecuted`, `OperationCancelled`, `ReceiptClosed`.
 
-const connection = new Connection('http://localhost:8899', 'confirmed');
-const wallet = { /* your wallet implementation */ };
+## threshold-multisig
 
-const client = await PactyraClient.connect(wallet, connection);
+A 3-of-5 threshold multisig program backing the protocol authority. Since Squads is not deployed on Solana devnet, this custom program provides the same security property: multiple key holders must approve before trust-root operations execute.
 
-// Register an agent
-await client.registerAgent(agentId);
+### Instructions (7)
 
-// Lock a 5 USDC bond
-await client.lockBond(agentId, 5_000_000);
-
-// Request a $5 capability
-const { capabilityPda } = await client.requestCapability(agentId, {
-  capabilityType: 'payService',
-  targetProgram: treasuryPda.toString(),
-  targetAccount: recipientToken.toString(),
-  amountLimit: 5_000_000,
-  frequencyLimit: 10,
-  ttlSeconds: 1800,
-});
-
-// Assert a capability (the hero instruction)
-await client.assertCapability(agentId, {
-  actionType: 'payService',
-  targetProgram: treasuryPda.toString(),
-  targetAccount: recipientToken.toString(),
-  amount: 5_000_000,
-  actionNonce: 1,
-});
-
-// Record a verified outcome
-await client.recordOutcome(agentId, actionId, capabilityId, 'pass', 'none', evidenceHash);
-
-// Read agent state
-const agent = await client.getAgent(agentId);
-console.log('Tier:', client.getTierName(agent.tier));
-console.log('Max amount:', client.getTierMaxAmount(agent.tier));
-console.log('Success rate:', client.getSuccessRate(agent.successCount, agent.totalCount));
-```
-
-### SDK Tests
-
-```
-  @pactyra/client SDK
-    ✔ Connects to a cluster
-    ✔ Exposes all three programs
-    ✔ Exports correct program IDs
-    ✔ Exports devnet USDC mint
-    ✔ Exports tier amount constants
-    ✔ Derives agent PDA correctly
-    ✔ Derives bond PDA correctly
-    ✔ Derives policy PDA correctly
-    ✔ Derives verifier registry PDA correctly
-    ✔ Derives consumed nonce PDA correctly
-    ✔ Derives capability PDA with target_program seed
-    ✔ Derives receipt PDA correctly
-    ✔ Derives treasury PDA correctly
-    ✔ Derives vault PDA correctly
-    ✔ Derives freshness config PDA correctly
-    ✔ Returns tier name from tier object
-    ✔ Returns tier max from tier object
-    ✔ Computes success rate correctly
-    ✔ Exports all enums
-
-  19 passing (71ms)
-```
-
-## Agent Passport UI
-
-The Agent Passport is a Next.js web application that renders onchain agent state.
-
-### Features
-
-- **Hero card**: Agent ID, current authority tier, max amount, verified execution count, success rate, critical failures, bond status, authority epoch
-- **Authority timeline**: Visual history of upgrades, downgrades, assertions, outcomes, bond events
-- **Performance receipts**: Evidence viewer with verifier, result, severity, and evidence hash
-- **Capability list**: Active/locked capabilities with amount limits and TTL
-
-### Running the UI
-
-The UI is served from the Next.js application:
-
-```bash
-bun run dev
-```
-
-The page renders at `http://localhost:3000` showing the Agent Passport with:
-- Agent `treasury-agent-042` at Tier 3 (Trusted) with $500 authority
-- 28 verified executions, 27 successful, 96.4% success rate
-- Active capabilities: PAY_SERVICE ($500), TRADE ($250)
-- Locked capabilities: TREASURY_WITHDRAW, DELEGATE
-- Authority timeline with upgrade events
-- Performance receipts with Pyth freshness verifier evidence
-
-## Demo orchestration
-
-The `scripts/` directory contains orchestration scripts that produce the complete authority loop in a single reproducible run.
-
-### Scripts
-
-| Script | Purpose |
+| Instruction | Description |
 |---|---|
-| `bootstrap.ts` | Initialize protocol, register verifier + agent, create policy, lock bond |
-| `earn-tier2.ts` | Record 5 verified successes → Tier 1 → Tier 2 ($5 → $50) |
-| `earn-tier3.ts` | Record 22 successes + 1 ordinary fail (27/28 = 96.4%) → Tier 2 → Tier 3 ($50 → $500) |
-| `unauthorized-transfer.ts` | Attempt $400 transfer with $50 capability → rejected (AmountExceedsCapability) |
-| `critical-failure.ts` | Record critical failure → bond slashed, tier downgraded, epoch++ ($500 → $5) |
-| `stale-capability.ts` | Attempt to use old-epoch capability → rejected (StaleEpoch) |
-| `demo-runner.ts` | Master script chaining all steps in one run |
+| `create_multisig` | Initialize with members and threshold |
+| `propose` | Create a proposal (proposer auto-approves) |
+| `approve` | Member approves a proposal |
+| `execute_proposal` | Execute after threshold reached (invoke_signed with multisig PDA) |
+| `cancel_proposal` | Cancel a pending proposal |
+| `add_member` | Add a new member (config authority only) |
+| `remove_member` | Remove a member (config authority only) |
 
-### Demo output
-
-```
-  Demo: $5 → $50 → $500 → $5
-    Agent tier: Probation | Bond: 5000000 | Max: $5
-    ✔ [1/6] Bootstrap: Initialize protocol, register agent, lock bond (2160ms)
-    Tier: Proven | Successes: 5 | Max: $50
-    ✔ [2/6] Earn Tier 2: 5 verified successes → $5 → $50 (2117ms)
-    Tier: Trusted | Total: 28 | Rate: 96.4% | Max: $500
-    ✔ [3/6] Earn Tier 3: 27/28 successes (96.4%) → $50 → $500 (9963ms)
-    Rejected: AmountExceedsCapability — no USDC moved
-    ✔ [4/6] Unauthorized transfer: $400 rejected (AmountExceedsCapability) (458ms)
-    Before: Tier Trusted Epoch 1
-    After:  Tier Probation Epoch 2 | Bond: 0 (slashed)
-    ✔ [5/6] Critical failure: $500 → $5, bond slashed, epoch++ (840ms)
-    Capability epoch: 1 | Current epoch: 2
-    Rejected: StaleEpoch — old capabilities invalidated
-    ✔ [6/6] Stale capability: old epoch capability rejected (StaleEpoch)
-
-    === Demo Complete ===
-    Final tier: Probation
-    Final epoch: 2
-    Total verified: 29
-    Total successful: 27
-    Critical failures: 1
-    Bond: 0 (slashed)
-
-    $5 → $50 → $500 → $5 ✓
-    ✔ Summary: Full $5 → $50 → $500 → $5 loop demonstrated
-
-  7 passing (16s)
-```
-
-The demo proves the complete mechanism density:
-- Authority earned through verified performance
-- Authority enforced before USDC transfers
-- Critical failure collapses authority deterministically
-- Stale credentials invalidated by epoch increment
-
-## Test results
+### Devnet multisig state
 
 ```
-  bond
-    ✔ Bond lock works (437ms)
-    ✔ Bond slash on critical failure (416ms)
-    ✔ Bond re-lock after slash works (429ms)
-    ✔ Capability request without bond rejected — BondNotSatisfied (439ms)
-
-  capabilities
-    ✔ Valid capability assertion passes (862ms)
-    ✔ Wrong amount rejected — AmountExceedsCapability (451ms)
-    ✔ Wrong target account rejected — TargetNotInScope (434ms)
-    ✔ Wrong target program rejected — TargetProgramMismatch (430ms)
-    ✔ Wrong action type rejected — ActionTypeNotPermitted (435ms)
-    ✔ Revoked capability rejected — CapabilityNotActive (853ms)
-
-  epochs
-    ✔ T1 → T2 after 5 verified successes (2153ms)
-    ✔ T2 → T3 after 22 more successes + 1 ordinary fail (27/28 = 96.4%) (9951ms)
-    ✔ T3 → T1 on critical failure with epoch increment (885ms)
-    ✔ Old epoch capability rejected — StaleEpoch
-
-  failure
-    ✔ Ordinary failure does not downgrade tier or slash bond (440ms)
-    ✔ Critical failure downgrades to Probation and slashes bond (433ms)
-
-  replay
-    ✔ First use of nonce passes (852ms)
-    ✔ Replay with same nonce rejected — account already exists
-
-  targets
-    ✔ Target substitution rejected — TargetNotInScope
-    ✔ Amount escalation rejected — AmountExceedsCapability
-    ✔ Wrong target program rejected — TargetProgramMismatch
-    ✔ Valid target and amount passes (386ms)
-
-  treasury
-    ✔ Initializes treasury and deposits USDC (878ms)
-    ✔ Authorized $5 transfer executes — CPI passes (875ms)
-    ✔ Unauthorized $6 transfer reverts — no USDC moved
-    ✔ Wrong recipient rejected — TargetNotInScope, no USDC moved (433ms)
-
-  verifier
-    ✔ Initializes freshness config (430ms)
-    ✔ Non-Pyth account rejected — WrongOwner
-    ✔ Insufficient data rejected — owner or data check
-    ✔ Wrong feed ID rejected — owner or feed check
-    ✔ Unauthorized verifier rejected — UnauthorizedVerifier (389ms)
-
-  31 passing (44s)
+Multisig PDA: 7vPjrrEEeszXDNiigpczbzNH376ak5EDfsxvT4UGSpkv
+Members: 5
+Threshold: 3
+VerifierRegistry authority: transferred to multisig PDA ✓
 ```
 
-### Security properties verified
-
-| Test file | Threats covered |
-|---|---|
-| `capabilities.ts` | T1, T4, T5, T7, T8 (valid, wrong amount, wrong target, wrong action type, revoked) |
-| `epochs.ts` | T2, T18 (T1→T2, T2→T3, T3→T1, stale epoch, authority transitions) |
-| `replay.ts` | T3 (nonce reuse rejected) |
-| `targets.ts` | T1, T4, T5 (target substitution, amount escalation, wrong program) |
-| `failure.ts` | T18 (ordinary fail, critical fail, slash, downgrade) |
-| `bond.ts` | bond lock, slash, re-lock, insufficient bond rejection |
-| `treasury.ts` | T9, T10, T11 (authorized transfer, unauthorized reverts, wrong recipient) |
-| `verifier.ts` | T12, T14, T19, T20 (wrong owner, insufficient data, wrong feed, unauthorized verifier) |
-
-The test suite demonstrates the complete authority transition loop:
-
-```
-Tier 1 ($5) → 5 successes → Tier 2 ($50) → 27/28 successes → Tier 3 ($500)
-    → critical failure → Tier 1 ($5), bond slashed, epoch++
-    → old capability rejected (stale epoch)
-    → new bond locked, new $5 capability issued at epoch 2
-```
+All trust-root operations (`register_verifier`, `deprecate_verifier`, `replace_protocol_authority`) now require multisig proposal + 3-of-5 approval.
 
 ## pactyra-verifier
 
 The objective verifier reads Pyth `PriceUpdateV2` accounts and checks price freshness against a configurable threshold.
 
-### Instructions
+### Instructions (3)
 
 | Instruction | Description |
 |---|---|
@@ -370,13 +179,10 @@ The objective verifier reads Pyth `PriceUpdateV2` accounts and checks price fres
 
 ### Pyth integration
 
-The verifier reads real Pyth `PriceUpdateV2` accounts directly from Solana:
-
 - **Owner check**: Verifies the account is owned by the Pyth Pull Oracle program (`pythWSnswVUd12oZpeFP8e9CVaEqJg25g1Vtc2biRsT`)
 - **Feed ID check**: Reads the `feed_id` field from the account data and compares to the config
 - **Freshness check**: Reads the `publish_time` field, computes age, compares to `max_age_seconds`
-
-The `PriceUpdateV2` data is read at computed offsets that account for Borsh's variable-length `VerificationLevel` enum (1 byte for `Full`, 2 bytes for `Partial`).
+- **Evidence hash**: Computes `keccak256` of the Pyth account data and passes it to `record_outcome`
 
 ### Severity classification
 
@@ -388,9 +194,9 @@ The `PriceUpdateV2` data is read at computed offsets that account for Borsh's va
 
 ## reference-treasury
 
-The reference downstream program enforces PACTYRA capabilities before executing USDC transfers. This proves PACTYRA is an enforcement primitive, not just an analytics dashboard.
+The reference downstream program enforces PACTYRA capabilities before executing USDC transfers.
 
-### Instructions
+### Instructions (4)
 
 | Instruction | Description |
 |---|---|
@@ -401,27 +207,119 @@ The reference downstream program enforces PACTYRA capabilities before executing 
 
 ### CPI enforcement
 
-The `authorized_transfer` instruction follows this flow:
+The `authorized_transfer` instruction calls `assert_capability` **before** executing the token transfer. If any security check fails, the transaction reverts and no USDC is moved. This is the architectural security boundary: **the treasury cannot move funds without a valid PACTYRA capability.**
+
+## Timelock
+
+Trust-root operations (`register_verifier`, `deprecate_verifier`, `replace_protocol_authority`) are gated by a 24-hour timelock:
+
+1. `propose_operation` — creates a `TimelockedOperation` with `execute_after = now + 86400`
+2. Wait 24 hours — any observer can detect and respond
+3. `execute_operation` — executes after delay expires
+4. `cancel_operation` — proposer can cancel before execution
+
+## SDK
+
+The `@pactyra/client` TypeScript SDK provides a typed interface to all programs.
+
+### Installation
+
+```bash
+cd sdk && npm install
+```
+
+### Usage
+
+```typescript
+import { PactyraClient } from '@pactyra/client';
+
+const client = await PactyraClient.connect(wallet, connection);
+
+await client.registerAgent(agentId);
+await client.lockBond(agentId, 5_000_000);
+await client.assertCapability(agentId, action);
+await client.recordOutcome(agentId, actionId, capabilityId, 'pass', 'none', evidenceHash);
+```
+
+### SDK tests (19 passing)
+
+## Web UI
+
+Deployed to Vercel at [https://pactyra-ui.vercel.app](https://pactyra-ui.vercel.app). Source in [`ui/`](ui/).
+
+### Features
+
+- Dark mode with system preference detection
+- Interactive authority loop simulator
+- Live devnet data fetching (agent state, program deployment status)
+- Register Agent, Lock Bond, Record Outcome, Request Capability forms
+- Transaction history panel
+- Authority loop visualization chart
+- Protocol health gauge
+- Security check tooltips
+- Copy-to-clipboard on all addresses
+
+### API Routes (7)
+
+| Route | Method | Description |
+|---|---|---|
+| `/api/agent?id=<hex>` | GET | Fetch live agent state from devnet |
+| `/api/deployment` | GET | Check all 4 program deployment status |
+| `/api/register-agent` | POST | Register a new agent on devnet |
+| `/api/lock-bond` | POST | Lock a bond for an agent |
+| `/api/record-outcome` | POST | Record a verified outcome |
+| `/api/request-capability` | POST | Request a capability |
+| `/api/transaction-history?id=<hex>` | GET | Fetch recent transactions for an agent |
+
+## Demo orchestration
+
+Scripts in `scripts/` produce the complete `$5 → $50 → $500 → $5` authority loop.
+
+| Script | Purpose |
+|---|---|
+| `bootstrap.ts` | Initialize protocol, register verifier + agent, create policy, lock bond |
+| `earn-tier2.ts` | 5 verified successes → Tier 1 → Tier 2 |
+| `earn-tier3.ts` | 27/28 successes (96.4%) → Tier 2 → Tier 3 |
+| `unauthorized-transfer.ts` | $400 rejected (AmountExceedsCapability) |
+| `critical-failure.ts` | Bond slash + downgrade + epoch++ |
+| `stale-capability.ts` | Old-epoch capability rejected (StaleEpoch) |
+| `demo-runner.ts` | Master script chaining all steps |
+| `devnet-verify.ts` | Devnet deployment verification |
+| `setup-multisig.ts` | Create multisig and transfer protocol authority |
+
+## Test results
 
 ```
-1. Build ActionParams (action_type, target_program=treasury, target_account=recipient, amount, nonce)
-2. CPI into pactyra_core::assert_capability
-   → 12 security checks (agent active, capability active, epoch current, etc.)
-   → If any check fails: transaction REVERTS, no USDC moved
-3. If capability assertion PASSES:
-   → Execute SPL token transfer from vault to recipient
-   → Emit AuthorizedTransferExecuted event
+  31 formal tests passing (44s)
+  19 SDK tests passing (71ms)
+  7 demo runner tests passing (16s)
+  ─────────────────────────────
+  57 total tests
 ```
-
-This is the architectural security boundary: **the treasury cannot move funds without a valid PACTYRA capability.**
 
 ## Architecture
 
-See [`docs/architecture.md`](docs/architecture.md) for the full architecture diagram including:
-- Protocol flow (verified performance → evidence-bound capability → assert_capability → execute/reject → outcome → authority change)
-- Program relationships (CPI between pactyra-core, pactyra-verifier, and reference-treasury)
+See [`docs/architecture.md`](docs/architecture.md) for:
+- Protocol flow diagram
+- Program relationships (CPI between all 4 programs)
 - Authority transition state machine (T1 → T2 → T3 → T1)
-- Security boundary flow (12 checks in assert_capability)
+- Security boundary flow (13 checks in assert_capability)
+
+## Security model
+
+- **Exact-action binding**: Every capability commits to agent, action type, target program, target account, amount limit, expiry, and authority epoch.
+- **Authority epochs**: Incrementing the epoch silently invalidates all outstanding capabilities.
+- **Short-lived capabilities**: Configurable TTL (default 30 minutes), bounded target scope, single-use nonces.
+- **Replay protection**: `ConsumedNonce` PDA prevents nonce reuse.
+- **Bond requirement**: Capabilities rejected if agent's bond is insufficient.
+- **Verifier-only outcomes**: Only registered verifier operators can submit receipts. Evidence hash must be non-zero.
+- **Tier-based limits**: $5 / $50 / $500 per capability based on agent tier.
+- **Delegate scope**: Session keys have bounded amount and expiry, enforced in `assert_capability`.
+- **Agent freeze**: Frozen agents cannot assert capabilities.
+- **Timelock**: 24-hour delay on all trust-root operations.
+- **Multisig**: 3-of-5 threshold for protocol authority operations.
+- **Immutable policies**: Policies can only be created or superseded, never mutated.
+- **Rent reclamation**: Old receipts from prior epochs can be closed.
 
 ## Build
 
@@ -429,7 +327,7 @@ See [`docs/architecture.md`](docs/architecture.md) for the full architecture dia
 
 - Rust 1.89+
 - Solana CLI 4.x (Agave)
-- Anchor 0.31+
+- Anchor 1.2+
 - Node.js 18+
 
 ### Install and build
@@ -443,82 +341,6 @@ anchor build
 
 ```bash
 anchor test --skip-build
-```
-
-## Architecture
-
-```
-Agent
-  │
-  ▼
-PACTYRA
-  │
-  ├── Policy (immutable, defines requirements)
-  ├── Capability (short-lived, exact-action bound)
-  ├── Bond (economic stake, slashable)
-  ├── ConsumedNonce (replay protection)
-  ├── Receipt (verified outcome evidence)
-  └── Authority Epoch (stale-credential invalidation)
-  │
-  ▼
-assert_capability() — 12 security checks
-  │
-  ├── PASS → downstream program executes
-  └── REJECT → transaction reverts
-  │
-  ▼
-record_outcome() — verifier submits receipt
-  │
-  ├── PASS + thresholds met → authority upgrade
-  └── CRITICAL FAIL → bond slash + downgrade + epoch++
-```
-
-## Security model
-
-- **Exact-action binding**: Every capability commits to agent, action type, target program, target account, amount limit, expiry, and authority epoch.
-- **Authority epochs**: Incrementing the epoch silently invalidates all outstanding capabilities for that agent.
-- **Short-lived capabilities**: High-risk capabilities have configurable TTL (default 30 minutes), bounded target scope, and single-use nonces.
-- **Replay protection**: Each `assert_capability` call creates a `ConsumedNonce` PDA, preventing the same action nonce from being used twice.
-- **Bond requirement**: Capabilities issued under policies with a minimum bond are rejected if the agent's bond is insufficient.
-- **Verifier-only outcomes**: Only registered verifier operators can submit performance receipts. Agents cannot award themselves success.
-- **Tier-based limits**: Capability amount limits are bounded by the agent's current authority tier ($5 / $50 / $500).
-
-## Web UI
-
-The Agent Passport web application is in the [`ui/`](ui/) directory and deployed to Vercel at [https://pactyra-ui.vercel.app](https://pactyra-ui.vercel.app).
-
-### Features
-
-- **Dark mode** with system preference detection
-- **Interactive authority loop simulator** — record successes and critical failures to trigger tier upgrades/downgrades
-- **Live devnet data** — auto-fetches agent state and program deployment status from Solana devnet
-- **Register Agent form** — register a new agent on devnet from the browser
-- **Lock Bond form** — lock a 5 USDC bond for an agent
-- **Record Outcome form** — record verified outcomes with result and severity selectors
-- **Request Capability form** — request a capability with amount selector
-- **Transaction history** — view recent devnet transactions for an agent
-- **Authority loop visualization** — animated chart showing the $5 → $50 → $500 → $5 cycle
-- **Protocol health gauge** — circular progress showing deployment + test + devnet status
-- **12 security check tooltips** — detailed explanations for each assert_capability check
-
-### API Routes
-
-| Route | Method | Description |
-|---|---|---|
-| `/api/agent?id=<hex>` | GET | Fetch live agent state from devnet |
-| `/api/deployment` | GET | Check all 3 program deployment status |
-| `/api/register-agent` | POST | Register a new agent on devnet |
-| `/api/lock-bond` | POST | Lock a bond for an agent |
-| `/api/record-outcome` | POST | Record a verified outcome |
-| `/api/request-capability` | POST | Request a capability |
-| `/api/transaction-history?id=<hex>` | GET | Fetch recent transactions for an agent |
-
-### Configuration
-
-The UI requires the `SOLANA_WALLET_SECRET_KEY` environment variable (64-byte JSON array) for write operations. Set it in Vercel or `.env.local`:
-
-```
-SOLANA_WALLET_SECRET_KEY=[210,43,30,199,...]
 ```
 
 ## License
