@@ -16,4 +16,5 @@ idl-build = ["anchor-lang/idl-build"]
 test-sbf = []
 
 [dependencies]
-anchor-lang = "0.31.0"
+anchor-lang = { version = "0.31.1", features = ["init-if-needed"] }
+pactyra-core = { path = "../pactyra-core", features = ["cpi"] }

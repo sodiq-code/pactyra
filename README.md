@@ -86,28 +86,38 @@ Replay protection is enforced via a `ConsumedNonce` PDA that is created on each 
 
 ```
   pactyra-core authority transitions
-    ✔ Initializes the protocol (409ms)
-    ✔ Registers a verifier operator (432ms)
-    ✔ Registers an agent at Tier 1 (Probation) (424ms)
-    ✔ Creates a policy (424ms)
-    ✔ Locks a 5 USDC bond (440ms)
-    ✔ Rejects $50 capability request at Tier 1 — AmountExceedsTier (42ms)
-    ✔ Accepts $5 capability request at Tier 1 (404ms)
-    ✔ Records 5 successful outcomes — upgrades to Tier 2 (Proven) (2147ms)
-    ✔ Accepts $50 capability request at Tier 2 (422ms)
-    ✔ Rejects $500 capability request at Tier 2 — AmountExceedsTier (38ms)
-    ✔ Records 22 more successes + 1 ordinary fail (27/28 = 96.4%) — upgrades to Tier 3 (Trusted) (9886ms)
-    ✔ Accepts $500 capability request at Tier 3 (437ms)
-    ✔ Records a critical failure — downgrades to Tier 1, slashes bond, increments epoch (428ms)
+    ✔ Initializes the protocol (412ms)
+    ✔ Registers a verifier operator (443ms)
+    ✔ Registers an agent at Tier 1 (Probation) (431ms)
+    ✔ Creates a policy (477ms)
+    ✔ Locks a 5 USDC bond (428ms)
+    ✔ Rejects $50 capability request at Tier 1 — AmountExceedsTier
+    ✔ Accepts $5 capability request at Tier 1 (510ms)
+    ✔ Records 5 successful outcomes — upgrades to Tier 2 (Proven) (2168ms)
+    ✔ Accepts $50 capability request at Tier 2 (441ms)
+    ✔ Rejects $500 capability request at Tier 2 — AmountExceedsTier (39ms)
+    ✔ Records 22 more successes + 1 ordinary fail (27/28 = 96.4%) — upgrades to Tier 3 (9885ms)
+    ✔ Accepts $500 capability request at Tier 3 (438ms)
+    ✔ Records a critical failure — downgrades to Tier 1, slashes bond, increments epoch (435ms)
     ✔ Rejects old capability (stale epoch) — StaleEpoch
     ✔ Rejects $50 capability at Tier 1 after downgrade — AmountExceedsTier
-    ✔ Re-locks bond after slash (393ms)
-    ✔ Accepts $5 capability at Tier 1 after downgrade (428ms)
-    ✔ Rejects outcome from unregistered verifier — UnauthorizedVerifier (459ms)
-    ✔ Revokes a capability (396ms)
-    ✔ Rejects assertion of revoked capability — CapabilityNotActive
+    ✔ Re-locks bond after slash (396ms)
+    ✔ Accepts $5 capability at Tier 1 after downgrade (436ms)
+    ✔ Rejects outcome from unregistered verifier — UnauthorizedVerifier (451ms)
+    ✔ Revokes a capability (404ms)
+    ✔ Rejects assertion of revoked capability — CapabilityNotActive (39ms)
 
-  20 passing (19s)
+  pactyra-verifier Pyth freshness
+    ✔ Initializes the protocol and registers a verifier (432ms)
+    ✔ Registers an agent and locks a bond (887ms)
+    ✔ Initializes freshness config with 30s max age and 60s critical threshold (439ms)
+    ✔ Rejects non-Pyth account — WrongOwner (440ms)
+    ✔ Rejects account with insufficient data — InsufficientData (441ms)
+    ✔ Rejects account with wrong feed ID — WrongFeed (419ms)
+    ✔ Verifies freshness config was created correctly
+    ✔ Verifies Pyth Pull Oracle program ID is correct
+
+  28 passing (24s)
 ```
 
 The test suite demonstrates the complete authority transition loop:
@@ -118,6 +128,36 @@ Tier 1 ($5) → 5 successes → Tier 2 ($50) → 27/28 successes → Tier 3 ($50
     → old capability rejected (stale epoch)
     → new bond locked, new $5 capability issued at epoch 2
 ```
+
+## pactyra-verifier
+
+The objective verifier reads Pyth `PriceUpdateV2` accounts and checks price freshness against a configurable threshold.
+
+### Instructions
+
+| Instruction | Description |
+|---|---|
+| `initialize_config` | Creates a `FreshnessConfig` PDA with feed ID, max age, and critical threshold |
+| `verify_freshness` | Reads a Pyth `PriceUpdateV2` account, verifies owner, feed ID, and freshness |
+| `verify_and_record` | Verifies freshness then CPIs into `pactyra_core::record_outcome` with appropriate result and severity |
+
+### Pyth integration
+
+The verifier reads real Pyth `PriceUpdateV2` accounts directly from Solana:
+
+- **Owner check**: Verifies the account is owned by the Pyth Pull Oracle program (`pythWSnswVUd12oZpeFP8e9CVaEqJg25g1Vtc2biRsT`)
+- **Feed ID check**: Reads the `feed_id` field from the account data and compares to the config
+- **Freshness check**: Reads the `publish_time` field, computes age, compares to `max_age_seconds`
+
+The `PriceUpdateV2` data is read at computed offsets that account for Borsh's variable-length `VerificationLevel` enum (1 byte for `Full`, 2 bytes for `Partial`).
+
+### Severity classification
+
+| Age | Result | Severity |
+|---|---|---|
+| ≤ `max_age_seconds` (30s) | Pass | None |
+| > `max_age_seconds` but ≤ `critical_threshold` (60s) | Fail | Ordinary |
+| > `critical_threshold` (60s) | Fail | Critical (triggers authority downgrade) |
 
 ## Build
 
