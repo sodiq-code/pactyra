@@ -82,6 +82,116 @@ The `assert_capability` instruction performs 12 security checks before authorizi
 
 Replay protection is enforced via a `ConsumedNonce` PDA that is created on each successful assertion, making the same (agent, nonce) pair unusable twice.
 
+## SDK
+
+The `@pactyra/client` TypeScript SDK provides a typed interface to all three programs.
+
+### Installation
+
+```bash
+cd sdk && npm install
+```
+
+### Usage
+
+```typescript
+import { PactyraClient } from '@pactyra/client';
+import { Connection, Keypair } from '@solana/web3.js';
+
+const connection = new Connection('http://localhost:8899', 'confirmed');
+const wallet = { /* your wallet implementation */ };
+
+const client = await PactyraClient.connect(wallet, connection);
+
+// Register an agent
+await client.registerAgent(agentId);
+
+// Lock a 5 USDC bond
+await client.lockBond(agentId, 5_000_000);
+
+// Request a $5 capability
+const { capabilityPda } = await client.requestCapability(agentId, {
+  capabilityType: 'payService',
+  targetProgram: treasuryPda.toString(),
+  targetAccount: recipientToken.toString(),
+  amountLimit: 5_000_000,
+  frequencyLimit: 10,
+  ttlSeconds: 1800,
+});
+
+// Assert a capability (the hero instruction)
+await client.assertCapability(agentId, {
+  actionType: 'payService',
+  targetProgram: treasuryPda.toString(),
+  targetAccount: recipientToken.toString(),
+  amount: 5_000_000,
+  actionNonce: 1,
+});
+
+// Record a verified outcome
+await client.recordOutcome(agentId, actionId, capabilityId, 'pass', 'none', evidenceHash);
+
+// Read agent state
+const agent = await client.getAgent(agentId);
+console.log('Tier:', client.getTierName(agent.tier));
+console.log('Max amount:', client.getTierMaxAmount(agent.tier));
+console.log('Success rate:', client.getSuccessRate(agent.successCount, agent.totalCount));
+```
+
+### SDK Tests
+
+```
+  @pactyra/client SDK
+    ✔ Connects to a cluster
+    ✔ Exposes all three programs
+    ✔ Exports correct program IDs
+    ✔ Exports devnet USDC mint
+    ✔ Exports tier amount constants
+    ✔ Derives agent PDA correctly
+    ✔ Derives bond PDA correctly
+    ✔ Derives policy PDA correctly
+    ✔ Derives verifier registry PDA correctly
+    ✔ Derives consumed nonce PDA correctly
+    ✔ Derives capability PDA with target_program seed
+    ✔ Derives receipt PDA correctly
+    ✔ Derives treasury PDA correctly
+    ✔ Derives vault PDA correctly
+    ✔ Derives freshness config PDA correctly
+    ✔ Returns tier name from tier object
+    ✔ Returns tier max from tier object
+    ✔ Computes success rate correctly
+    ✔ Exports all enums
+
+  19 passing (71ms)
+```
+
+## Agent Passport UI
+
+The Agent Passport is a Next.js web application that renders onchain agent state.
+
+### Features
+
+- **Hero card**: Agent ID, current authority tier, max amount, verified execution count, success rate, critical failures, bond status, authority epoch
+- **Authority timeline**: Visual history of upgrades, downgrades, assertions, outcomes, bond events
+- **Performance receipts**: Evidence viewer with verifier, result, severity, and evidence hash
+- **Capability list**: Active/locked capabilities with amount limits and TTL
+
+### Running the UI
+
+The UI is served from the Next.js application:
+
+```bash
+bun run dev
+```
+
+The page renders at `http://localhost:3000` showing the Agent Passport with:
+- Agent `treasury-agent-042` at Tier 3 (Trusted) with $500 authority
+- 28 verified executions, 27 successful, 96.4% success rate
+- Active capabilities: PAY_SERVICE ($500), TRADE ($250)
+- Locked capabilities: TREASURY_WITHDRAW, DELEGATE
+- Authority timeline with upgrade events
+- Performance receipts with Pyth freshness verifier evidence
+
 ## Test results
 
 ```

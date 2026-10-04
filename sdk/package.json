@@ -1,0 +1,28 @@
+{
+  "name": "@pactyra/client",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for the PACTYRA protocol",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "license": "MIT",
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc",
+    "test": "ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.31.0",
+    "@solana/web3.js": "1.95.4",
+    "@solana/spl-token": "0.4.8",
+    "bn.js": "^5.2.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "ts-mocha": "^10.0.0",
+    "@types/bn.js": "^5.1.6",
+    "chai": "^4.4.1",
+    "@types/chai": "^4.3.0",
+    "@types/mocha": "^10.0.0",
+    "@types/node": "^20.0.0"
+  }
+}
