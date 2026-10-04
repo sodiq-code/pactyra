@@ -1,0 +1,15 @@
+pactyra/
+target/
+.anchor/
+test-ledger/
+dev.log
+server.log
+*.log
+research/
+review/
+tool-results/
+upload/
+worklog.md
+skills/
+mini-services/
+examples/

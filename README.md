@@ -4,6 +4,8 @@
 
 AI agents already have keys. PACTYRA makes them earn the right to use them.
 
+**Live Demo:** [https://pactyra-ui.vercel.app](https://pactyra-ui.vercel.app)
+
 ## Overview
 
 PACTYRA is a protocol that converts verified execution history into machine-enforceable economic authority. It sits between autonomous agents and the economic programs they want to control — ensuring that authority is earned through verifiable outcomes, exercised within deterministic limits, and automatically revoked when verified performance fails.
@@ -480,6 +482,44 @@ record_outcome() — verifier submits receipt
 - **Bond requirement**: Capabilities issued under policies with a minimum bond are rejected if the agent's bond is insufficient.
 - **Verifier-only outcomes**: Only registered verifier operators can submit performance receipts. Agents cannot award themselves success.
 - **Tier-based limits**: Capability amount limits are bounded by the agent's current authority tier ($5 / $50 / $500).
+
+## Web UI
+
+The Agent Passport web application is in the [`ui/`](ui/) directory and deployed to Vercel at [https://pactyra-ui.vercel.app](https://pactyra-ui.vercel.app).
+
+### Features
+
+- **Dark mode** with system preference detection
+- **Interactive authority loop simulator** — record successes and critical failures to trigger tier upgrades/downgrades
+- **Live devnet data** — auto-fetches agent state and program deployment status from Solana devnet
+- **Register Agent form** — register a new agent on devnet from the browser
+- **Lock Bond form** — lock a 5 USDC bond for an agent
+- **Record Outcome form** — record verified outcomes with result and severity selectors
+- **Request Capability form** — request a capability with amount selector
+- **Transaction history** — view recent devnet transactions for an agent
+- **Authority loop visualization** — animated chart showing the $5 → $50 → $500 → $5 cycle
+- **Protocol health gauge** — circular progress showing deployment + test + devnet status
+- **12 security check tooltips** — detailed explanations for each assert_capability check
+
+### API Routes
+
+| Route | Method | Description |
+|---|---|---|
+| `/api/agent?id=<hex>` | GET | Fetch live agent state from devnet |
+| `/api/deployment` | GET | Check all 3 program deployment status |
+| `/api/register-agent` | POST | Register a new agent on devnet |
+| `/api/lock-bond` | POST | Lock a bond for an agent |
+| `/api/record-outcome` | POST | Record a verified outcome |
+| `/api/request-capability` | POST | Request a capability |
+| `/api/transaction-history?id=<hex>` | GET | Fetch recent transactions for an agent |
+
+### Configuration
+
+The UI requires the `SOLANA_WALLET_SECRET_KEY` environment variable (64-byte JSON array) for write operations. Set it in Vercel or `.env.local`:
+
+```
+SOLANA_WALLET_SECRET_KEY=[210,43,30,199,...]
+```
 
 ## License
 
