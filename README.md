@@ -18,11 +18,43 @@ An agent starts at Tier 1 ($5 authority), earns Tier 2 ($50) after 5 verified su
 
 ## Programs
 
-| Program | Description | Program ID |
-|---|---|---|
-| `pactyra-core` | Core protocol: Agent, Policy, Capability, Bond, Receipt, VerifierRegistry, ConsumedNonce | `EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC` |
-| `pactyra-verifier` | Objective Pyth price freshness verifier | `5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN` |
-| `reference-treasury` | Reference downstream program enforcing capabilities before USDC transfers | `6gAZR4omxMUWy5Fb6kCtdmaWASFFXr9WRCoWUcAz7UA9` |
+All three programs are deployed to Solana devnet and verified executable.
+
+| Program | Program ID | Deployed | Size |
+|---|---|---|---|
+| `pactyra-core` | `EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC` | ✅ Devnet | 336 KB |
+| `pactyra-verifier` | `5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN` | ✅ Devnet | 217 KB |
+| `reference-treasury` | `6gAZR4omxMUWy5Fb6kCtdmaWASFFXr9WRCoWUcAz7UA9` | ✅ Devnet | 287 KB |
+
+### Devnet transaction evidence
+
+The following transactions were executed on Solana devnet, proving the programs are live and functional:
+
+| Instruction | Transaction Signature |
+|---|---|
+| Initialize protocol | [`XajnkaaFzz...GQv`](https://solana.fm/tx/XajnkaaFzzLgaCSo6jh2RV2sBgs2Ge4uESVbTG7gdZKTkbaQePEs1yWYjyEuVVdbFndzVJmp3swtrEMsmVX2GQv?cluster=devnet) |
+| Register verifier | [`5LUx5i9FKh...aWo`](https://solana.fm/tx/5LUx5i9FKhoZGDtxV7tHbfStmzjpifejDjGLBYM6o7zQi89sjQYz5xbVVXWpMbc1TgYYswMrKAeuqEMBC6gZHaWo?cluster=devnet) |
+| Register agent | [`c6kQt5E2oR...LFW`](https://solana.fm/tx/c6kQt5E2oR96SNebNp5KrREJp4wqMQjCjHCMnnJmZfZQa5K6HfnvNTisxCFo4RaeRspGCCBk3GLgwCA5qkzrLFW?cluster=devnet) |
+| Create policy | [`3dZrGaxyXh...5JM`](https://solana.fm/tx/3dZrGaxyXhz43fdjArfwU4cLGUNQYeqTqxuZ1ya2r9qsJaXc5BCCpKVCwQqyWrmUVYJgSp6YRLcZ5yrgsTDp55JM?cluster=devnet) |
+| Lock bond | [`5MqTqxj3ac...7GkE`](https://solana.fm/tx/5MqTqxj3aczMkcJh7aKsm5zNjrGxmhMM7vEVGacuBHG3PXKMBrTbhbhh5cnk9RKH6yzja21wuE5hnCGVekhY7GkE?cluster=devnet) |
+
+### Verified agent state on devnet
+
+```
+Tier: Probation
+Epoch: 1
+Bond: 5,000,000 base units (5 USDC)
+Max capability: $5
+```
+
+### Devnet configuration
+
+```
+RPC: https://devnet.helius-rpc.com/?api-key=4196f886-5f5f-4fdb-8fae-128076aa8468
+Wallet: A55wG1G5nLVxn9Ns91ogrqZ6cHVi2yPd7WRi8GCyc3PE
+USDC mint: 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU (6 decimals)
+Pyth Pull Oracle: pythWSnswVUd12oZpeFP8e9CVaEqJg25g1Vtc2biRsT
+```
 
 ## pactyra-core
 
@@ -380,6 +412,14 @@ The `authorized_transfer` instruction follows this flow:
 ```
 
 This is the architectural security boundary: **the treasury cannot move funds without a valid PACTYRA capability.**
+
+## Architecture
+
+See [`docs/architecture.md`](docs/architecture.md) for the full architecture diagram including:
+- Protocol flow (verified performance → evidence-bound capability → assert_capability → execute/reject → outcome → authority change)
+- Program relationships (CPI between pactyra-core, pactyra-verifier, and reference-treasury)
+- Authority transition state machine (T1 → T2 → T3 → T1)
+- Security boundary flow (12 checks in assert_capability)
 
 ## Build
 
