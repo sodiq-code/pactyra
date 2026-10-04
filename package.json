@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "build": "anchor build",
-    "test": "anchor test",
+    "test": "anchor test --skip-build",
     "lint": "anchor lint",
     "idl:generate": "anchor idl build",
     "deploy:devnet": "anchor deploy --provider.cluster devnet",
@@ -13,13 +13,14 @@
   },
   "devDependencies": {
     "@coral-xyz/anchor": "^0.31.0",
-    "@solana/web3.js": "^1.95.0",
-    "@solana/spl-token": "^0.4.0",
+    "@solana/web3.js": "1.95.4",
+    "@solana/spl-token": "0.4.8",
     "chai": "^4.4.1",
     "ts-mocha": "^10.0.0",
     "typescript": "^5.5.0",
     "@types/bn.js": "^5.1.6",
     "@types/chai": "^4.3.0",
-    "@types/mocha": "^10.0.0"
+    "@types/mocha": "^10.0.0",
+    "bn.js": "^5.2.1"
   }
 }
