@@ -85,39 +85,23 @@ Replay protection is enforced via a `ConsumedNonce` PDA that is created on each 
 ## Test results
 
 ```
-  pactyra-core authority transitions
-    ✔ Initializes the protocol (412ms)
-    ✔ Registers a verifier operator (443ms)
-    ✔ Registers an agent at Tier 1 (Probation) (431ms)
-    ✔ Creates a policy (477ms)
-    ✔ Locks a 5 USDC bond (428ms)
-    ✔ Rejects $50 capability request at Tier 1 — AmountExceedsTier
-    ✔ Accepts $5 capability request at Tier 1 (510ms)
-    ✔ Records 5 successful outcomes — upgrades to Tier 2 (Proven) (2168ms)
-    ✔ Accepts $50 capability request at Tier 2 (441ms)
-    ✔ Rejects $500 capability request at Tier 2 — AmountExceedsTier (39ms)
-    ✔ Records 22 more successes + 1 ordinary fail (27/28 = 96.4%) — upgrades to Tier 3 (9885ms)
-    ✔ Accepts $500 capability request at Tier 3 (438ms)
-    ✔ Records a critical failure — downgrades to Tier 1, slashes bond, increments epoch (435ms)
-    ✔ Rejects old capability (stale epoch) — StaleEpoch
-    ✔ Rejects $50 capability at Tier 1 after downgrade — AmountExceedsTier
-    ✔ Re-locks bond after slash (396ms)
-    ✔ Accepts $5 capability at Tier 1 after downgrade (436ms)
-    ✔ Rejects outcome from unregistered verifier — UnauthorizedVerifier (451ms)
-    ✔ Revokes a capability (404ms)
-    ✔ Rejects assertion of revoked capability — CapabilityNotActive (39ms)
+  pactyra-core authority transitions (20 tests)
+  pactyra-verifier Pyth freshness (8 tests)
+  reference-treasury enforcement (10 tests)
 
-  pactyra-verifier Pyth freshness
-    ✔ Initializes the protocol and registers a verifier (432ms)
-    ✔ Registers an agent and locks a bond (887ms)
-    ✔ Initializes freshness config with 30s max age and 60s critical threshold (439ms)
-    ✔ Rejects non-Pyth account — WrongOwner (440ms)
-    ✔ Rejects account with insufficient data — InsufficientData (441ms)
-    ✔ Rejects account with wrong feed ID — WrongFeed (419ms)
-    ✔ Verifies freshness config was created correctly
-    ✔ Verifies Pyth Pull Oracle program ID is correct
+  38 passing (31s)
+```
 
-  28 passing (24s)
+The treasury test suite proves the complete enforcement loop:
+
+```
+Deposit 100 USDC into treasury vault
+    → Request $5 capability targeting treasury
+    → Authorized $5 transfer executes (CPI into assert_capability PASSES)
+    → Unauthorized $6 transfer reverts (AmountExceedsCapability)
+    → Replay attack rejected (nonce already consumed)
+    → Wrong recipient rejected (TargetNotInScope)
+    → No USDC moved on rejection
 ```
 
 The test suite demonstrates the complete authority transition loop:
@@ -158,6 +142,35 @@ The `PriceUpdateV2` data is read at computed offsets that account for Borsh's va
 | ≤ `max_age_seconds` (30s) | Pass | None |
 | > `max_age_seconds` but ≤ `critical_threshold` (60s) | Fail | Ordinary |
 | > `critical_threshold` (60s) | Fail | Critical (triggers authority downgrade) |
+
+## reference-treasury
+
+The reference downstream program enforces PACTYRA capabilities before executing USDC transfers. This proves PACTYRA is an enforcement primitive, not just an analytics dashboard.
+
+### Instructions
+
+| Instruction | Description |
+|---|---|
+| `initialize_treasury` | Creates a treasury PDA with a vault token account |
+| `deposit` | Deposits USDC into the vault; tracks user balance |
+| `authorized_transfer` | CPIs into `pactyra_core::assert_capability` before transferring USDC |
+| `set_paused` | Emergency pause toggle (treasury authority only) |
+
+### CPI enforcement
+
+The `authorized_transfer` instruction follows this flow:
+
+```
+1. Build ActionParams (action_type, target_program=treasury, target_account=recipient, amount, nonce)
+2. CPI into pactyra_core::assert_capability
+   → 12 security checks (agent active, capability active, epoch current, etc.)
+   → If any check fails: transaction REVERTS, no USDC moved
+3. If capability assertion PASSES:
+   → Execute SPL token transfer from vault to recipient
+   → Emit AuthorizedTransferExecuted event
+```
+
+This is the architectural security boundary: **the treasury cannot move funds without a valid PACTYRA capability.**
 
 ## Build
 

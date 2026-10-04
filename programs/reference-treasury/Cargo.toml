@@ -18,3 +18,4 @@ test-sbf = []
 [dependencies]
 anchor-lang = { version = "0.31.1", features = ["init-if-needed"] }
 anchor-spl = "0.31.1"
+pactyra-core = { path = "../pactyra-core", features = ["cpi"] }
