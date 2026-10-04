@@ -192,6 +192,61 @@ The page renders at `http://localhost:3000` showing the Agent Passport with:
 - Authority timeline with upgrade events
 - Performance receipts with Pyth freshness verifier evidence
 
+## Demo orchestration
+
+The `scripts/` directory contains orchestration scripts that produce the complete authority loop in a single reproducible run.
+
+### Scripts
+
+| Script | Purpose |
+|---|---|
+| `bootstrap.ts` | Initialize protocol, register verifier + agent, create policy, lock bond |
+| `earn-tier2.ts` | Record 5 verified successes → Tier 1 → Tier 2 ($5 → $50) |
+| `earn-tier3.ts` | Record 22 successes + 1 ordinary fail (27/28 = 96.4%) → Tier 2 → Tier 3 ($50 → $500) |
+| `unauthorized-transfer.ts` | Attempt $400 transfer with $50 capability → rejected (AmountExceedsCapability) |
+| `critical-failure.ts` | Record critical failure → bond slashed, tier downgraded, epoch++ ($500 → $5) |
+| `stale-capability.ts` | Attempt to use old-epoch capability → rejected (StaleEpoch) |
+| `demo-runner.ts` | Master script chaining all steps in one run |
+
+### Demo output
+
+```
+  Demo: $5 → $50 → $500 → $5
+    Agent tier: Probation | Bond: 5000000 | Max: $5
+    ✔ [1/6] Bootstrap: Initialize protocol, register agent, lock bond (2160ms)
+    Tier: Proven | Successes: 5 | Max: $50
+    ✔ [2/6] Earn Tier 2: 5 verified successes → $5 → $50 (2117ms)
+    Tier: Trusted | Total: 28 | Rate: 96.4% | Max: $500
+    ✔ [3/6] Earn Tier 3: 27/28 successes (96.4%) → $50 → $500 (9963ms)
+    Rejected: AmountExceedsCapability — no USDC moved
+    ✔ [4/6] Unauthorized transfer: $400 rejected (AmountExceedsCapability) (458ms)
+    Before: Tier Trusted Epoch 1
+    After:  Tier Probation Epoch 2 | Bond: 0 (slashed)
+    ✔ [5/6] Critical failure: $500 → $5, bond slashed, epoch++ (840ms)
+    Capability epoch: 1 | Current epoch: 2
+    Rejected: StaleEpoch — old capabilities invalidated
+    ✔ [6/6] Stale capability: old epoch capability rejected (StaleEpoch)
+
+    === Demo Complete ===
+    Final tier: Probation
+    Final epoch: 2
+    Total verified: 29
+    Total successful: 27
+    Critical failures: 1
+    Bond: 0 (slashed)
+
+    $5 → $50 → $500 → $5 ✓
+    ✔ Summary: Full $5 → $50 → $500 → $5 loop demonstrated
+
+  7 passing (16s)
+```
+
+The demo proves the complete mechanism density:
+- Authority earned through verified performance
+- Authority enforced before USDC transfers
+- Critical failure collapses authority deterministically
+- Stale credentials invalidated by epoch increment
+
 ## Test results
 
 ```
