@@ -1078,6 +1078,7 @@ name = "pactyra-verifier"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
+ "pactyra-core",
 ]
 
 [[package]]
@@ -1276,6 +1277,7 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
+ "pactyra-core",
 ]
 
 [[package]]
