@@ -250,24 +250,68 @@ The demo proves the complete mechanism density:
 ## Test results
 
 ```
-  pactyra-core authority transitions (20 tests)
-  pactyra-verifier Pyth freshness (8 tests)
-  reference-treasury enforcement (10 tests)
+  bond
+    ✔ Bond lock works (437ms)
+    ✔ Bond slash on critical failure (416ms)
+    ✔ Bond re-lock after slash works (429ms)
+    ✔ Capability request without bond rejected — BondNotSatisfied (439ms)
 
-  38 passing (31s)
+  capabilities
+    ✔ Valid capability assertion passes (862ms)
+    ✔ Wrong amount rejected — AmountExceedsCapability (451ms)
+    ✔ Wrong target account rejected — TargetNotInScope (434ms)
+    ✔ Wrong target program rejected — TargetProgramMismatch (430ms)
+    ✔ Wrong action type rejected — ActionTypeNotPermitted (435ms)
+    ✔ Revoked capability rejected — CapabilityNotActive (853ms)
+
+  epochs
+    ✔ T1 → T2 after 5 verified successes (2153ms)
+    ✔ T2 → T3 after 22 more successes + 1 ordinary fail (27/28 = 96.4%) (9951ms)
+    ✔ T3 → T1 on critical failure with epoch increment (885ms)
+    ✔ Old epoch capability rejected — StaleEpoch
+
+  failure
+    ✔ Ordinary failure does not downgrade tier or slash bond (440ms)
+    ✔ Critical failure downgrades to Probation and slashes bond (433ms)
+
+  replay
+    ✔ First use of nonce passes (852ms)
+    ✔ Replay with same nonce rejected — account already exists
+
+  targets
+    ✔ Target substitution rejected — TargetNotInScope
+    ✔ Amount escalation rejected — AmountExceedsCapability
+    ✔ Wrong target program rejected — TargetProgramMismatch
+    ✔ Valid target and amount passes (386ms)
+
+  treasury
+    ✔ Initializes treasury and deposits USDC (878ms)
+    ✔ Authorized $5 transfer executes — CPI passes (875ms)
+    ✔ Unauthorized $6 transfer reverts — no USDC moved
+    ✔ Wrong recipient rejected — TargetNotInScope, no USDC moved (433ms)
+
+  verifier
+    ✔ Initializes freshness config (430ms)
+    ✔ Non-Pyth account rejected — WrongOwner
+    ✔ Insufficient data rejected — owner or data check
+    ✔ Wrong feed ID rejected — owner or feed check
+    ✔ Unauthorized verifier rejected — UnauthorizedVerifier (389ms)
+
+  31 passing (44s)
 ```
 
-The treasury test suite proves the complete enforcement loop:
+### Security properties verified
 
-```
-Deposit 100 USDC into treasury vault
-    → Request $5 capability targeting treasury
-    → Authorized $5 transfer executes (CPI into assert_capability PASSES)
-    → Unauthorized $6 transfer reverts (AmountExceedsCapability)
-    → Replay attack rejected (nonce already consumed)
-    → Wrong recipient rejected (TargetNotInScope)
-    → No USDC moved on rejection
-```
+| Test file | Threats covered |
+|---|---|
+| `capabilities.ts` | T1, T4, T5, T7, T8 (valid, wrong amount, wrong target, wrong action type, revoked) |
+| `epochs.ts` | T2, T18 (T1→T2, T2→T3, T3→T1, stale epoch, authority transitions) |
+| `replay.ts` | T3 (nonce reuse rejected) |
+| `targets.ts` | T1, T4, T5 (target substitution, amount escalation, wrong program) |
+| `failure.ts` | T18 (ordinary fail, critical fail, slash, downgrade) |
+| `bond.ts` | bond lock, slash, re-lock, insufficient bond rejection |
+| `treasury.ts` | T9, T10, T11 (authorized transfer, unauthorized reverts, wrong recipient) |
+| `verifier.ts` | T12, T14, T19, T20 (wrong owner, insufficient data, wrong feed, unauthorized verifier) |
 
 The test suite demonstrates the complete authority transition loop:
 
