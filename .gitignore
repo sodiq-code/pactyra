@@ -1,0 +1,40 @@
+# Rust / Anchor
+target/
+.anchor/
+test-ledger/
+.starknet/
+
+# Node / TypeScript
+node_modules/
+dist/
+.next/
+.cache/
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.env
+
+# Secrets
+*keypair.json
+!target/deploy/*-keypair.json
+.secret
+*.pem
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+dev.log
+server.log
+
+# Build artifacts
+*.so
+!target/deploy/*.so

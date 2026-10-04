@@ -1,0 +1,19 @@
+[package]
+name = "pactyra-core"
+version = "0.1.0"
+description = "Core protocol for evidence-bound economic authority"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "pactyra_core"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+idl-build = ["anchor-lang/idl-build"]
+test-sbf = []
+
+[dependencies]
+anchor-lang = "0.31.0"
