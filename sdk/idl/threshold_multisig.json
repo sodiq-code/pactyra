@@ -1,0 +1,770 @@
+{
+  "address": "FgfW1JkSknJpcCypbhuv531qvVu2z8sNVPH2kZXLpDKc",
+  "metadata": {
+    "name": "threshold_multisig",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "3-of-5 threshold multisig for protocol authority"
+  },
+  "instructions": [
+    {
+      "name": "add_member",
+      "docs": [
+        "Add a new member to the multisig."
+      ],
+      "discriminator": [
+        13,
+        116,
+        123,
+        130,
+        126,
+        198,
+        57,
+        34
+      ],
+      "accounts": [
+        {
+          "name": "multisig",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_member",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "approve",
+      "docs": [
+        "Approve a proposal. Must be a multisig member."
+      ],
+      "discriminator": [
+        69,
+        74,
+        217,
+        36,
+        115,
+        117,
+        97,
+        76
+      ],
+      "accounts": [
+        {
+          "name": "multisig",
+          "relations": [
+            "proposal"
+          ]
+        },
+        {
+          "name": "proposal",
+          "writable": true
+        },
+        {
+          "name": "approver",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "cancel_proposal",
+      "docs": [
+        "Cancel a proposal."
+      ],
+      "discriminator": [
+        106,
+        74,
+        128,
+        146,
+        19,
+        65,
+        39,
+        23
+      ],
+      "accounts": [
+        {
+          "name": "proposal",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "create_multisig",
+      "docs": [
+        "Initialize a new multisig with the given members and threshold."
+      ],
+      "discriminator": [
+        148,
+        146,
+        240,
+        10,
+        226,
+        215,
+        167,
+        174
+      ],
+      "accounts": [
+        {
+          "name": "multisig",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  117,
+                  108,
+                  116,
+                  105,
+                  115,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              }
+            ]
+          }
+        },
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "members",
+          "type": {
+            "vec": "pubkey"
+          }
+        },
+        {
+          "name": "threshold",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "execute_proposal",
+      "docs": [
+        "Execute a proposal once enough approvals have been collected.",
+        "This uses invoke_signed with the multisig PDA as signer."
+      ],
+      "discriminator": [
+        186,
+        60,
+        116,
+        133,
+        108,
+        128,
+        111,
+        28
+      ],
+      "accounts": [
+        {
+          "name": "multisig",
+          "relations": [
+            "proposal"
+          ]
+        },
+        {
+          "name": "proposal",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "propose",
+      "docs": [
+        "Propose a transaction for the multisig to execute."
+      ],
+      "discriminator": [
+        93,
+        253,
+        82,
+        168,
+        118,
+        33,
+        102,
+        90
+      ],
+      "accounts": [
+        {
+          "name": "multisig",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  117,
+                  108,
+                  116,
+                  105,
+                  115,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "multisig.creator",
+                "account": "Multisig"
+              }
+            ]
+          }
+        },
+        {
+          "name": "proposal",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  112,
+                  111,
+                  115,
+                  97,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "multisig"
+              },
+              {
+                "kind": "account",
+                "path": "proposer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "proposer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "target_program",
+          "type": "pubkey"
+        },
+        {
+          "name": "instruction_data",
+          "type": "bytes"
+        },
+        {
+          "name": "accounts",
+          "type": {
+            "vec": {
+              "defined": {
+                "name": "ProposalAccount"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "remove_member",
+      "docs": [
+        "Remove a member from the multisig."
+      ],
+      "discriminator": [
+        171,
+        57,
+        231,
+        150,
+        167,
+        128,
+        18,
+        55
+      ],
+      "accounts": [
+        {
+          "name": "multisig",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "member",
+          "type": "pubkey"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Multisig",
+      "discriminator": [
+        224,
+        116,
+        121,
+        186,
+        68,
+        161,
+        79,
+        236
+      ]
+    },
+    {
+      "name": "Proposal",
+      "discriminator": [
+        26,
+        94,
+        189,
+        187,
+        116,
+        136,
+        53,
+        33
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "MemberAdded",
+      "discriminator": [
+        198,
+        220,
+        228,
+        196,
+        92,
+        235,
+        240,
+        79
+      ]
+    },
+    {
+      "name": "MemberRemoved",
+      "discriminator": [
+        250,
+        66,
+        3,
+        113,
+        161,
+        10,
+        59,
+        39
+      ]
+    },
+    {
+      "name": "MultisigCreated",
+      "discriminator": [
+        94,
+        25,
+        238,
+        110,
+        95,
+        40,
+        251,
+        66
+      ]
+    },
+    {
+      "name": "ProposalApproved",
+      "discriminator": [
+        70,
+        49,
+        155,
+        228,
+        157,
+        43,
+        88,
+        49
+      ]
+    },
+    {
+      "name": "ProposalCancelled",
+      "discriminator": [
+        253,
+        59,
+        104,
+        46,
+        129,
+        78,
+        9,
+        14
+      ]
+    },
+    {
+      "name": "ProposalCreated",
+      "discriminator": [
+        186,
+        8,
+        160,
+        108,
+        81,
+        13,
+        51,
+        206
+      ]
+    },
+    {
+      "name": "ProposalExecuted",
+      "discriminator": [
+        92,
+        213,
+        189,
+        201,
+        101,
+        83,
+        111,
+        83
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "NotEnoughApprovals",
+      "msg": "Not enough approvals to execute"
+    },
+    {
+      "code": 6001,
+      "name": "AlreadyApproved",
+      "msg": "Member has already approved"
+    },
+    {
+      "code": 6002,
+      "name": "NotAMember",
+      "msg": "Signer is not a multisig member"
+    },
+    {
+      "code": 6003,
+      "name": "AlreadyExecuted",
+      "msg": "Proposal already executed"
+    },
+    {
+      "code": 6004,
+      "name": "AlreadyCancelled",
+      "msg": "Proposal already cancelled"
+    },
+    {
+      "code": 6005,
+      "name": "TooManyMembers",
+      "msg": "Too many members"
+    },
+    {
+      "code": 6006,
+      "name": "NotConfigAuthority",
+      "msg": "Only config authority can perform this action"
+    }
+  ],
+  "types": [
+    {
+      "name": "MemberAdded",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "multisig",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_member",
+            "type": "pubkey"
+          },
+          {
+            "name": "member_count",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MemberRemoved",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "multisig",
+            "type": "pubkey"
+          },
+          {
+            "name": "removed_member",
+            "type": "pubkey"
+          },
+          {
+            "name": "member_count",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Multisig",
+      "docs": [
+        "A multisig wallet with threshold signing."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "creator",
+            "docs": [
+              "The creator of this multisig (used for PDA derivation)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "members",
+            "docs": [
+              "The members who can propose and approve transactions."
+            ],
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "threshold",
+            "docs": [
+              "Number of approvals required to execute a proposal."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "config_authority",
+            "docs": [
+              "The authority that can add/remove members."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "bump seed."
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MultisigCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "multisig",
+            "type": "pubkey"
+          },
+          {
+            "name": "threshold",
+            "type": "u8"
+          },
+          {
+            "name": "member_count",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Proposal",
+      "docs": [
+        "A proposed transaction awaiting approval."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "multisig",
+            "docs": [
+              "The multisig this proposal belongs to."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "proposer",
+            "docs": [
+              "The proposer."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "instruction_data",
+            "docs": [
+              "The instruction data to execute."
+            ],
+            "type": "bytes"
+          },
+          {
+            "name": "target_program",
+            "docs": [
+              "The program to call."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "accounts",
+            "docs": [
+              "The accounts to pass to the instruction."
+            ],
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "ProposalAccount"
+                }
+              }
+            }
+          },
+          {
+            "name": "approvers",
+            "docs": [
+              "Members who have approved."
+            ],
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "executed",
+            "docs": [
+              "Whether the proposal has been executed."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "cancelled",
+            "docs": [
+              "Whether the proposal was cancelled."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "bump seed."
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProposalAccount",
+      "docs": [
+        "A single account in a proposal."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pubkey",
+            "type": "pubkey"
+          },
+          {
+            "name": "is_signer",
+            "type": "bool"
+          },
+          {
+            "name": "is_writable",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProposalApproved",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "proposal",
+            "type": "pubkey"
+          },
+          {
+            "name": "approver",
+            "type": "pubkey"
+          },
+          {
+            "name": "approval_count",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProposalCancelled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "proposal",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProposalCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "proposal",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "target_program",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProposalExecuted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "proposal",
+            "type": "pubkey"
+          },
+          {
+            "name": "target_program",
+            "type": "pubkey"
+          }
+        ]
+      }
+    }
+  ]
+}

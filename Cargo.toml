@@ -3,6 +3,7 @@ members = [
     "programs/pactyra-core",
     "programs/pactyra-verifier",
     "programs/reference-treasury",
+    "programs/threshold-multisig",
 ]
 resolver = "2"
 

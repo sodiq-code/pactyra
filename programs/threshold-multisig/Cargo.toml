@@ -1,0 +1,19 @@
+[package]
+name = "threshold-multisig"
+version = "0.1.0"
+description = "3-of-5 threshold multisig for protocol authority"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "threshold_multisig"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+idl-build = ["anchor-lang/idl-build"]
+test-sbf = []
+
+[dependencies]
+anchor-lang = { version = "0.31.1", features = ["init-if-needed"] }

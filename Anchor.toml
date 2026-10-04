@@ -9,11 +9,13 @@ skip-lint = false
 pactyra_core = "EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC"
 pactyra_verifier = "5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN"
 reference_treasury = "6gAZR4omxMUWy5Fb6kCtdmaWASFFXr9WRCoWUcAz7UA9"
+threshold_multisig = "FgfW1JkSknJpcCypbhuv531qvVu2z8sNVPH2kZXLpDKc"
 
 [programs.devnet]
 pactyra_core = "EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC"
 pactyra_verifier = "5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN"
 reference_treasury = "6gAZR4omxMUWy5Fb6kCtdmaWASFFXr9WRCoWUcAz7UA9"
+threshold_multisig = "FgfW1JkSknJpcCypbhuv531qvVu2z8sNVPH2kZXLpDKc"
 
 [provider]
 cluster = "localnet"
