@@ -206,6 +206,17 @@ pub struct ConsumedNonce {
 }
 
 // ============================================================
+// Tier Amount Limits (USDC base units, 6 decimals)
+// ============================================================
+
+const TIER_1_MAX_AMOUNT: u64 = 5_000_000;
+const TIER_2_MAX_AMOUNT: u64 = 50_000_000;
+const TIER_3_MAX_AMOUNT: u64 = 500_000_000;
+
+/// Number of verified successes required for T1 → T2 upgrade.
+const T1_TO_T2_THRESHOLD: u64 = 5;
+
+// ============================================================
 // Error Codes
 // ============================================================
 
@@ -253,6 +264,8 @@ pub enum PactyraError {
     CapabilityAgentMismatch,
     #[msg("The target program does not match")]
     TargetProgramMismatch,
+    #[msg("The amount exceeds the tier limit for this agent")]
+    AmountExceedsTier,
 }
 
 // ============================================================
@@ -384,6 +397,7 @@ pub mod pactyra_core {
 
     /// Lock a bond for an agent.
     /// Tracks the bond amount in the Agent and Bond accounts.
+    /// Can be called again to re-lock after a slash.
     pub fn lock_bond(ctx: Context<LockBond>, amount: u64) -> Result<()> {
         require!(amount > 0, PactyraError::InsufficientBond);
 
@@ -393,12 +407,12 @@ pub mod pactyra_core {
         // Update agent bond amount
         agent.bond_amount += amount;
 
-        // Create bond record
+        // Create or update bond record
         let bond = &mut ctx.accounts.bond;
         bond.agent_id = agent.agent_id;
-        bond.amount = amount;
         bond.locked_at = clock.unix_timestamp;
         bond.slashed = false;
+        bond.amount = amount;
         bond.bump = ctx.bumps.bond;
 
         emit!(BondLocked {
@@ -434,6 +448,17 @@ pub mod pactyra_core {
         require!(
             params.amount_limit <= policy.max_amount_usdc,
             PactyraError::AmountExceedsCapability
+        );
+
+        // Verify amount limit does not exceed the agent's tier limit
+        let tier_max = match agent.tier {
+            AuthorityTier::Probation => TIER_1_MAX_AMOUNT,
+            AuthorityTier::Proven => TIER_2_MAX_AMOUNT,
+            AuthorityTier::Trusted => TIER_3_MAX_AMOUNT,
+        };
+        require!(
+            params.amount_limit <= tier_max,
+            PactyraError::AmountExceedsTier
         );
 
         // Verify bond is satisfied
@@ -583,6 +608,197 @@ pub mod pactyra_core {
         });
         Ok(())
     }
+
+    /// Register a verifier in the registry.
+    /// Only the protocol authority can call this.
+    pub fn register_verifier(
+        ctx: Context<RegisterVerifier>,
+        verifier_id: [u8; 32],
+        verifier_program: Pubkey,
+        operator_key: Pubkey,
+    ) -> Result<()> {
+        let registry = &mut ctx.accounts.verifier_registry;
+        let clock = Clock::get()?;
+
+        require!(
+            registry.authority == ctx.accounts.authority.key(),
+            PactyraError::UnauthorizedVerifier
+        );
+
+        registry.verifiers.push(VerifierEntry {
+            verifier_id,
+            verifier_program,
+            operator_key,
+            active: true,
+            registered_slot: clock.slot,
+        });
+
+        emit!(VerifierRegistered {
+            verifier_id,
+            verifier_program,
+            operator_key,
+            slot: clock.slot,
+        });
+        Ok(())
+    }
+
+    /// Record a performance outcome from a registered verifier.
+    /// Updates agent counters and triggers authority transitions.
+    pub fn record_outcome(
+        ctx: Context<RecordOutcome>,
+        action_id: [u8; 32],
+        capability_id: [u8; 32],
+        result: OutcomeResult,
+        severity: Severity,
+        evidence_hash: [u8; 32],
+    ) -> Result<()> {
+        let registry = &ctx.accounts.verifier_registry;
+        let operator = ctx.accounts.verifier_operator.key();
+        let clock = Clock::get()?;
+
+        // Verify the operator is a registered active verifier
+        let mut verifier_found = false;
+        for entry in &registry.verifiers {
+            if entry.operator_key == operator && entry.active {
+                verifier_found = true;
+                break;
+            }
+        }
+        require!(verifier_found, PactyraError::UnauthorizedVerifier);
+
+        let agent = &mut ctx.accounts.agent;
+        let policy = &ctx.accounts.policy;
+
+        // Create the receipt
+        let receipt = &mut ctx.accounts.receipt;
+        receipt.receipt_id = action_id;
+        receipt.agent_id = agent.agent_id;
+        receipt.action_id = action_id;
+        receipt.capability_id = capability_id;
+        receipt.policy_key = policy.key();
+        receipt.verifier = operator;
+        receipt.result = result;
+        receipt.severity = severity;
+        receipt.evidence_hash = evidence_hash;
+        receipt.timestamp = clock.unix_timestamp;
+        receipt.authority_epoch = agent.current_epoch;
+        receipt.bump = ctx.bumps.receipt;
+
+        // Update agent counters
+        agent.total_count += 1;
+        let is_pass = result == OutcomeResult::Pass;
+        if is_pass {
+            agent.success_count += 1;
+        }
+
+        // Handle critical failure: slash bond, downgrade, epoch++
+        let is_critical =
+            result == OutcomeResult::Fail && severity == Severity::Critical;
+
+        if is_critical {
+            agent.critical_failures += 1;
+
+            // Slash bond if it exists
+            if let Some(bond) = &mut ctx.accounts.bond {
+                if !bond.slashed {
+                    bond.slashed = true;
+                    let slashed_amount = bond.amount;
+                    bond.amount = 0;
+                    emit!(BondSlashed {
+                        agent_id: agent.agent_id,
+                        amount: slashed_amount,
+                        slot: clock.slot,
+                    });
+                }
+            }
+            agent.bond_amount = 0;
+
+            // Downgrade to Probation
+            let old_tier = agent.tier;
+            agent.tier = AuthorityTier::Probation;
+
+            // Increment epoch — invalidates all outstanding capabilities
+            agent.current_epoch += 1;
+
+            emit!(AuthorityDowngraded {
+                agent_id: agent.agent_id,
+                old_tier,
+                new_tier: AuthorityTier::Probation,
+                new_epoch: agent.current_epoch,
+                slot: clock.slot,
+            });
+        } else if is_pass {
+            // Check for authority upgrade
+            let old_tier = agent.tier;
+
+            // T1 -> T2: after 5 verified successes (protocol constant)
+            if agent.tier == AuthorityTier::Probation
+                && agent.success_count >= T1_TO_T2_THRESHOLD
+            {
+                agent.tier = AuthorityTier::Proven;
+                emit!(AuthorityUpgraded {
+                    agent_id: agent.agent_id,
+                    old_tier,
+                    new_tier: AuthorityTier::Proven,
+                    new_epoch: agent.current_epoch,
+                    success_count: agent.success_count,
+                    slot: clock.slot,
+                });
+            }
+
+            // T2 -> T3: after 20+ successes, 95% rate, 0 critical failures, bond satisfied
+            if agent.tier == AuthorityTier::Proven
+                && agent.success_count >= policy.min_successes
+                && agent.critical_failures <= policy.critical_failure_limit
+                && agent.bond_amount >= policy.min_bond_usdc
+            {
+                let success_rate_bps = if agent.total_count > 0 {
+                    ((agent.success_count as u128 * 10000)
+                        / agent.total_count as u128)
+                        as u16
+                } else {
+                    0
+                };
+
+                if success_rate_bps >= policy.min_success_rate_bps {
+                    agent.tier = AuthorityTier::Trusted;
+                    emit!(AuthorityUpgraded {
+                        agent_id: agent.agent_id,
+                        old_tier,
+                        new_tier: AuthorityTier::Trusted,
+                        new_epoch: agent.current_epoch,
+                        success_count: agent.success_count,
+                        slot: clock.slot,
+                    });
+                }
+            }
+        }
+
+        emit!(OutcomeRecorded {
+            receipt_id: action_id,
+            agent_id: agent.agent_id,
+            result,
+            severity,
+            verifier: operator,
+            slot: clock.slot,
+        });
+        Ok(())
+    }
+
+    /// Revoke a capability. Only the agent's authority root can call this.
+    pub fn revoke_capability(ctx: Context<RevokeCapability>) -> Result<()> {
+        let capability = &mut ctx.accounts.capability;
+        let clock = Clock::get()?;
+
+        capability.status = CapabilityStatus::Revoked;
+
+        emit!(CapabilityRevoked {
+            capability_id: capability.capability_id,
+            agent_id: capability.agent_id,
+            slot: clock.slot,
+        });
+        Ok(())
+    }
 }
 
 // ============================================================
@@ -651,7 +867,7 @@ pub struct LockBond<'info> {
     pub agent: Account<'info, Agent>,
 
     #[account(
-        init,
+        init_if_needed,
         payer = authority_root,
         space = 8 + Bond::INIT_SPACE,
         seeds = [b"bond", agent.agent_id.as_ref()],
@@ -666,6 +882,7 @@ pub struct LockBond<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(params: RequestCapabilityParams)]
 pub struct RequestCapability<'info> {
     #[account(has_one = authority_root)]
     pub agent: Account<'info, Agent>,
@@ -676,7 +893,7 @@ pub struct RequestCapability<'info> {
         init,
         payer = authority_root,
         space = 8 + Capability::INIT_SPACE,
-        seeds = [b"capability", agent.agent_id.as_ref(), agent.current_epoch.to_le_bytes().as_ref()],
+        seeds = [b"capability", agent.agent_id.as_ref(), agent.current_epoch.to_le_bytes().as_ref(), params.target_program.as_ref()],
         bump
     )]
     pub capability: Account<'info, Capability>,
@@ -716,6 +933,73 @@ pub struct AssertCapability<'info> {
     pub authority_root: Signer<'info>,
 
     pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct RegisterVerifier<'info> {
+    #[account(mut,
+        seeds = [b"verifier_registry"],
+        bump = verifier_registry.bump,
+        has_one = authority
+    )]
+    pub verifier_registry: Account<'info, VerifierRegistry>,
+
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(action_id: [u8; 32])]
+pub struct RecordOutcome<'info> {
+    #[account(
+        mut,
+        seeds = [b"agent", agent.agent_id.as_ref()],
+        bump = agent.bump,
+    )]
+    pub agent: Account<'info, Agent>,
+
+    #[account(
+        init,
+        payer = verifier_operator,
+        space = 8 + Receipt::INIT_SPACE,
+        seeds = [b"receipt", agent.agent_id.as_ref(), action_id.as_ref()],
+        bump
+    )]
+    pub receipt: Account<'info, Receipt>,
+
+    #[account(seeds = [b"verifier_registry"], bump = verifier_registry.bump)]
+    pub verifier_registry: Account<'info, VerifierRegistry>,
+
+    pub policy: Account<'info, Policy>,
+
+    #[account(
+        mut,
+        seeds = [b"bond", agent.agent_id.as_ref()],
+        bump = bond.bump,
+    )]
+    pub bond: Option<Account<'info, Bond>>,
+
+    #[account(mut)]
+    pub verifier_operator: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct RevokeCapability<'info> {
+    #[account(has_one = authority_root)]
+    pub agent: Account<'info, Agent>,
+
+    #[account(
+        mut,
+        constraint = capability.agent_id == agent.agent_id,
+    )]
+    pub capability: Account<'info, Capability>,
+
+    #[account(mut)]
+    pub authority_root: Signer<'info>,
 }
 
 // ============================================================
@@ -769,5 +1053,56 @@ pub struct CapabilityAsserted {
     pub amount: u64,
     pub action_nonce: u64,
     pub result: bool,
+    pub slot: u64,
+}
+
+#[event]
+pub struct VerifierRegistered {
+    pub verifier_id: [u8; 32],
+    pub verifier_program: Pubkey,
+    pub operator_key: Pubkey,
+    pub slot: u64,
+}
+
+#[event]
+pub struct OutcomeRecorded {
+    pub receipt_id: [u8; 32],
+    pub agent_id: [u8; 32],
+    pub result: OutcomeResult,
+    pub severity: Severity,
+    pub verifier: Pubkey,
+    pub slot: u64,
+}
+
+#[event]
+pub struct AuthorityUpgraded {
+    pub agent_id: [u8; 32],
+    pub old_tier: AuthorityTier,
+    pub new_tier: AuthorityTier,
+    pub new_epoch: u64,
+    pub success_count: u64,
+    pub slot: u64,
+}
+
+#[event]
+pub struct AuthorityDowngraded {
+    pub agent_id: [u8; 32],
+    pub old_tier: AuthorityTier,
+    pub new_tier: AuthorityTier,
+    pub new_epoch: u64,
+    pub slot: u64,
+}
+
+#[event]
+pub struct BondSlashed {
+    pub agent_id: [u8; 32],
+    pub amount: u64,
+    pub slot: u64,
+}
+
+#[event]
+pub struct CapabilityRevoked {
+    pub capability_id: [u8; 32],
+    pub agent_id: [u8; 32],
     pub slot: u64,
 }
