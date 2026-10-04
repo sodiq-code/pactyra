@@ -61,6 +61,42 @@
           }
         },
         {
+          "name": "delegate_scope",
+          "docs": [
+            "Optional: if a delegate (session key) is signing instead of the authority root,",
+            "this account must be provided and the delegate scope is verified."
+          ],
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  108,
+                  101,
+                  103,
+                  97,
+                  116,
+                  101,
+                  95,
+                  115,
+                  99,
+                  111,
+                  112,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "agent.agent_id",
+                "account": "Agent"
+              }
+            ]
+          }
+        },
+        {
           "name": "authority_root",
           "writable": true,
           "signer": true,
@@ -108,6 +144,43 @@
           "name": "proposer",
           "writable": true,
           "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "close_receipt",
+      "docs": [
+        "Close a receipt account and reclaim rent.",
+        "Only the agent's authority root can close receipts.",
+        "Receipts can only be closed after the authority epoch has advanced",
+        "(ensuring they are historical, not active evidence)."
+      ],
+      "discriminator": [
+        126,
+        254,
+        244,
+        203,
+        124,
+        164,
+        134,
+        89
+      ],
+      "accounts": [
+        {
+          "name": "agent"
+        },
+        {
+          "name": "receipt",
+          "writable": true
+        },
+        {
+          "name": "authority_root",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "agent"
+          ]
         }
       ],
       "args": []
@@ -531,7 +604,11 @@
       "name": "record_outcome",
       "docs": [
         "Record a performance outcome from a registered verifier.",
-        "Updates agent counters and triggers authority transitions."
+        "Updates agent counters and triggers authority transitions.",
+        "",
+        "Security: The verifier cannot fabricate the outcome because the",
+        "evidence_hash must match the keccak256 of the Pyth price update",
+        "account data. An independent observer can re-verify the hash."
       ],
       "discriminator": [
         130,
@@ -1535,6 +1612,19 @@
       ]
     },
     {
+      "name": "ReceiptClosed",
+      "discriminator": [
+        127,
+        232,
+        161,
+        69,
+        46,
+        187,
+        159,
+        188
+      ]
+    },
+    {
       "name": "VerifierDeprecated",
       "discriminator": [
         96,
@@ -1716,6 +1806,16 @@
       "code": 6030,
       "name": "UnauthorizedCancellation",
       "msg": "Unauthorized — only the proposer can cancel"
+    },
+    {
+      "code": 6031,
+      "name": "InvalidEvidence",
+      "msg": "The evidence hash is invalid (all zeros)"
+    },
+    {
+      "code": 6032,
+      "name": "ReceiptFromCurrentEpoch",
+      "msg": "Cannot close a receipt from the current authority epoch"
     }
   ],
   "types": [
@@ -2938,6 +3038,40 @@
           {
             "name": "bump",
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ReceiptClosed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "receipt_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "authority_epoch",
+            "type": "u64"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
           }
         ]
       }

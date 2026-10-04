@@ -141,6 +141,7 @@ pub mod reference_treasury {
             capability: ctx.accounts.capability.to_account_info(),
             policy: ctx.accounts.policy.to_account_info(),
             consumed_nonce: ctx.accounts.consumed_nonce.to_account_info(),
+            delegate_scope: None,
             authority_root: ctx.accounts.authority_root.to_account_info(),
             system_program: ctx.accounts.system_program.to_account_info(),
         };
