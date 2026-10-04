@@ -85,6 +85,34 @@
       ]
     },
     {
+      "name": "cancel_operation",
+      "docs": [
+        "Cancel a proposed timelocked operation (only proposer can cancel)."
+      ],
+      "discriminator": [
+        64,
+        80,
+        246,
+        116,
+        95,
+        207,
+        78,
+        13
+      ],
+      "accounts": [
+        {
+          "name": "operation",
+          "writable": true
+        },
+        {
+          "name": "proposer",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "create_policy",
       "docs": [
         "Create a new policy. Policies are immutable once created."
@@ -143,6 +171,201 @@
           }
         }
       ]
+    },
+    {
+      "name": "delegate_authority",
+      "docs": [
+        "Grant a delegate (session key) with bounded scope."
+      ],
+      "discriminator": [
+        228,
+        17,
+        85,
+        163,
+        65,
+        139,
+        36,
+        206
+      ],
+      "accounts": [
+        {
+          "name": "agent"
+        },
+        {
+          "name": "delegate_scope",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  108,
+                  101,
+                  103,
+                  97,
+                  116,
+                  101,
+                  95,
+                  115,
+                  99,
+                  111,
+                  112,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "agent.agent_id",
+                "account": "Agent"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority_root",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "agent"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "delegate",
+          "type": "pubkey"
+        },
+        {
+          "name": "max_amount_per_action",
+          "type": "u64"
+        },
+        {
+          "name": "expires_in_seconds",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "deprecate_verifier",
+      "docs": [
+        "Deprecate a verifier — marks it as inactive in the registry."
+      ],
+      "discriminator": [
+        165,
+        224,
+        1,
+        190,
+        243,
+        58,
+        47,
+        101
+      ],
+      "accounts": [
+        {
+          "name": "verifier_registry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  101,
+                  114,
+                  105,
+                  102,
+                  105,
+                  101,
+                  114,
+                  95,
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "verifier_registry"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "verifier_index",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "execute_operation",
+      "docs": [
+        "Execute a timelocked operation after the delay has passed."
+      ],
+      "discriminator": [
+        105,
+        240,
+        250,
+        159,
+        65,
+        132,
+        111,
+        185
+      ],
+      "accounts": [
+        {
+          "name": "operation",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "freeze_agent",
+      "docs": [
+        "Freeze an agent — prevents all future capability assertions."
+      ],
+      "discriminator": [
+        142,
+        40,
+        239,
+        10,
+        18,
+        216,
+        106,
+        176
+      ],
+      "accounts": [
+        {
+          "name": "agent",
+          "writable": true
+        },
+        {
+          "name": "authority_root",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "agent"
+          ]
+        }
+      ],
+      "args": []
     },
     {
       "name": "initialize_protocol",
@@ -263,6 +486,44 @@
         {
           "name": "amount",
           "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "propose_operation",
+      "docs": [
+        "Propose a timelocked trust-root operation.",
+        "The operation can only be executed after TIMELOCK_DELAY_SECONDS."
+      ],
+      "discriminator": [
+        138,
+        188,
+        18,
+        209,
+        140,
+        122,
+        139,
+        187
+      ],
+      "accounts": [
+        {
+          "name": "operation",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "operation_type",
+          "type": "u8"
         }
       ]
     },
@@ -587,6 +848,68 @@
       ]
     },
     {
+      "name": "replace_protocol_authority",
+      "docs": [
+        "Replace the protocol authority — transfers control of the VerifierRegistry."
+      ],
+      "discriminator": [
+        128,
+        179,
+        36,
+        83,
+        245,
+        146,
+        146,
+        22
+      ],
+      "accounts": [
+        {
+          "name": "verifier_registry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  101,
+                  114,
+                  105,
+                  102,
+                  105,
+                  101,
+                  114,
+                  95,
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "verifier_registry"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "new_authority",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
       "name": "request_capability",
       "docs": [
         "Request a capability for an agent."
@@ -702,6 +1025,133 @@
         }
       ],
       "args": []
+    },
+    {
+      "name": "revoke_delegate",
+      "docs": [
+        "Revoke a delegate (session key)."
+      ],
+      "discriminator": [
+        142,
+        66,
+        98,
+        126,
+        102,
+        60,
+        92,
+        163
+      ],
+      "accounts": [
+        {
+          "name": "agent"
+        },
+        {
+          "name": "delegate_scope",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  108,
+                  101,
+                  103,
+                  97,
+                  116,
+                  101,
+                  95,
+                  115,
+                  99,
+                  111,
+                  112,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "agent.agent_id",
+                "account": "Agent"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority_root",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "agent"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "supersede_policy",
+      "docs": [
+        "Supersede a policy — marks it as superseded and points to the new policy."
+      ],
+      "discriminator": [
+        76,
+        45,
+        101,
+        169,
+        243,
+        171,
+        57,
+        5
+      ],
+      "accounts": [
+        {
+          "name": "old_policy",
+          "writable": true
+        },
+        {
+          "name": "new_policy"
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "old_policy"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "unfreeze_agent",
+      "docs": [
+        "Unfreeze an agent — restores active status."
+      ],
+      "discriminator": [
+        31,
+        194,
+        10,
+        120,
+        66,
+        217,
+        180,
+        103
+      ],
+      "accounts": [
+        {
+          "name": "agent",
+          "writable": true
+        },
+        {
+          "name": "authority_root",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "agent"
+          ]
+        }
+      ],
+      "args": []
     }
   ],
   "accounts": [
@@ -758,6 +1208,19 @@
       ]
     },
     {
+      "name": "DelegateScope",
+      "discriminator": [
+        197,
+        110,
+        84,
+        1,
+        101,
+        175,
+        26,
+        55
+      ]
+    },
+    {
       "name": "Policy",
       "discriminator": [
         222,
@@ -784,6 +1247,19 @@
       ]
     },
     {
+      "name": "TimelockedOperation",
+      "discriminator": [
+        137,
+        217,
+        242,
+        107,
+        214,
+        178,
+        50,
+        102
+      ]
+    },
+    {
       "name": "VerifierRegistry",
       "discriminator": [
         21,
@@ -799,6 +1275,19 @@
   ],
   "events": [
     {
+      "name": "AgentFrozen",
+      "discriminator": [
+        49,
+        38,
+        208,
+        185,
+        219,
+        3,
+        92,
+        27
+      ]
+    },
+    {
       "name": "AgentRegistered",
       "discriminator": [
         191,
@@ -809,6 +1298,19 @@
         100,
         189,
         85
+      ]
+    },
+    {
+      "name": "AgentUnfrozen",
+      "discriminator": [
+        209,
+        209,
+        139,
+        83,
+        146,
+        43,
+        100,
+        252
       ]
     },
     {
@@ -903,6 +1405,71 @@
       ]
     },
     {
+      "name": "DelegateGranted",
+      "discriminator": [
+        64,
+        15,
+        157,
+        81,
+        216,
+        0,
+        90,
+        100
+      ]
+    },
+    {
+      "name": "DelegateRevoked",
+      "discriminator": [
+        10,
+        200,
+        133,
+        29,
+        238,
+        207,
+        193,
+        124
+      ]
+    },
+    {
+      "name": "OperationCancelled",
+      "discriminator": [
+        35,
+        79,
+        124,
+        242,
+        195,
+        248,
+        114,
+        0
+      ]
+    },
+    {
+      "name": "OperationExecuted",
+      "discriminator": [
+        205,
+        223,
+        227,
+        106,
+        178,
+        86,
+        163,
+        162
+      ]
+    },
+    {
+      "name": "OperationProposed",
+      "discriminator": [
+        252,
+        68,
+        199,
+        155,
+        10,
+        17,
+        178,
+        206
+      ]
+    },
+    {
       "name": "OutcomeRecorded",
       "discriminator": [
         4,
@@ -929,6 +1496,32 @@
       ]
     },
     {
+      "name": "PolicySuperseded",
+      "discriminator": [
+        255,
+        166,
+        123,
+        160,
+        206,
+        125,
+        114,
+        54
+      ]
+    },
+    {
+      "name": "ProtocolAuthorityReplaced",
+      "discriminator": [
+        250,
+        3,
+        15,
+        129,
+        59,
+        205,
+        21,
+        251
+      ]
+    },
+    {
       "name": "ProtocolInitialized",
       "discriminator": [
         173,
@@ -939,6 +1532,19 @@
         118,
         76,
         132
+      ]
+    },
+    {
+      "name": "VerifierDeprecated",
+      "discriminator": [
+        96,
+        186,
+        228,
+        36,
+        234,
+        71,
+        62,
+        96
       ]
     },
     {
@@ -1065,6 +1671,51 @@
       "code": 6021,
       "name": "AmountExceedsTier",
       "msg": "The amount exceeds the tier limit for this agent"
+    },
+    {
+      "code": 6022,
+      "name": "TimelockNotExpired",
+      "msg": "The operation is not yet executable — timelock not expired"
+    },
+    {
+      "code": 6023,
+      "name": "OperationAlreadyExecuted",
+      "msg": "The operation has already been executed"
+    },
+    {
+      "code": 6024,
+      "name": "OperationCancelled",
+      "msg": "The operation has been cancelled"
+    },
+    {
+      "code": 6025,
+      "name": "DelegateScopeExpired",
+      "msg": "The delegate scope has expired"
+    },
+    {
+      "code": 6026,
+      "name": "DelegateAmountExceedsScope",
+      "msg": "The delegate amount exceeds the scope limit"
+    },
+    {
+      "code": 6027,
+      "name": "AgentFrozen",
+      "msg": "The agent is frozen"
+    },
+    {
+      "code": 6028,
+      "name": "VerifierNotActive",
+      "msg": "The verifier is not active"
+    },
+    {
+      "code": 6029,
+      "name": "PolicyAlreadySuperseded",
+      "msg": "The policy is already superseded"
+    },
+    {
+      "code": 6030,
+      "name": "UnauthorizedCancellation",
+      "msg": "Unauthorized — only the proposer can cancel"
     }
   ],
   "types": [
@@ -1183,6 +1834,27 @@
       }
     },
     {
+      "name": "AgentFrozen",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "AgentRegistered",
       "type": {
         "kind": "struct",
@@ -1220,6 +1892,27 @@
           },
           {
             "name": "Frozen"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentUnfrozen",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "slot",
+            "type": "u64"
           }
         ]
       }
@@ -1746,6 +2439,160 @@
       }
     },
     {
+      "name": "DelegateGranted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "delegate",
+            "type": "pubkey"
+          },
+          {
+            "name": "max_amount_per_action",
+            "type": "u64"
+          },
+          {
+            "name": "expires_at",
+            "type": "i64"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DelegateRevoked",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "delegate",
+            "type": "pubkey"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DelegateScope",
+      "docs": [
+        "Delegate scope for session keys — bounds what a delegate can do."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "delegate",
+            "type": "pubkey"
+          },
+          {
+            "name": "max_amount_per_action",
+            "type": "u64"
+          },
+          {
+            "name": "expires_at",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "OperationCancelled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "operation_type",
+            "type": "u8"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "OperationExecuted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "operation_type",
+            "type": "u8"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "OperationProposed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "operation_type",
+            "type": "u8"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "execute_after",
+            "type": "i64"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "OutcomeRecorded",
       "type": {
         "kind": "struct",
@@ -1942,6 +2789,52 @@
       }
     },
     {
+      "name": "PolicySuperseded",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "old_policy_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "new_policy_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProtocolAuthorityReplaced",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "ProtocolInitialized",
       "type": {
         "kind": "struct",
@@ -2104,6 +2997,66 @@
           },
           {
             "name": "Critical"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TimelockedOperation",
+      "docs": [
+        "A timelocked trust-root operation awaiting execution."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "operation_type",
+            "type": "u8"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposed_at",
+            "type": "i64"
+          },
+          {
+            "name": "execute_after",
+            "type": "i64"
+          },
+          {
+            "name": "executed",
+            "type": "bool"
+          },
+          {
+            "name": "cancelled",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VerifierDeprecated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "verifier_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "slot",
+            "type": "u64"
           }
         ]
       }

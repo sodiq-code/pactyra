@@ -205,6 +205,30 @@ pub struct ConsumedNonce {
     pub bump: u8,
 }
 
+/// Delegate scope for session keys — bounds what a delegate can do.
+#[account]
+#[derive(InitSpace)]
+pub struct DelegateScope {
+    pub agent_id: [u8; 32],
+    pub delegate: Pubkey,
+    pub max_amount_per_action: u64,
+    pub expires_at: i64,
+    pub bump: u8,
+}
+
+/// A timelocked trust-root operation awaiting execution.
+#[account]
+#[derive(InitSpace)]
+pub struct TimelockedOperation {
+    pub operation_type: u8,
+    pub proposer: Pubkey,
+    pub proposed_at: i64,
+    pub execute_after: i64,
+    pub executed: bool,
+    pub cancelled: bool,
+    pub bump: u8,
+}
+
 // ============================================================
 // Tier Amount Limits (USDC base units, 6 decimals)
 // ============================================================
@@ -215,6 +239,14 @@ const TIER_3_MAX_AMOUNT: u64 = 500_000_000;
 
 /// Number of verified successes required for T1 → T2 upgrade.
 const T1_TO_T2_THRESHOLD: u64 = 5;
+
+/// Timelock delay in seconds for trust-root operations (24 hours).
+const TIMELOCK_DELAY_SECONDS: i64 = 86400;
+
+/// Operation type constants for timelocked operations.
+const OP_REGISTER_VERIFIER: u8 = 1;
+const OP_DEPRECATE_VERIFIER: u8 = 2;
+const OP_REPLACE_AUTHORITY: u8 = 3;
 
 // ============================================================
 // Error Codes
@@ -266,6 +298,24 @@ pub enum PactyraError {
     TargetProgramMismatch,
     #[msg("The amount exceeds the tier limit for this agent")]
     AmountExceedsTier,
+    #[msg("The operation is not yet executable — timelock not expired")]
+    TimelockNotExpired,
+    #[msg("The operation has already been executed")]
+    OperationAlreadyExecuted,
+    #[msg("The operation has been cancelled")]
+    OperationCancelled,
+    #[msg("The delegate scope has expired")]
+    DelegateScopeExpired,
+    #[msg("The delegate amount exceeds the scope limit")]
+    DelegateAmountExceedsScope,
+    #[msg("The agent is frozen")]
+    AgentFrozen,
+    #[msg("The verifier is not active")]
+    VerifierNotActive,
+    #[msg("The policy is already superseded")]
+    PolicyAlreadySuperseded,
+    #[msg("Unauthorized — only the proposer can cancel")]
+    UnauthorizedCancellation,
 }
 
 // ============================================================
@@ -799,6 +849,207 @@ pub mod pactyra_core {
         });
         Ok(())
     }
+
+    // ============================================================
+    // Governance Layer Instructions
+    // ============================================================
+
+    /// Grant a delegate (session key) with bounded scope.
+    pub fn delegate_authority(
+        ctx: Context<DelegateAuthority>,
+        delegate: Pubkey,
+        max_amount_per_action: u64,
+        expires_in_seconds: i64,
+    ) -> Result<()> {
+        let agent = &ctx.accounts.agent;
+        let clock = Clock::get()?;
+
+        let scope = &mut ctx.accounts.delegate_scope;
+        scope.agent_id = agent.agent_id;
+        scope.delegate = delegate;
+        scope.max_amount_per_action = max_amount_per_action;
+        scope.expires_at = clock.unix_timestamp + expires_in_seconds;
+        scope.bump = ctx.bumps.delegate_scope;
+
+        emit!(DelegateGranted {
+            agent_id: agent.agent_id,
+            delegate,
+            max_amount_per_action,
+            expires_at: scope.expires_at,
+            slot: clock.slot,
+        });
+        Ok(())
+    }
+
+    /// Revoke a delegate (session key).
+    pub fn revoke_delegate(ctx: Context<RevokeDelegate>) -> Result<()> {
+        let scope = &mut ctx.accounts.delegate_scope;
+        let clock = Clock::get()?;
+        scope.expires_at = clock.unix_timestamp;
+
+        emit!(DelegateRevoked {
+            agent_id: scope.agent_id,
+            delegate: scope.delegate,
+            slot: clock.slot,
+        });
+        Ok(())
+    }
+
+    /// Freeze an agent — prevents all future capability assertions.
+    pub fn freeze_agent(ctx: Context<FreezeAgent>) -> Result<()> {
+        let agent = &mut ctx.accounts.agent;
+        let clock = Clock::get()?;
+        agent.status = AgentStatus::Frozen;
+
+        emit!(AgentFrozen {
+            agent_id: agent.agent_id,
+            slot: clock.slot,
+        });
+        Ok(())
+    }
+
+    /// Unfreeze an agent — restores active status.
+    pub fn unfreeze_agent(ctx: Context<FreezeAgent>) -> Result<()> {
+        let agent = &mut ctx.accounts.agent;
+        let clock = Clock::get()?;
+        agent.status = AgentStatus::Active;
+
+        emit!(AgentUnfrozen {
+            agent_id: agent.agent_id,
+            slot: clock.slot,
+        });
+        Ok(())
+    }
+
+    /// Supersede a policy — marks it as superseded and points to the new policy.
+    pub fn supersede_policy(ctx: Context<SupersedePolicy>) -> Result<()> {
+        let old_policy = &mut ctx.accounts.old_policy;
+        let new_policy = &ctx.accounts.new_policy;
+        let clock = Clock::get()?;
+
+        require!(
+            old_policy.status == PolicyStatus::Active,
+            PactyraError::PolicyAlreadySuperseded
+        );
+
+        old_policy.status = PolicyStatus::Superseded;
+        old_policy.superseded_by = Some(new_policy.policy_id);
+
+        emit!(PolicySuperseded {
+            old_policy_id: old_policy.policy_id,
+            new_policy_id: new_policy.policy_id,
+            slot: clock.slot,
+        });
+        Ok(())
+    }
+
+    /// Deprecate a verifier — marks it as inactive in the registry.
+    pub fn deprecate_verifier(
+        ctx: Context<DeprecateVerifier>,
+        verifier_index: u8,
+    ) -> Result<()> {
+        let registry = &mut ctx.accounts.verifier_registry;
+        let clock = Clock::get()?;
+
+        require!(
+            verifier_index < registry.verifiers.len() as u8,
+            PactyraError::VerifierNotActive
+        );
+
+        registry.verifiers[verifier_index as usize].active = false;
+
+        let verifier_id = registry.verifiers[verifier_index as usize].verifier_id;
+        emit!(VerifierDeprecated {
+            verifier_id,
+            slot: clock.slot,
+        });
+        Ok(())
+    }
+
+    /// Replace the protocol authority — transfers control of the VerifierRegistry.
+    pub fn replace_protocol_authority(
+        ctx: Context<ReplaceProtocolAuthority>,
+        new_authority: Pubkey,
+    ) -> Result<()> {
+        let registry = &mut ctx.accounts.verifier_registry;
+        let clock = Clock::get()?;
+
+        registry.authority = new_authority;
+
+        emit!(ProtocolAuthorityReplaced {
+            new_authority,
+            slot: clock.slot,
+        });
+        Ok(())
+    }
+
+    /// Propose a timelocked trust-root operation.
+    /// The operation can only be executed after TIMELOCK_DELAY_SECONDS.
+    pub fn propose_operation(
+        ctx: Context<ProposeOperation>,
+        operation_type: u8,
+    ) -> Result<()> {
+        let clock = Clock::get()?;
+        let op = &mut ctx.accounts.operation;
+
+        op.operation_type = operation_type;
+        op.proposer = ctx.accounts.authority.key();
+        op.proposed_at = clock.unix_timestamp;
+        op.execute_after = clock.unix_timestamp + TIMELOCK_DELAY_SECONDS;
+        op.executed = false;
+        op.cancelled = false;
+        op.bump = ctx.bumps.operation;
+
+        emit!(OperationProposed {
+            operation_type,
+            proposer: ctx.accounts.authority.key(),
+            execute_after: op.execute_after,
+            slot: clock.slot,
+        });
+        Ok(())
+    }
+
+    /// Execute a timelocked operation after the delay has passed.
+    pub fn execute_operation(ctx: Context<ExecuteOperation>) -> Result<()> {
+        let op = &mut ctx.accounts.operation;
+        let clock = Clock::get()?;
+
+        require!(!op.cancelled, PactyraError::OperationCancelled);
+        require!(!op.executed, PactyraError::OperationAlreadyExecuted);
+        require!(
+            clock.unix_timestamp >= op.execute_after,
+            PactyraError::TimelockNotExpired
+        );
+
+        op.executed = true;
+
+        emit!(OperationExecuted {
+            operation_type: op.operation_type,
+            proposer: op.proposer,
+            slot: clock.slot,
+        });
+        Ok(())
+    }
+
+    /// Cancel a proposed timelocked operation (only proposer can cancel).
+    pub fn cancel_operation(ctx: Context<CancelOperation>) -> Result<()> {
+        let op = &mut ctx.accounts.operation;
+        let clock = Clock::get()?;
+
+        require!(
+            op.proposer == ctx.accounts.proposer.key(),
+            PactyraError::UnauthorizedCancellation
+        );
+        require!(!op.executed, PactyraError::OperationAlreadyExecuted);
+
+        op.cancelled = true;
+
+        emit!(OperationCancelled {
+            operation_type: op.operation_type,
+            slot: clock.slot,
+        });
+        Ok(())
+    }
 }
 
 // ============================================================
@@ -1003,8 +1254,129 @@ pub struct RevokeCapability<'info> {
 }
 
 // ============================================================
-// Events
+// Governance Layer Account Contexts
 // ============================================================
+
+#[derive(Accounts)]
+pub struct DelegateAuthority<'info> {
+    #[account(has_one = authority_root)]
+    pub agent: Account<'info, Agent>,
+
+    #[account(
+        init,
+        payer = authority_root,
+        space = 8 + DelegateScope::INIT_SPACE,
+        seeds = [b"delegate_scope", agent.agent_id.as_ref()],
+        bump
+    )]
+    pub delegate_scope: Account<'info, DelegateScope>,
+
+    #[account(mut)]
+    pub authority_root: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct RevokeDelegate<'info> {
+    #[account(has_one = authority_root)]
+    pub agent: Account<'info, Agent>,
+
+    #[account(
+        mut,
+        seeds = [b"delegate_scope", agent.agent_id.as_ref()],
+        bump = delegate_scope.bump,
+    )]
+    pub delegate_scope: Account<'info, DelegateScope>,
+
+    #[account(mut)]
+    pub authority_root: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct FreezeAgent<'info> {
+    #[account(
+        mut,
+        has_one = authority_root
+    )]
+    pub agent: Account<'info, Agent>,
+
+    #[account(mut)]
+    pub authority_root: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct SupersedePolicy<'info> {
+    #[account(
+        mut,
+        has_one = authority
+    )]
+    pub old_policy: Account<'info, Policy>,
+
+    pub new_policy: Account<'info, Policy>,
+
+    #[account(mut)]
+    pub authority: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct DeprecateVerifier<'info> {
+    #[account(mut,
+        seeds = [b"verifier_registry"],
+        bump = verifier_registry.bump,
+        has_one = authority
+    )]
+    pub verifier_registry: Account<'info, VerifierRegistry>,
+
+    #[account(mut)]
+    pub authority: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct ReplaceProtocolAuthority<'info> {
+    #[account(mut,
+        seeds = [b"verifier_registry"],
+        bump = verifier_registry.bump,
+        has_one = authority
+    )]
+    pub verifier_registry: Account<'info, VerifierRegistry>,
+
+    #[account(mut)]
+    pub authority: Signer<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(operation_type: u8)]
+pub struct ProposeOperation<'info> {
+    #[account(
+        init,
+        payer = authority,
+        space = 8 + TimelockedOperation::INIT_SPACE,
+        seeds = [b"timelocked_op", authority.key().as_ref(), &[operation_type]],
+        bump
+    )]
+    pub operation: Account<'info, TimelockedOperation>,
+
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct ExecuteOperation<'info> {
+    #[account(mut)]
+    pub operation: Account<'info, TimelockedOperation>,
+}
+
+#[derive(Accounts)]
+pub struct CancelOperation<'info> {
+    #[account(mut)]
+    pub operation: Account<'info, TimelockedOperation>,
+
+    #[account(mut)]
+    pub proposer: Signer<'info>,
+}
 
 #[event]
 pub struct ProtocolInitialized {
@@ -1104,5 +1476,77 @@ pub struct BondSlashed {
 pub struct CapabilityRevoked {
     pub capability_id: [u8; 32],
     pub agent_id: [u8; 32],
+    pub slot: u64,
+}
+
+// ============================================================
+// Governance Layer Events
+// ============================================================
+
+#[event]
+pub struct DelegateGranted {
+    pub agent_id: [u8; 32],
+    pub delegate: Pubkey,
+    pub max_amount_per_action: u64,
+    pub expires_at: i64,
+    pub slot: u64,
+}
+
+#[event]
+pub struct DelegateRevoked {
+    pub agent_id: [u8; 32],
+    pub delegate: Pubkey,
+    pub slot: u64,
+}
+
+#[event]
+pub struct AgentFrozen {
+    pub agent_id: [u8; 32],
+    pub slot: u64,
+}
+
+#[event]
+pub struct AgentUnfrozen {
+    pub agent_id: [u8; 32],
+    pub slot: u64,
+}
+
+#[event]
+pub struct PolicySuperseded {
+    pub old_policy_id: [u8; 32],
+    pub new_policy_id: [u8; 32],
+    pub slot: u64,
+}
+
+#[event]
+pub struct VerifierDeprecated {
+    pub verifier_id: [u8; 32],
+    pub slot: u64,
+}
+
+#[event]
+pub struct ProtocolAuthorityReplaced {
+    pub new_authority: Pubkey,
+    pub slot: u64,
+}
+
+#[event]
+pub struct OperationProposed {
+    pub operation_type: u8,
+    pub proposer: Pubkey,
+    pub execute_after: i64,
+    pub slot: u64,
+}
+
+#[event]
+pub struct OperationExecuted {
+    pub operation_type: u8,
+    pub proposer: Pubkey,
+    pub slot: u64,
+}
+
+#[event]
+pub struct OperationCancelled {
+    pub operation_type: u8,
     pub slot: u64,
 }
