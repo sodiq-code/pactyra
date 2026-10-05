@@ -286,6 +286,52 @@ Scripts in `scripts/` produce the complete `$5 → $50 → $500 → $5` authorit
 | `demo-runner.ts` | Master script chaining all steps |
 | `devnet-verify.ts` | Devnet deployment verification |
 | `setup-multisig.ts` | Create multisig and transfer protocol authority |
+| `x402-demo.ts` | x402 adapter demo — gates agentic payments with PACTYRA capabilities |
+
+## x402 Adapter
+
+The SDK includes an x402 adapter that gates agentic HTTP payments with PACTYRA capabilities. This proves PACTYRA can control how much an autonomous agent is allowed to pay for services.
+
+### Flow
+
+```
+Agent → HTTP request to x402 service
+       ← 402 Payment Required
+Adapter → assert_capability(agent, action, amount)
+         → 13 security checks
+         → PASS: continue to payment
+         → FAIL: reject, no payment made
+Adapter → SPL token transfer (USDC)
+       ← Transaction signature
+Agent → HTTP request + X-PAYMENT header
+       ← 200 OK + resource
+```
+
+### Usage
+
+```typescript
+import { PactyraX402Adapter } from '@pactyra/client';
+
+const adapter = new PactyraX402Adapter({
+  pactyraClient: client,
+  agentId,
+  capabilityPda,
+  rpcUrl: 'https://devnet.helius-rpc.com/?api-key=...',
+  usdcMint: new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU'),
+  payerTokenAccount,
+});
+
+// Make a paid request — capability is checked before payment
+const response = await adapter.fetch('https://service.example.com/api', {
+  maxAmount: 5_000_000, // $5 USDC
+  actionNonce: 1,
+});
+```
+
+### Key insight
+
+Without PACTYRA: any agent with a wallet can pay for any service.
+With PACTYRA: the agent must earn the authority to pay through verified performance. A new agent starts at $5 and must prove itself before spending more.
 
 ## Test results
 
