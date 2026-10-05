@@ -1,10 +1,18 @@
 # PACTYRA
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Solana](https://img.shields.io/badge/Solana-Devnet-9945FF.svg?logo=solana&logoColor=white)](https://solana.com)
+[![Pyth](https://img.shields.io/badge/Pyth-Network-00D2FF.svg)](https://pyth.network)
+[![Deployed on Vercel](https://img.shields.io/badge/Vercel-Live-000000.svg?logo=vercel&logoColor=white)](https://pactyra-ui.vercel.app)
+[![Anchor](https://img.shields.io/badge/Anchor-1.2.0-2D2D2D.svg)](https://www.anchor-lang.com)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Rust](https://img.shields.io/badge/Rust-1.89-CE422B.svg?logo=rust&logoColor=white)](https://www.rust-lang.org)
+
 **Evidence-bound economic authority for autonomous agents.**
 
 AI agents already have keys. PACTYRA makes them earn the right to use them.
 
-**Live Demo:** [https://pactyra-ui.vercel.app](https://pactyra-ui.vercel.app)
+**Live Demo:** [https://pactyra-ui.vercel.app](https://pactyra-ui.vercel.app) · **GitHub:** [https://github.com/sodiq-code/pactyra](https://github.com/sodiq-code/pactyra)
 
 ## Overview
 
@@ -356,6 +364,15 @@ See [`docs/architecture.md`](docs/architecture.md) for:
 - Authority transition state machine (T1 → T2 → T3 → T1)
 - Security boundary flow (13 checks in assert_capability)
 
+## Documentation
+
+| Document | Description |
+|---|---|
+| [Architecture](docs/architecture.md) | Protocol flow, program relationships, authority state machine, security boundary |
+| [GTM Strategy](docs/gtm-strategy.md) | Market analysis, business model, competitive positioning, 4-phase go-to-market |
+| [Pitch Script](docs/pitch-script.md) | 2-3 minute pitch video script with timestamps and key points |
+| [Demo Storyboard](docs/demo-storyboard.md) | ≤3 minute demo video storyboard with recording checklist |
+
 ## Security model
 
 - **Exact-action binding**: Every capability commits to agent, action type, target program, target account, amount limit, expiry, and authority epoch.
@@ -396,4 +413,11 @@ anchor test --skip-build
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE)
+
+## Links
+
+- **GitHub:** [https://github.com/sodiq-code/pactyra](https://github.com/sodiq-code/pactyra)
+- **Live Demo:** [https://pactyra-ui.vercel.app](https://pactyra-ui.vercel.app)
+- **SDK:** `npm install @sodiq-code/pactyra-client` (GitHub Packages)
+- **Programs:** [pactyra-core](https://solana.fm/address/EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC?cluster=devnet) · [pactyra-verifier](https://solana.fm/address/5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN?cluster=devnet) · [reference-treasury](https://solana.fm/address/6gAZR4omxMUWy5Fb6kCtdmaWASFFXr9WRCoWUcAz7UA9?cluster=devnet) · [threshold-multisig](https://solana.fm/address/FgfW1JkSknJpcCypbhuv531qvVu2z8sNVPH2kZXLpDKc?cluster=devnet)
