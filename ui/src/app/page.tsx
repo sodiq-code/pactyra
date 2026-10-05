@@ -12,8 +12,20 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
+import { useWallet } from '@solana/wallet-adapter-react'
+import { BaseWalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import {
   Shield, Activity, DollarSign, Lock, Zap, Copy, Check, RefreshCw,
   Plus, AlertTriangle, Users, Clock, ExternalLink, Sun, Moon,
@@ -47,6 +59,21 @@ interface DeploymentProgram {
 interface DeploymentData {
   cluster: string; wallet: string; balanceSOL: number
   programs: DeploymentProgram[]; allDeployed: boolean; rpc?: string
+}
+
+// Irreversible governance actions gated by an AlertDialog confirmation.
+type IrreversibleKey =
+  | 'freeze'
+  | 'replace_authority'
+  | 'supersede'
+  | 'deprecate'
+
+interface IrreversibleAction {
+  key: IrreversibleKey
+  title: string
+  description: string
+  body: () => Record<string, unknown>
+  label: string
 }
 
 const TIER_CONFIG: Record<Tier, { amount: number; gradient: string; glow: string; text: string }> = {
@@ -111,7 +138,8 @@ function ThemeToggle() {
   }, [theme, mounted])
   return (
     <Button variant="outline" size="icon" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-      aria-label="Toggle theme" title="Toggle theme" className="bg-card/50 border-border/50 backdrop-blur">
+      aria-label="Toggle theme" title="Toggle theme"
+      className="bg-card/50 border-border/50 backdrop-blur min-h-[44px] sm:min-h-0 sm:size-9">
       {mounted && theme === 'dark' ? <Sun className="h-4 w-4 text-amber-300" /> : <Moon className="h-4 w-4" />}
     </Button>
   )
@@ -180,6 +208,7 @@ function KV({ label, value, mono }: { label: string; value: string; mono?: boole
 
 export default function Page() {
   const { toast } = useToast()
+  const { connected } = useWallet()
 
   const [agent, setAgent] = useState<LiveAgent | null>(null)
   const [agentLoading, setAgentLoading] = useState(true)
@@ -198,6 +227,8 @@ export default function Page() {
   const [verifierIdx, setVerifierIdx] = useState('0')
   const [newAuthority, setNewAuthority] = useState('')
   const [govBusy, setGovBusy] = useState<string>('')
+  // Pending irreversible governance action awaiting user confirmation in AlertDialog.
+  const [pending, setPending] = useState<IrreversibleAction | null>(null)
 
   const fetchAgent = useCallback(async (id: string, silent = false) => {
     if (!silent) setAgentLoading(true)
@@ -329,6 +360,16 @@ export default function Page() {
     }
   }
 
+  // Trigger an irreversible action — first shows the confirmation dialog,
+  // only dispatches to /api/governance if the user explicitly confirms.
+  const queueIrreversible = (action: IrreversibleAction) => setPending(action)
+  const confirmIrreversible = () => {
+    if (!pending) return
+    const p = pending
+    setPending(null)
+    handleGovernance(p.key, p.body(), p.label)
+  }
+
   const tier: Tier = agent?.tier || 'Trusted'
   const tierCfg = TIER_CONFIG[tier]
   const maxAmount = agent?.maxAmount ?? tierCfg.amount
@@ -354,7 +395,7 @@ export default function Page() {
 
       <div className="relative max-w-4xl mx-auto px-4 sm:px-6 py-6">
         {/* HEADER */}
-        <header className="flex items-center justify-between mb-8">
+        <header className="flex items-center justify-between gap-3 flex-wrap mb-6 sm:mb-8">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-md bg-gradient-to-br from-emerald-400 to-teal-600 shadow-[0_0_18px_rgba(16,185,129,0.4)]">
               <Shield className="h-4 w-4 text-white" />
@@ -364,19 +405,31 @@ export default function Page() {
               <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Agent Passport</span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
             <Badge variant="outline"
               className={cn('gap-1.5 font-mono text-xs',
-                liveOk ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
-                       : 'border-amber-500/40 bg-amber-500/10 text-amber-400')}
-              title={liveOk ? (agentReady ? 'Agent live on devnet' : 'Devnet connected — agent not yet registered') : 'Connecting to devnet'}>
+                connected ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
+                          : 'border-amber-500/40 bg-amber-500/10 text-amber-400')}
+              title={connected ? 'Wallet connected — live transactions enabled'
+                               : 'Demo mode — connect Phantom for live governance'}>
               <span className={cn('h-1.5 w-1.5 rounded-full',
-                liveOk ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500')} />
-              {liveOk ? 'LIVE' : 'STANDBY'}
+                connected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500')} />
+              {connected ? 'Connected' : 'Demo Mode'}
             </Badge>
+            <BaseWalletMultiButton
+              labels={{
+                'change-wallet': 'Change wallet',
+                connecting: 'Connecting ...',
+                'copy-address': 'Copy address',
+                copied: 'Copied',
+                disconnect: 'Disconnect',
+                'has-wallet': 'Connect',
+                'no-wallet': 'Connect Wallet',
+              }}
+            />
             <Button variant="outline" size="sm"
               onClick={() => { fetchAgent(activeAgentId); fetchDeployment() }}
-              className="bg-card/50 border-border/50 backdrop-blur gap-1.5" title="Refresh data">
+              className="bg-card/50 border-border/50 backdrop-blur gap-1.5 min-h-[44px] sm:min-h-0" title="Refresh data">
               <RefreshCw className={cn('h-3.5 w-3.5', agentLoading && 'animate-spin')} />
               <span className="hidden sm:inline text-xs">Refresh</span>
             </Button>
@@ -434,7 +487,7 @@ export default function Page() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <Metric label="Verified" value={totalCount} icon={Activity} />
                 <Metric label="Successful" value={successCount} icon={Check} accent="emerald" />
                 <Metric label="Rate" value={`${successRate}%`} icon={Zap}
@@ -443,7 +496,7 @@ export default function Page() {
                   accent={criticalFailures === 0 ? 'emerald' : 'rose'} />
               </div>
 
-              <div className="grid grid-cols-3 gap-4 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                 <KV label="Bond" value={`${bondAmount} USDC`} mono />
                 <KV label="Epoch" value={`#${epoch}`} mono />
                 <KV label="Updated" value={agentLoading ? 'Loading...' : timeAgo(lastUpdated)} mono />
@@ -451,13 +504,13 @@ export default function Page() {
 
               <div className="flex flex-col sm:flex-row gap-2">
                 <Button onClick={() => handleRecordOutcome('pass', 'none')} disabled={recording !== ''}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white">
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] sm:min-h-9">
                   <Check className="h-4 w-4" />
                   {recording === 'success' ? 'Recording...' : 'Record Success'}
                 </Button>
                 <Button onClick={() => handleRecordOutcome('fail', 'critical')} disabled={recording !== ''}
                   variant="outline"
-                  className="flex-1 border-rose-500/40 text-rose-400 hover:bg-rose-500/10 hover:text-rose-400">
+                  className="flex-1 border-rose-500/40 text-rose-400 hover:bg-rose-500/10 hover:text-rose-400 min-h-[44px] sm:min-h-9">
                   <AlertTriangle className="h-4 w-4" />
                   {recording === 'critical' ? 'Recording...' : 'Record Critical Failure'}
                 </Button>
@@ -501,7 +554,7 @@ export default function Page() {
 
                 <Separator className="bg-border/40" />
 
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div className="min-w-0">
                     <div className="text-xs text-muted-foreground mb-1">Lock Bond</div>
                     <div className="font-mono text-sm">
@@ -509,7 +562,8 @@ export default function Page() {
                       <span className="text-muted-foreground text-xs ml-2">stake against agent misbehavior</span>
                     </div>
                   </div>
-                  <Button onClick={handleLockBond} disabled={lockingBond} variant="outline" className="shrink-0">
+                  <Button onClick={handleLockBond} disabled={lockingBond} variant="outline"
+                    className="shrink-0 min-h-[44px] sm:min-h-9">
                     <Lock className="h-4 w-4" />
                     {lockingBond ? 'Locking...' : 'Lock Bond'}
                   </Button>
@@ -552,7 +606,7 @@ export default function Page() {
 
                 <Separator className="bg-border/40" />
 
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div>
                     <div className="text-xs font-medium mb-1 flex items-center gap-1.5">
                       <Shield className="h-3.5 w-3.5 text-muted-foreground" />Agent Status
@@ -561,11 +615,17 @@ export default function Page() {
                   </div>
                   <div className="flex gap-2 shrink-0">
                     <Button variant="outline" size="sm" disabled={govBusy === 'freeze'}
-                      onClick={() => handleGovernance('freeze', {}, 'Freeze')}
-                      className="border-rose-500/40 text-rose-400 hover:bg-rose-500/10">Freeze</Button>
+                      onClick={() => queueIrreversible({
+                        key: 'freeze',
+                        title: 'Freeze Agent',
+                        description: 'This will prevent the agent from asserting any capabilities. Continue?',
+                        body: () => ({}),
+                        label: 'Freeze',
+                      })}
+                      className="border-rose-500/40 text-rose-400 hover:bg-rose-500/10 min-h-[44px] sm:min-h-8">Freeze</Button>
                     <Button variant="outline" size="sm" disabled={govBusy === 'unfreeze'}
                       onClick={() => handleGovernance('unfreeze', {}, 'Unfreeze')}
-                      className="border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10">Unfreeze</Button>
+                      className="border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 min-h-[44px] sm:min-h-8">Unfreeze</Button>
                   </div>
                 </div>
 
@@ -583,8 +643,14 @@ export default function Page() {
                       placeholder="New version tag"
                       className="font-mono text-xs bg-background/50 border-border/50" />
                     <Button variant="default" size="sm" disabled={govBusy === 'supersede'}
-                      onClick={() => handleGovernance('supersede',
-                        { oldVersionTag: oldPolicyTag, newVersionTag: newPolicyTag }, 'Supersede policy')}>
+                      onClick={() => queueIrreversible({
+                        key: 'supersede',
+                        title: 'Supersede Policy',
+                        description: 'This will mark the old policy as superseded. Existing capabilities will expire naturally. Continue?',
+                        body: () => ({ oldVersionTag: oldPolicyTag, newVersionTag: newPolicyTag }),
+                        label: 'Supersede policy',
+                      })}
+                      className="min-h-[44px] sm:min-h-8">
                       {govBusy === 'supersede' ? '...' : 'Supersede'}
                     </Button>
                   </div>
@@ -602,8 +668,14 @@ export default function Page() {
                         placeholder="Index" type="number"
                         className="font-mono text-xs bg-background/50 border-border/50" />
                       <Button variant="outline" size="sm" disabled={govBusy === 'deprecate'}
-                        onClick={() => handleGovernance('deprecate',
-                          { verifierIndex: Number(verifierIdx) }, 'Deprecate verifier')}>
+                        onClick={() => queueIrreversible({
+                          key: 'deprecate',
+                          title: 'Deprecate Verifier',
+                          description: 'This will mark the verifier as inactive. New receipts from this verifier will be rejected. Continue?',
+                          body: () => ({ verifierIndex: Number(verifierIdx) }),
+                          label: 'Deprecate verifier',
+                        })}
+                        className="min-h-[44px] sm:min-h-8">
                         {govBusy === 'deprecate' ? '...' : 'Deprecate'}
                       </Button>
                     </div>
@@ -618,8 +690,14 @@ export default function Page() {
                         className="font-mono text-xs bg-background/50 border-border/50" />
                       <Button variant="default" size="sm"
                         disabled={govBusy === 'replace_authority' || !newAuthority}
-                        onClick={() => handleGovernance('replace_authority',
-                          { newAuthority }, 'Replace authority')}>
+                        onClick={() => queueIrreversible({
+                          key: 'replace_authority',
+                          title: 'Replace Protocol Authority',
+                          description: 'This transfers control of the VerifierRegistry to a new key. This is irreversible. Continue?',
+                          body: () => ({ newAuthority }),
+                          label: 'Replace authority',
+                        })}
+                        className="min-h-[44px] sm:min-h-8">
                         {govBusy === 'replace_authority' ? '...' : 'Replace'}
                       </Button>
                     </div>
@@ -732,6 +810,27 @@ export default function Page() {
             </div>
           </footer>
         </motion.div>
+
+        {/* CONFIRMATION DIALOG for irreversible governance actions */}
+        <AlertDialog open={pending !== null} onOpenChange={(o) => { if (!o) setPending(null) }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-rose-400" />
+                {pending?.title ?? 'Confirm action'}
+              </AlertDialogTitle>
+              <AlertDialogDescription>{pending?.description}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmIrreversible}
+                className="bg-rose-600 text-white hover:bg-rose-700">
+                Continue
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   )
