@@ -220,11 +220,16 @@ Trust-root operations (`register_verifier`, `deprecate_verifier`, `replace_proto
 
 ## SDK
 
-The `@pactyra/client` TypeScript SDK provides a typed interface to all programs.
+The TypeScript SDK provides a typed interface to all programs. Published to GitHub Packages as `@sodiq-code/pactyra-client@0.1.0`.
 
 ### Installation
 
 ```bash
+# From GitHub Packages registry
+echo "@sodiq-code:registry=https://npm.pkg.github.com" >> ~/.npmrc
+npm install @sodiq-code/pactyra-client
+
+# Or from source (for development)
 cd sdk && npm install
 ```
 
