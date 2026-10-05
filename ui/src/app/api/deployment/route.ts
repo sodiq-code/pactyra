@@ -7,9 +7,10 @@ import { Connection, PublicKey } from '@solana/web3.js'
 const DEVNET_RPC = 'https://devnet.helius-rpc.com/?api-key=4196f886-5f5f-4fdb-8fae-128076aa8468'
 
 const PROGRAMS = [
-  { name: 'pactyra-core', id: 'EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC', size: 336 },
-  { name: 'pactyra-verifier', id: '5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN', size: 217 },
-  { name: 'reference-treasury', id: '6gAZR4omxMUWy5Fb6kCtdmaWASFFXr9WRCoWUcAz7UA9', size: 287 },
+  { name: 'pactyra-core', id: 'EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC', size: 418, instructions: 20 },
+  { name: 'pactyra-verifier', id: '5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN', size: 217, instructions: 3 },
+  { name: 'reference-treasury', id: '6gAZR4omxMUWy5Fb6kCtdmaWASFFXr9WRCoWUcAz7UA9', size: 288, instructions: 4 },
+  { name: 'threshold-multisig', id: 'FgfW1JkSknJpcCypbhuv531qvVu2z8sNVPH2kZXLpDKc', size: 221, instructions: 7 },
 ]
 
 export async function GET() {
