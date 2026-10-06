@@ -304,26 +304,43 @@ Scripts in `scripts/` produce the complete `$5 → $50 → $500 → $5` authorit
 | `demo-runner.ts` | Master script chaining all steps |
 | `devnet-verify.ts` | Devnet deployment verification |
 | `setup-multisig.ts` | Create multisig and transfer protocol authority |
-| `x402-demo.ts` | x402 reference adapter demo |
+| `x402-demo.ts` | x402 V2 real integration demo |
 
-## x402 Reference Adapter
+## x402 V2 Integration
 
-The SDK includes a reference x402 adapter that demonstrates how PACTYRA capabilities can gate agentic HTTP payments. The payment facilitation is simulated — production use requires a real x402 V2 facilitator integration.
+The SDK includes a real x402 V2 adapter that performs actual on-chain USDC transfers. No simulated signatures — every payment is a real Solana transaction verified on-chain.
 
 ### Flow
 
 ```
-Agent → HTTP request to x402 service
-       ← 402 Payment Required
+Agent → HTTP request to x402 resource
+       ← 402 Payment Required + WWW-Authenticate: x402
 Adapter → assert_capability(agent, action, amount)
          → 13 security checks
          → PASS: continue to payment
          → FAIL: reject, no payment made
-Adapter → SPL token transfer (USDC)
-       ← Transaction signature
-Agent → HTTP request + X-PAYMENT header
-       ← 200 OK + resource
+Adapter → REAL SPL token transfer (USDC) via sendAndConfirmTransaction
+       ← REAL transaction signature
+Agent → HTTP request + X-PAYMENT: <real-signature>
+Facilitator → Verify signature on-chain (check token balance changes)
+       ← 200 OK + X-PAYMENT-RESPONSE + resource
 ```
+
+### Live Proof
+
+The x402 demo endpoint performs the complete flow with a real 0.01 USDC payment on devnet:
+
+```
+GET https://pactyra-ui.vercel.app/api/x402/demo
+```
+
+Verified transaction: [`4EBajkWPGnkPpRnBE4s1SUGS8Q38sdck9A68SL9Xdx2EwUKEFPwjNU2SLna4tfmcvuXaKKMJ53B9zws9LsJx6Q9d`](https://solana.fm/tx/4EBajkWPGnkPpRnBE4s1SUGS8Q38sdck9A68SL9Xdx2EwUKEFPwjNU2SLna4tfmcvuXaKKMJ53B9zws9LsJx6Q9d?cluster=devnet)
+
+On-chain verification:
+- Payer (A55wG1...): −10,000 base units (−0.01 USDC)
+- Payee (4ZokQY...): +10,000 base units (+0.01 USDC)
+- Mint: 4zMMC9srt5Ri... (USDC)
+- Slot: 508241626
 
 ### Usage
 
