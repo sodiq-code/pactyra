@@ -1,7 +1,8 @@
 /**
- * x402 Adapter Demo
+ * x402 Reference Adapter Demo
  *
- * Demonstrates PACTYRA gating x402 agentic payments with earned authority.
+ * Demonstrates how PACTYRA can gate x402 agentic payments with earned authority.
+ * Payment facilitation is simulated — production use requires a real x402 V2 facilitator.
  *
  * The flow:
  * 1. Agent has a PACTYRA capability (earned through verified performance)

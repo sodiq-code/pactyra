@@ -299,11 +299,11 @@ Scripts in `scripts/` produce the complete `$5 → $50 → $500 → $5` authorit
 | `demo-runner.ts` | Master script chaining all steps |
 | `devnet-verify.ts` | Devnet deployment verification |
 | `setup-multisig.ts` | Create multisig and transfer protocol authority |
-| `x402-demo.ts` | x402 adapter demo — gates agentic payments with PACTYRA capabilities |
+| `x402-demo.ts` | x402 reference adapter demo |
 
-## x402 Adapter
+## x402 Reference Adapter
 
-The SDK includes an x402 adapter that gates agentic HTTP payments with PACTYRA capabilities. This proves PACTYRA can control how much an autonomous agent is allowed to pay for services.
+The SDK includes a reference x402 adapter that demonstrates how PACTYRA capabilities can gate agentic HTTP payments. The payment facilitation is simulated — production use requires a real x402 V2 facilitator integration.
 
 ### Flow
 

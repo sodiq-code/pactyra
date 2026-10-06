@@ -1,7 +1,9 @@
 /**
- * PACTYRA x402 Adapter
+ * PACTYRA x402 Reference Adapter
  *
- * Gates x402 agentic payments with PACTYRA capabilities.
+ * Reference implementation showing how PACTYRA capabilities can gate
+ * x402 agentic payments. The payment facilitation is simulated —
+ * production use requires a real x402 V2 facilitator integration.
  *
  * Flow:
  *   1. Agent makes HTTP request to an x402-enabled service
@@ -10,7 +12,7 @@
  *   4. If capability is valid, adapter facilitates the USDC payment
  *   5. Service returns the resource
  *
- * This proves: PACTYRA can gate agentic payments with earned authority.
+ * This demonstrates: PACTYRA can gate agentic payments with earned authority.
  *
  * Usage:
  *   import { PactyraX402Adapter } from '@pactyra/client/adapters/x402';
