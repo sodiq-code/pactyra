@@ -28,7 +28,7 @@ import { useWallet } from '@solana/wallet-adapter-react'
 import { BaseWalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import {
   Shield, Activity, DollarSign, Lock, Zap, Copy, Check, RefreshCw,
-  Plus, AlertTriangle, Users, Clock, ExternalLink, Sun, Moon,
+  Plus, AlertTriangle, Users, Clock, ExternalLink, Sun, Moon, ChevronRight,
 } from 'lucide-react'
 
 type Tier = 'Probation' | 'Proven' | 'Trusted'
@@ -61,6 +61,15 @@ interface DeploymentData {
   programs: DeploymentProgram[]; allDeployed: boolean; rpc?: string
 }
 
+interface TxRecord {
+  signature: string; slot: number; blockTime: number | null
+  err: string | null; memo: string | null
+  explorerUrl: string; instruction: string | null
+}
+interface TxHistoryData {
+  agentId: string; agentPda: string; count: number; transactions: TxRecord[]
+}
+
 // Irreversible governance actions gated by an AlertDialog confirmation.
 type IrreversibleKey =
   | 'freeze'
@@ -85,16 +94,55 @@ const TIER_CONFIG: Record<Tier, { amount: number; gradient: string; glow: string
 const PERMANENT_AGENT_ID = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2'
 
 const PROGRAMS = [
-  { name: 'pactyra-core',        id: 'EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC', instructions: 20, size: 418, description: 'Authority root — bonds, tiers, capabilities, epochs, governance' },
-  { name: 'pactyra-verifier',    id: '5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN', instructions: 3,  size: 217, description: 'Evidence binding & external attestation CPI' },
-  { name: 'reference-treasury',  id: '6gAZR4omxMUWy5Fb6kCtdmaWASFFXr9WRCoWUcAz7UA9', instructions: 4,  size: 288, description: 'Reference treasury consuming agent authority' },
+  { name: 'pactyra-core',        id: 'EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC', instructions: 21, size: 582, description: 'Authority root — bonds, tiers, capabilities, epochs, Execution PDA, governance' },
+  { name: 'pactyra-verifier',    id: '5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN', instructions: 3,  size: 299, description: 'Pyth price freshness verification & outcome CPI' },
+  { name: 'reference-treasury',  id: '6gAZR4omxMUWy5Fb6kCtdmaWASFFXr9WRCoWUcAz7UA9', instructions: 4,  size: 378, description: 'Reference treasury — CPI-gated USDC transfers' },
   { name: 'threshold-multisig',  id: 'FgfW1JkSknJpcCypbhuv531qvVu2z8sNVPH2kZXLpDKc', instructions: 7,  size: 221, description: '3-of-5 multisig backing the protocol authority' },
 ] as const
 
 const TOTAL_INSTRUCTIONS = PROGRAMS.reduce((s, p) => s + p.instructions, 0)
+
+const SECURITY_CHECKS = [
+  'Agent must be Active (not Frozen)',
+  'Capability must be Active (not Revoked)',
+  'Capability belongs to this Agent',
+  'Authority epoch is current',
+  'Policy matches capability',
+  'Policy is Active (not Superseded)',
+  'Capability not expired (TTL)',
+  'Action type matches capability',
+  'Target program matches capability',
+  'Target account matches capability',
+  'Amount within capability limit',
+  'Bond satisfied (≥ policy minimum)',
+  'Delegate scope valid (if session key)',
+] as const
+
+const EXECUTION_STAGES = [
+  { stage: 'Asserted',  desc: 'assert_capability creates the Execution PDA with a deterministic action_id' },
+  { stage: 'Executed',  desc: 'Target program calls mark_executed via CPI, proving the action was performed' },
+  { stage: 'Recorded',  desc: 'record_outcome verifies Executed status, binds the receipt, sets Recorded' },
+] as const
+
+const ARCH_NODES = [
+  { name: 'pactyra-core',       role: 'Authority root', desc: 'Bonds, tiers, capabilities, epochs, Execution PDA', color: 'emerald' },
+  { name: 'pactyra-verifier',   role: 'Attestation',    desc: 'Pyth price freshness → record_outcome CPI',         color: 'sky' },
+  { name: 'reference-treasury', role: 'Consumer',       desc: 'CPI-gated USDC transfers (assert → transfer → mark)', color: 'amber' },
+  { name: 'threshold-multisig', role: 'Governance',    desc: '3-of-5 threshold backing protocol authority',       color: 'violet' },
+] as const
+
+const JUDGE_CLAIMS = [
+  { claim: '21 instructions in pactyra-core',        evidence: 'solana.fm program account',   link: 'https://solana.fm/address/EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC?cluster=devnet' },
+  { claim: 'Real USDC bond escrow',                   evidence: 'lock_bond transfers to vault PDA', link: 'https://solana.fm/tx/5MqTqxj3aczMkcJh7aKsm5zNjrGxmhMM7vEVGacuBHG3PXKMBrTbhbhh5cnk9RKH6yzja21wuE5hnCGVekhY7GkE?cluster=devnet' },
+  { claim: 'Execution PDA upgrade on devnet',        evidence: 'program upgrade tx',           link: 'https://solana.fm/tx/2GcKadnGSnAUh1hGq9VPdeJaDKraLhaHnizvMKQWeCk46X3ewhp9YsThx4WZLes6fx76x3PqXa7HozLZoqX5k96D?cluster=devnet' },
+  { claim: 'Governance timelock (24h)',              evidence: 'propose_operation + execute_operation', link: 'https://solana.fm/address/FgfW1JkSknJpcCypbhuv531qvVu2z8sNVPH2kZXLpDKc?cluster=devnet' },
+  { claim: '3-of-5 threshold multisig',              evidence: 'multisig PDA on devnet',       link: 'https://solana.fm/address/7vPjrrEEeszXDNiigpczbzNH376ak5EDfsxvT4UGSpkv?cluster=devnet' },
+  { claim: 'Pyth price freshness verification',     evidence: 'pactyra-verifier program',     link: 'https://solana.fm/address/5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN?cluster=devnet' },
+] as const
+
 const MULTISIG_PDA = '7vPjrrEEeszXDNiigpczbzNH376ak5EDfsxvT4UGSpkv'
 const GITHUB_URL = 'https://github.com/sodiq-code/pactyra'
-const VERCEL_URL = 'https://pactyra.vercel.app'
+const VERCEL_URL = 'https://pactyra-ui.vercel.app'
 const SOLANA_FM_BASE = 'https://solana.fm/address'
 
 const shortHash = (h: string, head = 4, tail = 4): string =>
@@ -227,8 +275,11 @@ export default function Page() {
   const [verifierIdx, setVerifierIdx] = useState('0')
   const [newAuthority, setNewAuthority] = useState('')
   const [govBusy, setGovBusy] = useState<string>('')
-  // Pending irreversible governance action awaiting user confirmation in AlertDialog.
   const [pending, setPending] = useState<IrreversibleAction | null>(null)
+  const [txHistory, setTxHistory] = useState<TxHistoryData | null>(null)
+  const [txHistoryLoading, setTxHistoryLoading] = useState(false)
+  const [showTxHistory, setShowTxHistory] = useState(false)
+  const [showJudgeMode, setShowJudgeMode] = useState(false)
 
   const fetchAgent = useCallback(async (id: string, silent = false) => {
     if (!silent) setAgentLoading(true)
@@ -243,6 +294,19 @@ export default function Page() {
       setAgentLoading(false)
     }
   }, [toast])
+
+  const fetchTxHistory = useCallback(async (id: string) => {
+    setTxHistoryLoading(true)
+    try {
+      const res = await fetch(`/api/transaction-history?id=${id}&limit=8`, { cache: 'no-store' })
+      const data: TxHistoryData = await res.json()
+      setTxHistory(data)
+    } catch {
+      // silent
+    } finally {
+      setTxHistoryLoading(false)
+    }
+  }, [])
 
   const fetchDeployment = useCallback(async () => {
     setDeploymentLoading(true)
@@ -260,7 +324,8 @@ export default function Page() {
   useEffect(() => {
     fetchAgent(PERMANENT_AGENT_ID)
     fetchDeployment()
-  }, [fetchAgent, fetchDeployment])
+    fetchTxHistory(PERMANENT_AGENT_ID)
+  }, [fetchAgent, fetchDeployment, fetchTxHistory])
 
   useEffect(() => {
     const t = setInterval(() => fetchAgent(activeAgentId, true), 30000)
@@ -428,7 +493,7 @@ export default function Page() {
               }}
             />
             <Button variant="outline" size="sm"
-              onClick={() => { fetchAgent(activeAgentId); fetchDeployment() }}
+              onClick={() => { fetchAgent(activeAgentId); fetchDeployment(); fetchTxHistory(activeAgentId) }}
               className="bg-card/50 border-border/50 backdrop-blur gap-1.5 min-h-[44px] sm:min-h-0" title="Refresh data">
               <RefreshCw className={cn('h-3.5 w-3.5', agentLoading && 'animate-spin')} />
               <span className="hidden sm:inline text-xs">Refresh</span>
@@ -529,6 +594,82 @@ export default function Page() {
               )}
             </CardContent>
           </Card>
+
+          {/* HOW IT WORKS */}
+          <section>
+            <SectionHeader icon={Activity} title="How It Works" hint="register → earn → spend → prove" />
+            <Card className="bg-card/50 backdrop-blur border-border/50">
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {[
+                    { step: '1', title: 'Register & Bond', desc: 'Agent registers with a 5 USDC bond, locked in a PDA vault. Starts at Tier 1 ($5 authority).', color: 'emerald' },
+                    { step: '2', title: 'Request Capability', desc: 'Agent requests scoped authority: target program, target account, amount limit, TTL.', color: 'sky' },
+                    { step: '3', title: 'Assert & Execute', desc: 'assert_capability checks 13 security rules. Target program executes and calls mark_executed via CPI.', color: 'amber' },
+                    { step: '4', title: 'Record Outcome', desc: 'Verifier records outcome. 5 passes → T2 ($50). 20+ at 95% → T3 ($500). Critical fail → slash, T1.', color: 'violet' },
+                  ].map((s) => (
+                    <div key={s.step} className={cn('flex items-start gap-3 p-3 rounded-lg border',
+                      s.color === 'emerald' ? 'bg-emerald-500/5 border-emerald-500/15'
+                      : s.color === 'sky'    ? 'bg-sky-500/5 border-sky-500/15'
+                      : s.color === 'amber'   ? 'bg-amber-500/5 border-amber-500/15'
+                      : 'bg-violet-500/5 border-violet-500/15')}>
+                      <div className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-mono text-xs font-bold',
+                        s.color === 'emerald' ? 'bg-emerald-500/15 text-emerald-400'
+                        : s.color === 'sky'    ? 'bg-sky-500/15 text-sky-400'
+                        : s.color === 'amber'   ? 'bg-amber-500/15 text-amber-400'
+                        : 'bg-violet-500/15 text-violet-400')}>
+                        {s.step}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold text-foreground mb-0.5">{s.title}</div>
+                        <div className="text-[11px] text-muted-foreground leading-snug">{s.desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* JUDGE MODE */}
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <Shield className="h-3.5 w-3.5 text-emerald-400" />
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Judge Mode</h2>
+              <Button variant="ghost" size="sm"
+                onClick={() => setShowJudgeMode(!showJudgeMode)}
+                className="ml-auto text-xs h-7 gap-1">
+                {showJudgeMode ? 'Hide' : 'Show Evidence'}
+              </Button>
+            </div>
+            {showJudgeMode && (
+              <Card className="bg-card/50 backdrop-blur border-emerald-500/20">
+                <CardContent className="pt-6 space-y-3">
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Verifiable on-chain evidence for each protocol claim. Every link opens Solana.fm with the devnet cluster parameter — judges can independently verify each assertion.
+                  </p>
+                  <div className="space-y-1.5">
+                    {JUDGE_CLAIMS.map((c, i) => (
+                      <div key={i} className="flex items-center gap-3 py-2 px-3 rounded-md bg-background/30 border border-border/30 hover:border-emerald-500/30 transition-colors">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-mono font-bold">
+                          {i + 1}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-medium text-foreground">{c.claim}</div>
+                          <div className="text-[10px] text-muted-foreground font-mono">{c.evidence}</div>
+                        </div>
+                        <a href={c.link} target="_blank" rel="noreferrer"
+                          className="text-emerald-400 hover:text-emerald-300 shrink-0 inline-flex items-center gap-1 text-[10px] font-mono"
+                          title="Verify on Solana.fm">
+                          Verify
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </section>
 
           {/* AGENT OPERATIONS */}
           <section>
@@ -763,8 +904,8 @@ export default function Page() {
                             <div className="text-[11px] text-muted-foreground truncate">{p.description}</div>
                           </div>
                           <div className="hidden sm:flex items-center gap-3 shrink-0 text-[11px] text-muted-foreground font-mono">
-                            <span>{p.instructions} instr</span>
-                            <span>{p.size}KB</span>
+                            <span>{live?.instructions ?? p.instructions} instr</span>
+                            <span>{live?.size ?? p.size}KB</span>
                           </div>
                           <CopyButton value={p.id} label={`${p.name} program ID copied`} />
                           <a href={`${SOLANA_FM_BASE}/${p.id}?cluster=devnet`} target="_blank" rel="noreferrer"
@@ -781,31 +922,264 @@ export default function Page() {
             </Card>
           </section>
 
+          {/* EXECUTION PDA */}
+          <section>
+            <SectionHeader icon={Shield} title="Execution PDA" hint="assert → execute → record" />
+            <Card className="bg-card/50 backdrop-blur border-border/50">
+              <CardContent className="pt-6 space-y-4">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Every capability assertion creates an on-chain Execution PDA that cryptographically binds the assertion to the actual action performed. The verifier cannot fabricate outcomes for actions that never happened — <span className="text-foreground font-medium">record_outcome requires Executed status</span>.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {EXECUTION_STAGES.map((s, i) => (
+                    <div key={s.stage} className="relative">
+                      {i < EXECUTION_STAGES.length - 1 && (
+                        <div className="hidden md:block absolute top-5 -right-2 z-10 text-muted-foreground/40">
+                          <ChevronRight className="h-4 w-4" />
+                        </div>
+                      )}
+                      <div className="flex flex-col items-center text-center gap-2 p-3 rounded-lg bg-background/30 border border-border/30">
+                        <div className={cn('flex h-9 w-9 items-center justify-center rounded-full shrink-0',
+                          i === 0 ? 'bg-amber-500/15 text-amber-400'
+                          : i === 1 ? 'bg-emerald-500/15 text-emerald-400'
+                          : 'bg-teal-500/15 text-teal-400')}>
+                          {i === 0 ? <Shield className="h-4 w-4" />
+                           : i === 1 ? <Check className="h-4 w-4" />
+                           : <Lock className="h-4 w-4" />}
+                        </div>
+                        <div className="font-mono text-xs font-semibold tracking-wide">{s.stage}</div>
+                        <div className="text-[10px] text-muted-foreground leading-snug">{s.desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 pt-2 text-[10px] text-muted-foreground font-mono">
+                  <span className="shrink-0">action_id =</span>
+                  <code className="text-[10px] text-foreground/70 bg-background/40 px-2 py-1 rounded break-all">
+                    keccak256(agent_id, capability_id, action_type, target_program, target_account, amount, action_nonce)
+                  </code>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* SECURITY CHECKS */}
+          <section>
+            <SectionHeader icon={Shield} title="Security Checks" hint="13 checks in assert_capability" />
+            <Card className="bg-card/50 backdrop-blur border-border/50">
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  {SECURITY_CHECKS.map((check, i) => (
+                    <div key={i} className="flex items-start gap-2 text-xs py-1">
+                      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400 mt-0.5">
+                        <Check className="h-2.5 w-2.5" />
+                      </span>
+                      <span className="text-muted-foreground">{check}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* PROTOCOL ARCHITECTURE */}
+          <section>
+            <SectionHeader icon={Shield} title="Protocol Architecture" hint="4 programs · CPI flow" />
+            <Card className="bg-card/50 backdrop-blur border-border/50">
+              <CardContent className="pt-6 space-y-3">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Four programs cooperate via CPI. The core program holds authority; the verifier attests outcomes; the treasury consumes authority to move USDC; the multisig governs trust-root operations.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {ARCH_NODES.map((n, i) => (
+                    <div key={n.name} className={cn('flex items-start gap-3 p-3 rounded-lg border',
+                      n.color === 'emerald' ? 'bg-emerald-500/5 border-emerald-500/20'
+                      : n.color === 'sky'    ? 'bg-sky-500/5 border-sky-500/20'
+                      : n.color === 'amber'   ? 'bg-amber-500/5 border-amber-500/20'
+                      : 'bg-violet-500/5 border-violet-500/20')}>
+                      <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-mono text-xs font-bold',
+                        n.color === 'emerald' ? 'bg-emerald-500/15 text-emerald-400'
+                        : n.color === 'sky'    ? 'bg-sky-500/15 text-sky-400'
+                        : n.color === 'amber'  ? 'bg-amber-500/15 text-amber-400'
+                        : 'bg-violet-500/15 text-violet-400')}>
+                        {i + 1}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <code className="font-mono text-xs font-semibold">{n.name}</code>
+                          <Badge variant="outline" className={cn('text-[9px] py-0 px-1.5',
+                            n.color === 'emerald' ? 'border-emerald-500/30 text-emerald-400'
+                            : n.color === 'sky'    ? 'border-sky-500/30 text-sky-400'
+                            : n.color === 'amber'   ? 'border-amber-500/30 text-amber-400'
+                            : 'border-violet-500/30 text-violet-400')}>
+                            {n.role}
+                          </Badge>
+                        </div>
+                        <div className="text-[11px] text-muted-foreground mt-1 leading-snug">{n.desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center justify-center gap-2 pt-2 text-[10px] text-muted-foreground font-mono">
+                  <span className="text-emerald-400">core</span>
+                  <ChevronRight className="h-3 w-3" />
+                  <span className="text-sky-400">verifier</span>
+                  <ChevronRight className="h-3 w-3" />
+                  <span className="text-amber-400">treasury</span>
+                  <ChevronRight className="h-3 w-3" />
+                  <span className="text-violet-400">multisig</span>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* AUTHORITY LOOP */}
+          <section>
+            <SectionHeader icon={Activity} title="Authority Loop" hint="$5 → $50 → $500 → $5" />
+            <Card className="bg-card/50 backdrop-blur border-border/50">
+              <CardContent className="pt-6 space-y-4">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Agents earn economic authority through verified execution history. Each tier unlocks higher transaction limits; a critical failure slashes the bond and resets authority to Tier 1.
+                </p>
+                <div className="flex items-center justify-between gap-2">
+                  {[
+                    { tier: 'T1', amount: '$5',   label: 'Probation', color: 'rose' },
+                    { tier: 'T2', amount: '$50',  label: 'Proven',    color: 'amber' },
+                    { tier: 'T3', amount: '$500', label: 'Trusted',   color: 'emerald' },
+                  ].map((t, i) => (
+                    <div key={t.tier} className="flex items-center gap-2 flex-1">
+                      <div className={cn('flex-1 flex flex-col items-center gap-1 p-3 rounded-lg border',
+                        t.color === 'rose'     ? 'bg-rose-500/5 border-rose-500/20'
+                        : t.color === 'amber'   ? 'bg-amber-500/5 border-amber-500/20'
+                        : 'bg-emerald-500/5 border-emerald-500/20')}>
+                        <span className={cn('text-lg font-bold',
+                          t.color === 'rose'     ? 'text-rose-400'
+                          : t.color === 'amber'   ? 'text-amber-400'
+                          : 'text-emerald-400')}>{t.amount}</span>
+                        <span className="text-[9px] uppercase tracking-wider text-muted-foreground">{t.label}</span>
+                        <span className="text-[9px] text-muted-foreground font-mono">{t.tier}</span>
+                      </div>
+                      {i < 2 && (
+                        <div className="flex flex-col items-center shrink-0">
+                          <ChevronRight className="h-3 w-3 text-muted-foreground/40" />
+                          <span className="text-[8px] text-muted-foreground/60 font-mono mt-0.5">5✓</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center justify-center gap-2 pt-1 text-[10px] text-muted-foreground">
+                  <AlertTriangle className="h-3 w-3 text-rose-400" />
+                  <span>Critical failure → bond slashed, epoch++, back to T1</span>
+                  <ChevronRight className="h-3 w-3 text-muted-foreground/40" />
+                  <span className="text-rose-400 font-mono">$5</span>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* TRANSACTION HISTORY */}
+          <section>
+            <SectionHeader icon={Clock} title="Transaction History" hint={txHistory ? `${txHistory.count} txs` : '—'} />
+            <Card className="bg-card/50 backdrop-blur border-border/50">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs text-muted-foreground">Recent on-chain activity for this agent PDA</span>
+                  <Button variant="ghost" size="sm" onClick={() => { setShowTxHistory(!showTxHistory); fetchTxHistory(activeAgentId) }}
+                    className="text-xs h-7 gap-1">
+                    <RefreshCw className={cn('h-3 w-3', txHistoryLoading && 'animate-spin')} />
+                    {showTxHistory ? 'Hide' : 'Show'}
+                  </Button>
+                </div>
+                {showTxHistory && (
+                  txHistoryLoading && !txHistory ? (
+                    <div className="text-sm text-muted-foreground py-4 text-center font-mono">Loading transactions...</div>
+                  ) : txHistory && txHistory.transactions.length > 0 ? (
+                    <div className="space-y-1.5 max-h-64 overflow-y-auto custom-scrollbar">
+                      {txHistory.transactions.map((tx) => (
+                        <div key={tx.signature} className="flex items-center gap-3 py-2 px-2 rounded-md hover:bg-background/30 text-xs">
+                          <span className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-full',
+                            tx.err ? 'bg-rose-500/15 text-rose-400' : 'bg-emerald-500/15 text-emerald-400')}>
+                            {tx.err ? <AlertTriangle className="h-2.5 w-2.5" /> : <Check className="h-2.5 w-2.5" />}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <code className="font-mono text-[11px] text-foreground/80 truncate">
+                                {tx.signature.slice(0, 8)}…{tx.signature.slice(-4)}
+                              </code>
+                              {tx.instruction && (
+                                <Badge variant="outline" className="text-[9px] py-0 px-1 font-mono shrink-0">
+                                  {tx.instruction.slice(0, 4)}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground font-mono">
+                              slot {tx.slot.toLocaleString()}
+                              {tx.blockTime && ` · ${timeAgo(tx.blockTime * 1000)}`}
+                            </div>
+                          </div>
+                          <a href={tx.explorerUrl} target="_blank" rel="noreferrer"
+                            className="text-muted-foreground hover:text-foreground shrink-0" title="View on Solana.fm">
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground py-4 text-center font-mono">No transactions found</div>
+                  )
+                )}
+              </CardContent>
+            </Card>
+          </section>
+
           {/* FOOTER */}
           <footer className="pt-4 pb-8 border-t border-border/40">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="flex items-center gap-3 text-xs">
-                <a href={GITHUB_URL} target="_blank" rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground" title="GitHub repository">
-                  <ExternalLink className="h-3 w-3" />GitHub
-                </a>
-                <Separator orientation="vertical" className="h-3 bg-border/40" />
-                <a href={VERCEL_URL} target="_blank" rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground" title="Vercel deployment">
-                  <ExternalLink className="h-3 w-3" />Vercel
-                </a>
-                <Separator orientation="vertical" className="h-3 bg-border/40" />
-                <span className="text-muted-foreground font-mono">
-                  {PROGRAMS.length} programs · {TOTAL_INSTRUCTIONS} instructions
-                </span>
+            <div className="flex flex-col gap-4">
+              {/* Footer stats bar */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                <div className="flex flex-col gap-0.5 p-2 rounded-md bg-card/30 border border-border/20">
+                  <span className="text-[9px] uppercase tracking-wider text-muted-foreground">Programs</span>
+                  <span className="font-mono text-sm font-semibold text-emerald-400">{PROGRAMS.length}</span>
+                </div>
+                <div className="flex flex-col gap-0.5 p-2 rounded-md bg-card/30 border border-border/20">
+                  <span className="text-[9px] uppercase tracking-wider text-muted-foreground">Instructions</span>
+                  <span className="font-mono text-sm font-semibold text-sky-400">{deployment?.programs.reduce((s, p) => s + p.instructions, 0) ?? TOTAL_INSTRUCTIONS}</span>
+                </div>
+                <div className="flex flex-col gap-0.5 p-2 rounded-md bg-card/30 border border-border/20">
+                  <span className="text-[9px] uppercase tracking-wider text-muted-foreground">Accounts</span>
+                  <span className="font-mono text-sm font-semibold text-amber-400">10</span>
+                </div>
+                <div className="flex flex-col gap-0.5 p-2 rounded-md bg-card/30 border border-border/20">
+                  <span className="text-[9px] uppercase tracking-wider text-muted-foreground">Security Checks</span>
+                  <span className="font-mono text-sm font-semibold text-violet-400">13</span>
+                </div>
               </div>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-mono text-muted-foreground">
-                {PROGRAMS.map((p, i) => (
-                  <span key={p.name} className="inline-flex items-center gap-1">
-                    {i > 0 && <span className="text-border/60">·</span>}
-                    <span title={p.id}>{shortHash(p.id, 4, 4)}</span>
+
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center gap-3 text-xs">
+                  <a href={GITHUB_URL} target="_blank" rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground" title="GitHub repository">
+                    <ExternalLink className="h-3 w-3" />GitHub
+                  </a>
+                  <Separator orientation="vertical" className="h-3 bg-border/40" />
+                  <a href={VERCEL_URL} target="_blank" rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground" title="Vercel deployment">
+                    <ExternalLink className="h-3 w-3" />Vercel
+                  </a>
+                  <Separator orientation="vertical" className="h-3 bg-border/40" />
+                  <span className="text-muted-foreground font-mono">
+                    {deployment ? `${deployment.cluster.toUpperCase()} · ${deployment.balanceSOL.toFixed(2)} SOL` : 'devnet'}
                   </span>
-                ))}
+                </div>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-mono text-muted-foreground">
+                  {PROGRAMS.map((p, i) => (
+                    <span key={p.name} className="inline-flex items-center gap-1">
+                      {i > 0 && <span className="text-border/60">·</span>}
+                      <span title={p.id}>{shortHash(p.id, 4, 4)}</span>
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
           </footer>
