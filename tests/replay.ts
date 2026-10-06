@@ -8,7 +8,19 @@ import * as anchor from "@coral-xyz/anchor";
 import { AnchorProvider, BN } from "@coral-xyz/anchor";
 import { PublicKey, Keypair, SystemProgram } from "@solana/web3.js";
 import { expect } from "chai";
-import { airdrop, makeId, TIER_1_MAX, BOND_AMOUNT } from "./helpers";
+import {
+  airdrop,
+  makeId,
+  TIER_1_MAX,
+  BOND_AMOUNT,
+  TOKEN_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  createMint,
+  createTokenAccount,
+  mintToAccount,
+  deriveExecutionPda,
+  deriveBondVaultPda,
+} from "./helpers";
 
 describe("replay", () => {
   const provider = AnchorProvider.env();
@@ -19,9 +31,12 @@ describe("replay", () => {
   let agentId: Uint8Array;
   let agentPda: PublicKey;
   let bondPda: PublicKey;
+  let bondVaultPda: PublicKey;
   let policyPda: PublicKey;
   let verifierRegistryPda: PublicKey;
   let capabilityPda: PublicKey;
+  let usdcMint: PublicKey;
+  let userTokenAccount: PublicKey;
 
   before(async () => {
     authority = Keypair.generate();
@@ -36,13 +51,26 @@ describe("replay", () => {
     [policyPda] = PublicKey.findProgramAddressSync([Buffer.from("policy"), Buffer.from("PAY-V1")], program.programId);
     [bondPda] = PublicKey.findProgramAddressSync([Buffer.from("bond"), Buffer.from(agentId)], program.programId);
 
+    // Set up USDC mint and bond vault for bond escrow
+    usdcMint = await createMint(
+      provider.connection, provider.wallet.payer, provider.wallet.publicKey, 6
+    );
+    [bondVaultPda] = deriveBondVaultPda(usdcMint, program.programId);
+    userTokenAccount = await createTokenAccount(
+      provider.connection, provider.wallet.payer, usdcMint, authority.publicKey
+    );
+    await mintToAccount(
+      provider.connection, provider.wallet.payer, usdcMint,
+      userTokenAccount, provider.wallet.publicKey, 50_000_000
+    );
+
     try { await program.methods.initializeProtocol().accounts({ verifierRegistry: verifierRegistryPda, authority: provider.wallet.publicKey, systemProgram: SystemProgram.programId }).rpc(); } catch (e) {}
     const verifierId = new Uint8Array(32);
     for (let i = 0; i < 32; i++) verifierId[i] = i + 50;
     try { await program.methods.registerVerifier(Array.from(verifierId), program.programId, provider.wallet.publicKey).accounts({ verifierRegistry: verifierRegistryPda, authority: provider.wallet.publicKey, systemProgram: SystemProgram.programId }).rpc(); } catch (e) {}
     try { await program.methods.registerAgent(Array.from(agentId)).accounts({ agent: agentPda, authority: authority.publicKey, systemProgram: SystemProgram.programId }).signers([authority]).rpc(); } catch (e) {}
     try { await program.methods.createPolicy({ versionTag: "PAY-V1", capabilityType: { payService: {} }, minSuccesses: new BN(20), minSuccessRateBps: 9500, criticalFailureLimit: new BN(0), minBondUsdc: new BN(5_000_000), maxAmountUsdc: new BN(500_000_000) }).accounts({ policy: policyPda, authority: provider.wallet.publicKey, systemProgram: SystemProgram.programId }).rpc(); } catch (e) {}
-    try { await program.methods.lockBond(BOND_AMOUNT).accounts({ agent: agentPda, bond: bondPda, authorityRoot: authority.publicKey, systemProgram: SystemProgram.programId }).signers([authority]).rpc(); } catch (e) {}
+    try { await program.methods.lockBond(BOND_AMOUNT).accounts({ agent: agentPda, bond: bondPda, agentToken: userTokenAccount, bondVault: bondVaultPda, usdcMint: usdcMint, authorityRoot: authority.publicKey, tokenProgram: TOKEN_PROGRAM_ID, associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID, systemProgram: SystemProgram.programId }).signers([authority]).rpc(); } catch (e) {}
   });
 
   it("First use of nonce passes", async () => {
@@ -65,12 +93,14 @@ describe("replay", () => {
     const [consumedNoncePda] = PublicKey.findProgramAddressSync(
       [Buffer.from("nonce"), Buffer.from(agentId), nonce.toArrayLike(Buffer, "le", 8)], program.programId
     );
+    const [executionPda] = deriveExecutionPda(agentId, nonce, program.programId);
     await program.methods.assertCapability({
       actionType: { payService: {} }, targetProgram: tp, targetAccount: ta,
       amount: TIER_1_MAX, actionNonce: nonce,
     }).accounts({
       agent: agentPda, capability: capabilityPda, policy: policyPda,
-      consumedNonce: consumedNoncePda, authorityRoot: authority.publicKey,
+      consumedNonce: consumedNoncePda, execution: executionPda,
+      authorityRoot: authority.publicKey,
       systemProgram: SystemProgram.programId,
     }).signers([authority]).rpc();
   });
@@ -81,13 +111,15 @@ describe("replay", () => {
     const [consumedNoncePda] = PublicKey.findProgramAddressSync(
       [Buffer.from("nonce"), Buffer.from(agentId), nonce.toArrayLike(Buffer, "le", 8)], program.programId
     );
+    const [executionPda] = deriveExecutionPda(agentId, nonce, program.programId);
     try {
       await program.methods.assertCapability({
         actionType: { payService: {} }, targetProgram: cap.targetProgram,
         targetAccount: cap.targetAccount, amount: TIER_1_MAX, actionNonce: nonce,
       }).accounts({
         agent: agentPda, capability: capabilityPda, policy: policyPda,
-        consumedNonce: consumedNoncePda, authorityRoot: authority.publicKey,
+        consumedNonce: consumedNoncePda, execution: executionPda,
+        authorityRoot: authority.publicKey,
         systemProgram: SystemProgram.programId,
       }).signers([authority]).rpc();
       expect.fail("Should reject replay");

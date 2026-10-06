@@ -30,12 +30,12 @@ An agent starts at Tier 1 ($5 authority), earns Tier 2 ($50) after 5 verified su
 
 All four programs are deployed to Solana devnet and verified executable.
 
-| Program | Program ID | Deployed | Size |
+| Program | Program ID | Instructions | Size |
 |---|---|---|---|
-| `pactyra-core` | `EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC` | ✅ Devnet | 548 KB |
-| `pactyra-verifier` | `5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN` | ✅ Devnet | 217 KB |
-| `reference-treasury` | `6gAZR4omxMUWy5Fb6kCtdmaWASFFXr9WRCoWUcAz7UA9` | ✅ Devnet | 288 KB |
-| `threshold-multisig` | `FgfW1JkSknJpcCypbhuv531qvVu2z8sNVPH2kZXLpDKc` | ✅ Devnet | 221 KB |
+| `pactyra-core` | `EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC` | 21 | 582 KB |
+| `pactyra-verifier` | `5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN` | 3 | 299 KB |
+| `reference-treasury` | `6gAZR4omxMUWy5Fb6kCtdmaWASFFXr9WRCoWUcAz7UA9` | 4 | 378 KB |
+| `threshold-multisig` | `FgfW1JkSknJpcCypbhuv531qvVu2z8sNVPH2kZXLpDKc` | 7 | 221 KB |
 
 ### Devnet configuration
 
@@ -254,7 +254,7 @@ await client.assertCapability(agentId, action);
 await client.recordOutcome(agentId, actionId, capabilityId, 'pass', 'none', evidenceHash);
 ```
 
-### SDK tests (19 passing)
+### SDK tests (21 passing)
 
 ## Web UI
 
@@ -350,10 +350,10 @@ With PACTYRA: the agent must earn the authority to pay through verified performa
 
 ```
   32 formal tests passing (44s)
-  19 SDK tests passing (71ms)
+  21 SDK tests passing (84ms) — includes Execution PDA derivation and action_id computation
   7 demo runner tests passing (16s)
   ─────────────────────────────
-  58 total tests
+  60 total tests
 ```
 
 ## Architecture
@@ -379,6 +379,7 @@ See [`docs/architecture.md`](docs/architecture.md) for:
 - **Authority epochs**: Incrementing the epoch silently invalidates all outstanding capabilities.
 - **Short-lived capabilities**: Configurable TTL (default 30 minutes), bounded target scope, single-use nonces.
 - **Replay protection**: `ConsumedNonce` PDA prevents nonce reuse.
+- **Execution PDA**: Every `assert_capability` call initializes an `Execution` PDA that cryptographically binds the capability assertion to the actual on-chain action. The target program must call `mark_executed` via CPI (signing with its own program ID) to advance the Execution from `Asserted` → `Executed`. The `record_outcome` instruction requires the Execution to be in `Executed` status and verifies that the `action_id` matches — preventing the verifier from fabricating outcomes for actions that never happened. The deterministic `action_id` is `keccak256(agent_id || capability_id || action_type || target_program || target_account || amount || action_nonce)`.
 - **Real USDC bond escrow**: The `lock_bond` instruction transfers real USDC from the agent's token account to a PDA-owned bond vault. On critical failure, the slashed USDC is transferred to a slash destination account. This is not accounting — real tokens move.
 - **Verifier-only outcomes**: Only registered verifier operators can submit receipts. Evidence hash must be non-zero.
 - **Tier-based limits**: $5 / $50 / $500 per capability based on agent tier.
@@ -388,6 +389,30 @@ See [`docs/architecture.md`](docs/architecture.md) for:
 - **Multisig**: 3-of-5 threshold for protocol authority operations.
 - **Immutable policies**: Policies can only be created or superseded, never mutated.
 - **Rent reclamation**: Old receipts from prior epochs can be closed.
+
+### Execution PDA lifecycle
+
+```
+assert_capability                mark_executed (CPI)              record_outcome
+      │                                │                               │
+      ▼                                ▼                               ▼
+┌──────────┐                   ┌──────────┐                   ┌──────────┐
+│ Asserted │ ───────────────►  │ Executed │ ───────────────►  │ Recorded │
+└──────────┘                   └──────────┘                   └──────────┘
+  Created by                      Target program                  Verifier records
+  assert_capability               signs via CPI                   outcome; action_id
+                                  to prove action                 must match
+                                  was performed
+
+  Seeds: [b"execution", agent_id, action_nonce]
+  action_id = keccak256(agent_id, capability_id, action_type, target_program,
+                        target_account, amount, action_nonce)
+```
+
+The Execution PDA closes the trust gap between the verifier and the on-chain action. Without it, a compromised verifier operator could fabricate a PASS outcome for an action that was never executed. With it, the verifier can only record outcomes for actions that were:
+1. Authorized via `assert_capability` (creates Execution PDA)
+2. Actually performed by the target program (mark_executed via CPI)
+3. Match the exact action parameters (action_id verification)
 
 ## Build
 

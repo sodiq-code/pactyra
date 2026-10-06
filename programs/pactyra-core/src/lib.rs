@@ -231,6 +231,48 @@ pub struct TimelockedOperation {
     pub bump: u8,
 }
 
+/// Lifecycle status of an Execution PDA.
+/// An Execution PDA binds an asserted capability to the actual on-chain
+/// effects it authorized, so that record_outcome cannot be fabricated for
+/// actions that never happened.
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug, InitSpace)]
+pub enum ExecutionStatus {
+    /// Capability was asserted via assert_capability. Action is authorized
+    /// but its on-chain effects have not yet been applied.
+    Asserted,
+    /// The target program marked the execution as performed via mark_executed.
+    /// The action's on-chain effects have been applied.
+    Executed,
+    /// record_outcome has consumed this execution. No further updates allowed.
+    Recorded,
+}
+
+/// An Execution PDA — binds a capability assertion to the actual on-chain
+/// action it authorized. Created in assert_capability, advanced to Executed
+/// by the target program via mark_executed, and finalized to Recorded in
+/// record_outcome.
+#[account]
+#[derive(InitSpace)]
+pub struct Execution {
+    /// Deterministic hash of (agent_id, capability_id, action_type, target_program,
+    /// target_account, amount, action_nonce). Computed identically in
+    /// assert_capability and record_outcome so the receipt is bound to the
+    /// exact action that was asserted and executed.
+    pub action_id: [u8; 32],
+    pub agent_id: [u8; 32],
+    pub capability_id: [u8; 32],
+    pub action_type: CapabilityType,
+    pub target_program: Pubkey,
+    pub target_account: Pubkey,
+    pub amount: u64,
+    pub action_nonce: u64,
+    pub authority_epoch: u64,
+    pub asserted_at: i64,
+    pub executed_at: i64,
+    pub status: ExecutionStatus,
+    pub bump: u8,
+}
+
 // ============================================================
 // Tier Amount Limits (USDC base units, 6 decimals)
 // ============================================================
@@ -322,6 +364,16 @@ pub enum PactyraError {
     InvalidEvidence,
     #[msg("Cannot close a receipt from the current authority epoch")]
     ReceiptFromCurrentEpoch,
+    #[msg("The execution PDA was not found for this action")]
+    ExecutionNotFound,
+    #[msg("The execution PDA action_id does not match the recorded action")]
+    ExecutionActionMismatch,
+    #[msg("The execution PDA is still asserted — the action has not been marked executed")]
+    ExecutionNotExecuted,
+    #[msg("The execution PDA has already been recorded — cannot record twice")]
+    ExecutionAlreadyRecorded,
+    #[msg("Only the target program can mark an execution as executed")]
+    UnauthorizedExecutionMarker,
 }
 
 // ============================================================
@@ -686,6 +738,41 @@ pub mod pactyra_core {
         consumed_nonce.consumed_at = clock.unix_timestamp;
         consumed_nonce.bump = ctx.bumps.consumed_nonce;
 
+        // Compute deterministic action_id binding this assertion to its exact
+        // action parameters. record_outcome recomputes this hash and requires
+        // it to match the Execution PDA's stored action_id — preventing the
+        // verifier from recording outcomes for actions that never happened.
+        let action_id = {
+            let mut hash_data = Vec::new();
+            hash_data.extend_from_slice(&agent.agent_id);
+            hash_data.extend_from_slice(&capability.capability_id);
+            hash_data.extend_from_slice(&[action.action_type as u8]);
+            hash_data.extend_from_slice(action.target_program.as_ref());
+            hash_data.extend_from_slice(action.target_account.as_ref());
+            hash_data.extend_from_slice(&action.amount.to_le_bytes());
+            hash_data.extend_from_slice(&action.action_nonce.to_le_bytes());
+            let hash = anchor_lang::solana_program::keccak::hash(&hash_data);
+            hash.to_bytes()
+        };
+
+        // Initialize the Execution PDA — binds this assertion to the actual
+        // on-chain action. The target program must call mark_executed before
+        // record_outcome can consume this Execution.
+        let execution = &mut ctx.accounts.execution;
+        execution.action_id = action_id;
+        execution.agent_id = agent.agent_id;
+        execution.capability_id = capability.capability_id;
+        execution.action_type = action.action_type;
+        execution.target_program = action.target_program;
+        execution.target_account = action.target_account;
+        execution.amount = action.amount;
+        execution.action_nonce = action.action_nonce;
+        execution.authority_epoch = agent.current_epoch;
+        execution.asserted_at = clock.unix_timestamp;
+        execution.executed_at = 0;
+        execution.status = ExecutionStatus::Asserted;
+        execution.bump = ctx.bumps.execution;
+
         emit!(CapabilityAsserted {
             agent_id: agent.agent_id,
             capability_id: capability.capability_id,
@@ -693,6 +780,56 @@ pub mod pactyra_core {
             amount: action.amount,
             action_nonce: action.action_nonce,
             result: true,
+            slot: clock.slot,
+        });
+
+        emit!(ExecutionAsserted {
+            action_id,
+            agent_id: agent.agent_id,
+            capability_id: capability.capability_id,
+            target_program: action.target_program,
+            action_nonce: action.action_nonce,
+            slot: clock.slot,
+        });
+        Ok(())
+    }
+
+    /// Mark an asserted Execution as executed.
+    ///
+    /// Called via CPI by the target program (the program stored in
+    /// `execution.target_program`) immediately after it applies the
+    /// action's on-chain effects — for example, after the reference-treasury
+    /// transfers USDC to the recipient.
+    ///
+    /// Security: The `executor` signer must equal `execution.target_program`.
+    /// In a CPI call the calling program's ID is automatically a signer, so
+    /// only the intended target program can advance an Execution from
+    /// `Asserted` to `Executed`. This is the cryptographic binding between
+    /// a capability assertion and the actual on-chain action.
+    pub fn mark_executed(ctx: Context<MarkExecuted>) -> Result<()> {
+        let execution = &mut ctx.accounts.execution;
+        let clock = Clock::get()?;
+
+        require!(
+            execution.status == ExecutionStatus::Asserted,
+            PactyraError::ExecutionAlreadyRecorded
+        );
+
+        // Only the target program stored in the Execution can mark it executed.
+        // The CPI caller (target program) signs for itself automatically.
+        require!(
+            ctx.accounts.executor.key() == execution.target_program,
+            PactyraError::UnauthorizedExecutionMarker
+        );
+
+        execution.status = ExecutionStatus::Executed;
+        execution.executed_at = clock.unix_timestamp;
+
+        emit!(ExecutionMarked {
+            action_id: execution.action_id,
+            agent_id: execution.agent_id,
+            executor: ctx.accounts.executor.key(),
+            executed_at: execution.executed_at,
             slot: clock.slot,
         });
         Ok(())
@@ -734,9 +871,16 @@ pub mod pactyra_core {
     /// Record a performance outcome from a registered verifier.
     /// Updates agent counters and triggers authority transitions.
     ///
-    /// Security: The verifier cannot fabricate the outcome because the
-    /// evidence_hash must match the keccak256 of the Pyth price update
-    /// account data. An independent observer can re-verify the hash.
+    /// Security:
+    /// 1. The verifier cannot fabricate the outcome because the
+    ///    evidence_hash must match the keccak256 of the Pyth price update
+    ///    account data. An independent observer can re-verify the hash.
+    /// 2. The verifier cannot fabricate outcomes for actions that never
+    ///    happened — the Execution PDA must exist, be in `Executed` status,
+    ///    and its stored action_id must equal the action_id argument.
+    ///    This cryptographically binds the receipt to an on-chain action
+    ///    that was authorized via `assert_capability` and subsequently
+    ///    marked executed by the target program via `mark_executed`.
     pub fn record_outcome(
         ctx: Context<RecordOutcome>,
         action_id: [u8; 32],
@@ -761,6 +905,32 @@ pub mod pactyra_core {
 
         let agent = &mut ctx.accounts.agent;
         let policy = &ctx.accounts.policy;
+        let execution = &mut ctx.accounts.execution;
+
+        // Verify the Execution PDA corresponds to the claimed action.
+        // The action_id passed in must equal the action_id stored in the
+        // Execution PDA — this binds the receipt to the actual asserted
+        // and executed action, preventing fabrication.
+        require!(
+            execution.action_id == action_id,
+            PactyraError::ExecutionActionMismatch
+        );
+        require!(
+            execution.agent_id == agent.agent_id,
+            PactyraError::CapabilityAgentMismatch
+        );
+        require!(
+            execution.capability_id == capability_id,
+            PactyraError::PolicyMismatch
+        );
+
+        // The Execution must have been marked Executed by the target program.
+        // Outcomes cannot be recorded for actions that were only asserted
+        // (and never actually executed on-chain).
+        require!(
+            execution.status == ExecutionStatus::Executed,
+            PactyraError::ExecutionNotExecuted
+        );
 
         // T13 Mitigation: Verify evidence_hash is non-zero
         // The evidence_hash must be the keccak256 of the actual Pyth account data.
@@ -910,6 +1080,16 @@ pub mod pactyra_core {
             result,
             severity,
             verifier: operator,
+            slot: clock.slot,
+        });
+
+        // Finalize the Execution lifecycle — no further updates allowed.
+        execution.status = ExecutionStatus::Recorded;
+
+        emit!(ExecutionRecorded {
+            action_id,
+            agent_id: agent.agent_id,
+            receipt: receipt.key(),
             slot: clock.slot,
         });
         Ok(())
@@ -1251,7 +1431,8 @@ pub struct LockBond<'info> {
     pub agent_token: Account<'info, TokenAccount>,
 
     #[account(
-        mut,
+        init_if_needed,
+        payer = authority_root,
         seeds = [b"bond_vault", usdc_mint.key().as_ref()],
         bump,
         token::mint = usdc_mint,
@@ -1317,6 +1498,18 @@ pub struct AssertCapability<'info> {
     )]
     pub consumed_nonce: Account<'info, ConsumedNonce>,
 
+    /// Execution PDA — binds this capability assertion to the actual on-chain
+    /// action. Seeds: [b"execution", agent_id, action_nonce]. The action_nonce
+    /// ties the Execution to the same nonce used for replay protection.
+    #[account(
+        init,
+        payer = authority_root,
+        space = 8 + Execution::INIT_SPACE,
+        seeds = [b"execution", agent.agent_id.as_ref(), action.action_nonce.to_le_bytes().as_ref()],
+        bump
+    )]
+    pub execution: Account<'info, Execution>,
+
     /// Optional: if a delegate (session key) is signing instead of the authority root,
     /// this account must be provided and the delegate scope is verified.
     /// CHECK: Verified in instruction logic. Seeds: [b"delegate_scope", agent_id]
@@ -1330,6 +1523,29 @@ pub struct AssertCapability<'info> {
     pub authority_root: Signer<'info>,
 
     pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct MarkExecuted<'info> {
+    /// The Execution PDA to advance from Asserted -> Executed.
+    /// Seeds: [b"execution", agent_id, action_nonce]
+    #[account(
+        mut,
+        seeds = [b"execution", execution.agent_id.as_ref(), execution.action_nonce.to_le_bytes().as_ref()],
+        bump = execution.bump,
+    )]
+    pub execution: Account<'info, Execution>,
+
+    /// The target program that is authorized to mark this Execution as executed.
+    /// In a CPI call the calling program's ID is automatically a signer, so
+    /// only the intended target program can satisfy this check. The address
+    /// constraint verifies it matches execution.target_program.
+    /// CHECK: Address verified against execution.target_program.
+    #[account(
+        signer,
+        address = execution.target_program,
+    )]
+    pub executor: Signer<'info>,
 }
 
 #[derive(Accounts)]
@@ -1370,6 +1586,16 @@ pub struct RecordOutcome<'info> {
     pub verifier_registry: Account<'info, VerifierRegistry>,
 
     pub policy: Account<'info, Policy>,
+
+    /// The Execution PDA that binds this receipt to an actual on-chain action.
+    /// Seeds: [b"execution", agent_id, action_nonce]. The action_id argument
+    /// is verified against execution.action_id in the instruction body.
+    #[account(
+        mut,
+        seeds = [b"execution", agent.agent_id.as_ref(), execution.action_nonce.to_le_bytes().as_ref()],
+        bump = execution.bump,
+    )]
+    pub execution: Account<'info, Execution>,
 
     #[account(
         mut,
@@ -1738,5 +1964,39 @@ pub struct ReceiptClosed {
     pub receipt_id: [u8; 32],
     pub agent_id: [u8; 32],
     pub authority_epoch: u64,
+    pub slot: u64,
+}
+
+// ============================================================
+// Execution PDA Events
+// ============================================================
+
+/// Emitted when assert_capability initializes an Execution PDA with status=Asserted.
+#[event]
+pub struct ExecutionAsserted {
+    pub action_id: [u8; 32],
+    pub agent_id: [u8; 32],
+    pub capability_id: [u8; 32],
+    pub target_program: Pubkey,
+    pub action_nonce: u64,
+    pub slot: u64,
+}
+
+/// Emitted when the target program marks an Execution as Executed via mark_executed.
+#[event]
+pub struct ExecutionMarked {
+    pub action_id: [u8; 32],
+    pub agent_id: [u8; 32],
+    pub executor: Pubkey,
+    pub executed_at: i64,
+    pub slot: u64,
+}
+
+/// Emitted when record_outcome finalizes an Execution to Recorded status.
+#[event]
+pub struct ExecutionRecorded {
+    pub action_id: [u8; 32],
+    pub agent_id: [u8; 32],
+    pub receipt: Pubkey,
     pub slot: u64,
 }

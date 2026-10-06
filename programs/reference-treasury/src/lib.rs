@@ -106,8 +106,15 @@ pub mod reference_treasury {
     /// (insufficient authority, wrong target, expired, stale epoch, etc.),
     /// the entire transaction reverts and no USDC is moved.
     ///
+    /// After the USDC transfer succeeds, it CPIs into
+    /// pactyra_core::mark_executed to advance the Execution PDA from
+    /// Asserted -> Executed. This is the cryptographic binding that
+    /// proves the action's on-chain effects were applied — without it,
+    /// record_outcome will refuse to record an outcome for this action.
+    ///
     /// This is the architectural security boundary: the treasury cannot
-    /// move funds without a valid PACTYRA capability.
+    /// move funds without a valid PACTYRA capability, and outcomes cannot
+    /// be recorded for actions the treasury never performed.
     pub fn authorized_transfer(
         ctx: Context<AuthorizedTransfer>,
         amount: u64,
@@ -135,17 +142,19 @@ pub mod reference_treasury {
         // CPI into pactyra_core::assert_capability
         // This verifies all 12 security checks before authorizing the transfer.
         // If any check fails, the transaction reverts here — no USDC is moved.
+        // assert_capability also initializes the Execution PDA (status=Asserted).
         let pactyra_core_program = ctx.accounts.pactyra_core_program.to_account_info();
         let cpi_accounts = pactyra_core::cpi::accounts::AssertCapability {
             agent: ctx.accounts.agent.to_account_info(),
             capability: ctx.accounts.capability.to_account_info(),
             policy: ctx.accounts.policy.to_account_info(),
             consumed_nonce: ctx.accounts.consumed_nonce.to_account_info(),
+            execution: ctx.accounts.execution.to_account_info(),
             delegate_scope: None,
             authority_root: ctx.accounts.authority_root.to_account_info(),
             system_program: ctx.accounts.system_program.to_account_info(),
         };
-        let cpi_ctx = CpiContext::new(pactyra_core_program, cpi_accounts);
+        let cpi_ctx = CpiContext::new(pactyra_core_program.clone(), cpi_accounts);
         pactyra_core::cpi::assert_capability(cpi_ctx, action.clone())?;
 
         // Capability assertion passed — execute the USDC transfer
@@ -166,6 +175,21 @@ pub mod reference_treasury {
             CpiContext::new_with_signer(cpi_program, cpi_accounts, signer),
             amount,
         )?;
+
+        // Mark the Execution as Executed. The treasury PDA signs via CPI
+        // seeds — its address matches execution.target_program, satisfying
+        // the MarkExecuted account constraints. This proves to record_outcome
+        // that the action's on-chain effects were actually applied.
+        let cpi_accounts = pactyra_core::cpi::accounts::MarkExecuted {
+            execution: ctx.accounts.execution.to_account_info(),
+            executor: ctx.accounts.treasury.to_account_info(),
+        };
+        let cpi_ctx = CpiContext::new_with_signer(
+            pactyra_core_program.clone(),
+            cpi_accounts,
+            signer,
+        );
+        pactyra_core::cpi::mark_executed(cpi_ctx)?;
 
         emit!(AuthorizedTransferExecuted {
             treasury: treasury.key(),
@@ -284,6 +308,13 @@ pub struct AuthorizedTransfer<'info> {
     /// Seeds: [b"nonce", agent.agent_id, action_nonce]
     #[account(mut)]
     pub consumed_nonce: UncheckedAccount<'info>,
+
+    /// Execution PDA, initialized by the CPI into assert_capability and
+    /// advanced to Executed by the CPI into mark_executed.
+    /// Seeds: [b"execution", agent.agent_id, action_nonce]
+    /// CHECK: Owned by pactyra-core; verified in CPI.
+    #[account(mut)]
+    pub execution: UncheckedAccount<'info>,
 
     /// CHECK: Constrained by `address = pactyra_core::ID`.
     #[account(address = pactyra_core::ID)]

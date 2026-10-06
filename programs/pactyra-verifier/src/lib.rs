@@ -263,6 +263,7 @@ pub mod pactyra_verifier {
             receipt: ctx.accounts.receipt.to_account_info(),
             verifier_registry: ctx.accounts.verifier_registry.to_account_info(),
             policy: ctx.accounts.policy.to_account_info(),
+            execution: ctx.accounts.execution.to_account_info(),
             bond: Some(ctx.accounts.bond.to_account_info()),
             bond_vault: None,
             slash_destination: None,
@@ -345,6 +346,13 @@ pub struct VerifyAndRecord<'info> {
     /// Seeds: [b"bond", agent.agent_id]
     #[account(mut)]
     pub bond: UncheckedAccount<'info>,
+
+    /// Execution PDA — required by record_outcome to verify the action was
+    /// actually executed on-chain. Must be in Executed status.
+    /// Seeds: [b"execution", agent.agent_id, action_nonce]
+    /// CHECK: Owned by pactyra-core; verified in CPI.
+    #[account(mut)]
+    pub execution: UncheckedAccount<'info>,
 
     /// USDC mint — needed for record_outcome CPI (bond_vault/slash_destination are None)
     pub usdc_mint: Account<'info, anchor_spl::token::Mint>,

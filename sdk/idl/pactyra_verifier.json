@@ -1,0 +1,780 @@
+{
+  "address": "5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN",
+  "metadata": {
+    "name": "pactyra_verifier",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Objective verifier for Pyth price freshness"
+  },
+  "instructions": [
+    {
+      "name": "initialize_config",
+      "docs": [
+        "Initialize the freshness configuration for a feed."
+      ],
+      "discriminator": [
+        208,
+        127,
+        21,
+        1,
+        194,
+        190,
+        196,
+        70
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  114,
+                  101,
+                  115,
+                  104,
+                  110,
+                  101,
+                  115,
+                  115,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "feed_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "feed_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "max_age_seconds",
+          "type": "u64"
+        },
+        {
+          "name": "critical_threshold_seconds",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "verify_and_record",
+      "docs": [
+        "Verify freshness and record the outcome via CPI into pactyra-core.",
+        "",
+        "If the price is fresh (age <= max_age): records a PASS outcome.",
+        "If the price is stale (age > max_age): records a FAIL outcome.",
+        "- If age > critical_threshold: severity = Critical (triggers authority downgrade)",
+        "- Otherwise: severity = Ordinary"
+      ],
+      "discriminator": [
+        40,
+        101,
+        2,
+        207,
+        169,
+        185,
+        175,
+        102
+      ],
+      "accounts": [
+        {
+          "name": "config"
+        },
+        {
+          "name": "price_update",
+          "docs": [
+            "Pyth PriceUpdateV2 account. Owner is checked in the instruction body",
+            "via `verify_pyth_owner()` against the Pyth Pull Oracle program ID."
+          ]
+        },
+        {
+          "name": "pactyra_core_program",
+          "address": "EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC"
+        },
+        {
+          "name": "agent",
+          "writable": true
+        },
+        {
+          "name": "receipt",
+          "docs": [
+            "Seeds: [b\"receipt\", agent.agent_id, action_id]"
+          ],
+          "writable": true
+        },
+        {
+          "name": "verifier_registry"
+        },
+        {
+          "name": "policy"
+        },
+        {
+          "name": "bond",
+          "docs": [
+            "Seeds: [b\"bond\", agent.agent_id]"
+          ],
+          "writable": true
+        },
+        {
+          "name": "execution",
+          "docs": [
+            "Execution PDA — required by record_outcome to verify the action was",
+            "actually executed on-chain. Must be in Executed status.",
+            "Seeds: [b\"execution\", agent.agent_id, action_nonce]"
+          ],
+          "writable": true
+        },
+        {
+          "name": "usdc_mint",
+          "docs": [
+            "USDC mint — needed for record_outcome CPI (bond_vault/slash_destination are None)"
+          ]
+        },
+        {
+          "name": "verifier_operator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "action_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "capability_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "verify_freshness",
+      "docs": [
+        "Verify a price update's freshness against the configuration.",
+        "",
+        "Reads the `publish_time` from the Pyth `PriceUpdateV2` account data",
+        "and checks that the age is within `max_age_seconds`.",
+        "",
+        "Security checks:",
+        "1. Account owner must be the Pyth Pull Oracle program (prevents forged accounts)",
+        "2. Feed ID must match the configuration (prevents wrong-feed attacks)",
+        "3. Price age must be within the maximum allowed (prevents stale price usage)"
+      ],
+      "discriminator": [
+        164,
+        162,
+        112,
+        132,
+        80,
+        122,
+        163,
+        170
+      ],
+      "accounts": [
+        {
+          "name": "config"
+        },
+        {
+          "name": "price_update",
+          "docs": [
+            "Pyth PriceUpdateV2 account. Owner is checked in the instruction body",
+            "via `verify_pyth_owner()` against the Pyth Pull Oracle program ID."
+          ]
+        }
+      ],
+      "args": [],
+      "returns": {
+        "defined": {
+          "name": "VerificationResult"
+        }
+      }
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Agent",
+      "discriminator": [
+        47,
+        166,
+        112,
+        147,
+        155,
+        197,
+        86,
+        7
+      ]
+    },
+    {
+      "name": "FreshnessConfig",
+      "discriminator": [
+        34,
+        141,
+        78,
+        69,
+        201,
+        131,
+        181,
+        6
+      ]
+    },
+    {
+      "name": "Policy",
+      "discriminator": [
+        222,
+        135,
+        7,
+        163,
+        235,
+        177,
+        33,
+        68
+      ]
+    },
+    {
+      "name": "VerifierRegistry",
+      "discriminator": [
+        21,
+        219,
+        168,
+        135,
+        51,
+        182,
+        88,
+        129
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "ConfigInitialized",
+      "discriminator": [
+        181,
+        49,
+        200,
+        156,
+        19,
+        167,
+        178,
+        91
+      ]
+    },
+    {
+      "name": "VerificationCompleted",
+      "discriminator": [
+        194,
+        162,
+        243,
+        3,
+        234,
+        203,
+        183,
+        118
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "PriceStale",
+      "msg": "The price update is too old"
+    },
+    {
+      "code": 6001,
+      "name": "WrongFeed",
+      "msg": "The feed ID does not match the configuration"
+    },
+    {
+      "code": 6002,
+      "name": "WrongOwner",
+      "msg": "The price update account is not owned by Pyth"
+    },
+    {
+      "code": 6003,
+      "name": "InvalidPrice",
+      "msg": "The price is invalid"
+    },
+    {
+      "code": 6004,
+      "name": "UnauthorizedOperator",
+      "msg": "Unauthorized operator"
+    },
+    {
+      "code": 6005,
+      "name": "InsufficientData",
+      "msg": "The price update account has insufficient data"
+    }
+  ],
+  "types": [
+    {
+      "name": "Agent",
+      "docs": [
+        "An autonomous agent with earned economic authority."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "authority_root",
+            "type": "pubkey"
+          },
+          {
+            "name": "delegate_authority",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "current_epoch",
+            "type": "u64"
+          },
+          {
+            "name": "policy_root",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "success_count",
+            "type": "u64"
+          },
+          {
+            "name": "total_count",
+            "type": "u64"
+          },
+          {
+            "name": "critical_failures",
+            "type": "u64"
+          },
+          {
+            "name": "bond_amount",
+            "type": "u64"
+          },
+          {
+            "name": "tier",
+            "type": {
+              "defined": {
+                "name": "AuthorityTier"
+              }
+            }
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "AgentStatus"
+              }
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentStatus",
+      "docs": [
+        "Agent status."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Active"
+          },
+          {
+            "name": "Frozen"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AuthorityTier",
+      "docs": [
+        "Authority tiers for agent economic access."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Probation"
+          },
+          {
+            "name": "Proven"
+          },
+          {
+            "name": "Trusted"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CapabilityType",
+      "docs": [
+        "Capability action classes."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "PayService"
+          },
+          {
+            "name": "Trade"
+          },
+          {
+            "name": "TreasuryWithdraw"
+          },
+          {
+            "name": "Delegate"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ConfigInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "feed_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "max_age_seconds",
+            "type": "u64"
+          },
+          {
+            "name": "critical_threshold_seconds",
+            "type": "u64"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FreshnessConfig",
+      "docs": [
+        "Pyth price freshness configuration."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "feed_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "max_age_seconds",
+            "type": "u64"
+          },
+          {
+            "name": "critical_threshold_seconds",
+            "type": "u64"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Policy",
+      "docs": [
+        "A fixed policy that defines authority requirements."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "policy_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "version_tag",
+            "type": "string"
+          },
+          {
+            "name": "capability_type",
+            "type": {
+              "defined": {
+                "name": "CapabilityType"
+              }
+            }
+          },
+          {
+            "name": "min_successes",
+            "type": "u64"
+          },
+          {
+            "name": "min_success_rate_bps",
+            "type": "u16"
+          },
+          {
+            "name": "critical_failure_limit",
+            "type": "u64"
+          },
+          {
+            "name": "min_bond_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "max_amount_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "PolicyStatus"
+              }
+            }
+          },
+          {
+            "name": "created_slot",
+            "type": "u64"
+          },
+          {
+            "name": "superseded_by",
+            "type": {
+              "option": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PolicyStatus",
+      "docs": [
+        "Policy lifecycle status."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Active"
+          },
+          {
+            "name": "Superseded"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VerificationCompleted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "result",
+            "type": {
+              "defined": {
+                "name": "VerificationResult"
+              }
+            }
+          },
+          {
+            "name": "feed_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "publish_time",
+            "type": "i64"
+          },
+          {
+            "name": "age_seconds",
+            "type": "i64"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VerificationResult",
+      "docs": [
+        "Verification result."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Pass"
+          },
+          {
+            "name": "Fail"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VerifierEntry",
+      "docs": [
+        "A single verifier entry in the registry."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "verifier_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "verifier_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "operator_key",
+            "type": "pubkey"
+          },
+          {
+            "name": "active",
+            "type": "bool"
+          },
+          {
+            "name": "registered_slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VerifierRegistry",
+      "docs": [
+        "Registry of authorized verifiers."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "verifiers",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "VerifierEntry"
+                }
+              }
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}

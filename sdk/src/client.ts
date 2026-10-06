@@ -28,6 +28,7 @@ import {
   derivePolicyPda,
   deriveVerifierRegistryPda,
   deriveConsumedNoncePda,
+  deriveExecutionPda,
   deriveReceiptPda,
 } from "./pdas";
 import {
@@ -46,6 +47,17 @@ import {
 const coreIdl = require("../idl/pactyra_core.json");
 const verifierIdl = require("../idl/pactyra_verifier.json");
 const treasuryIdl = require("../idl/reference_treasury.json");
+
+/**
+ * Maps CapabilityType enum string names to their on-chain Borsh discriminant.
+ * This must match the order of the CapabilityType enum in pactyra-core.
+ */
+const ACTION_TYPE_INDEX: Record<string, number> = {
+  payService: 0,
+  trade: 1,
+  treasuryWithdraw: 2,
+  delegate: 3,
+};
 
 export class PactyraClient {
   public readonly provider: AnchorProvider;
@@ -249,6 +261,10 @@ export class PactyraClient {
       agentId,
       new BN(action.actionNonce)
     );
+    const [executionPda] = deriveExecutionPda(
+      agentId,
+      new BN(action.actionNonce)
+    );
 
     const actionTypeObj = { [action.actionType]: {} };
     return this.coreProgram.methods
@@ -264,6 +280,7 @@ export class PactyraClient {
         capability: capabilityPda,
         policy: policyPda,
         consumedNonce: consumedNoncePda,
+        execution: executionPda,
         authorityRoot: this.provider.wallet.publicKey,
         systemProgram: SystemProgram.programId,
       })
@@ -271,13 +288,75 @@ export class PactyraClient {
   }
 
   // ================================================================
+  // Execution PDA — binds capability assertions to on-chain actions
+  // ================================================================
+
+  /**
+   * Compute the deterministic action_id for a set of action parameters.
+   * This hash is stored in the Execution PDA and the Receipt, binding the
+   * receipt to the exact action that was asserted and executed.
+   * keccak256(agent_id || capability_id || action_type || target_program ||
+   *           target_account || amount || action_nonce)
+   */
+  static computeActionId(
+    agentId: Uint8Array,
+    capabilityId: Uint8Array,
+    actionType: string,
+    targetProgram: PublicKey,
+    targetAccount: PublicKey,
+    amount: number | BN,
+    actionNonce: number | BN
+  ): Uint8Array {
+    const { keccak_256 } = require("js-sha3");
+    const amountBn = new BN(amount);
+    const nonceBn = new BN(actionNonce);
+    const actionTypeByte = ACTION_TYPE_INDEX[actionType] ?? 0;
+    const data = Buffer.concat([
+      Buffer.from(agentId),
+      Buffer.from(capabilityId),
+      Buffer.from([actionTypeByte]),
+      targetProgram.toBuffer(),
+      targetAccount.toBuffer(),
+      amountBn.toArrayLike(Buffer, "le", 8),
+      nonceBn.toArrayLike(Buffer, "le", 8),
+    ]);
+    const hashHex = keccak_256(data);
+    const hash = Buffer.from(hashHex, "hex");
+    return new Uint8Array(hash);
+  }
+
+  /**
+   * Fetch an Execution PDA. Returns null if not found.
+   */
+  async getExecution(
+    agentId: Uint8Array,
+    actionNonce: number | BN
+  ): Promise<any | null> {
+    const [executionPda] = deriveExecutionPda(agentId, new BN(actionNonce));
+    try {
+      return await this.coreProgram.account.execution.fetch(executionPda);
+    } catch {
+      return null;
+    }
+  }
+
+  // ================================================================
   // Outcome recording (verifier only)
   // ================================================================
 
+  /**
+   * Record a performance outcome for an executed action.
+   *
+   * The `actionNonce` must match the nonce used in the original
+   * `assert_capability` call. It is used to derive the Execution PDA,
+   * which must be in `Executed` status — proving the action's on-chain
+   * effects were actually applied by the target program.
+   */
   async recordOutcome(
     agentId: Uint8Array,
     actionId: Uint8Array,
     capabilityId: Uint8Array,
+    actionNonce: number | BN,
     result: OutcomeResult,
     severity: Severity,
     evidenceHash: Uint8Array
@@ -287,6 +366,7 @@ export class PactyraClient {
     const [verifierRegistryPda] = deriveVerifierRegistryPda();
     const [policyPda] = derivePolicyPda("PAY-V1");
     const [bondPda] = deriveBondPda(agentId);
+    const [executionPda] = deriveExecutionPda(agentId, new BN(actionNonce));
 
     const resultObj = result === OutcomeResult.Pass ? { pass: {} } : { fail: {} };
     const severityObj = { [severity]: {} };
@@ -304,6 +384,7 @@ export class PactyraClient {
         receipt: receiptPda,
         verifierRegistry: verifierRegistryPda,
         policy: policyPda,
+        execution: executionPda,
         bond: bondPda,
         verifierOperator: this.provider.wallet.publicKey,
         systemProgram: SystemProgram.programId,
@@ -384,6 +465,7 @@ export class PactyraClient {
       agentId,
       new BN(actionNonce)
     );
+    const [executionPda] = deriveExecutionPda(agentId, new BN(actionNonce));
 
     return this.treasuryProgram.methods
       .authorizedTransfer(new BN(amount), new BN(actionNonce))
@@ -393,6 +475,7 @@ export class PactyraClient {
         capability: capabilityPda,
         policy: policyPda,
         consumedNonce: consumedNoncePda,
+        execution: executionPda,
         pactyraCoreProgram: PACTYRA_CORE_PROGRAM_ID,
         vault: vault,
         recipientToken: recipientToken,

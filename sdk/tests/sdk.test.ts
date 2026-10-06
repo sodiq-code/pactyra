@@ -19,6 +19,7 @@ import {
   deriveVerifierRegistryPda,
   deriveConsumedNoncePda,
   deriveCapabilityPda,
+  deriveExecutionPda,
   deriveReceiptPda,
   deriveTreasuryPda,
   deriveVaultPda,
@@ -137,6 +138,59 @@ describe("@pactyra/client SDK", () => {
     const [receiptPda, bump] = deriveReceiptPda(agentId, actionId);
     expect(receiptPda).to.be.an.instanceof(PublicKey);
     expect(bump).to.be.a("number");
+  });
+
+  it("Derives execution PDA correctly", async () => {
+    const actionNonce = new BN(99);
+    const [executionPda, bump] = deriveExecutionPda(agentId, actionNonce);
+    expect(executionPda).to.be.an.instanceof(PublicKey);
+    expect(bump).to.be.a("number");
+    expect(executionPda.toBytes()).to.have.length(32);
+    // Execution PDA must differ from other PDAs derived from the same agent_id
+    const [agentPda] = deriveAgentPda(agentId);
+    expect(executionPda.equals(agentPda)).to.be.false;
+  });
+
+  it("Computes deterministic action_id", async () => {
+    const capabilityId = new Uint8Array(32);
+    for (let i = 0; i < 32; i++) capabilityId[i] = i + 1;
+    const targetProgram = Keypair.generate().publicKey;
+    const targetAccount = Keypair.generate().publicKey;
+
+    const actionId1 = PactyraClient.computeActionId(
+      agentId,
+      capabilityId,
+      "payService",
+      targetProgram,
+      targetAccount,
+      5_000_000,
+      42
+    );
+    const actionId2 = PactyraClient.computeActionId(
+      agentId,
+      capabilityId,
+      "payService",
+      targetProgram,
+      targetAccount,
+      5_000_000,
+      42
+    );
+
+    // Determinism: same inputs -> same output
+    expect(Buffer.from(actionId1).equals(Buffer.from(actionId2))).to.be.true;
+    expect(actionId1).to.have.length(32);
+
+    // Different nonce -> different action_id
+    const actionId3 = PactyraClient.computeActionId(
+      agentId,
+      capabilityId,
+      "payService",
+      targetProgram,
+      targetAccount,
+      5_000_000,
+      43
+    );
+    expect(Buffer.from(actionId1).equals(Buffer.from(actionId3))).to.be.false;
   });
 
   it("Derives treasury PDA correctly", async () => {

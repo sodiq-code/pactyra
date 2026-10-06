@@ -15,5 +15,5 @@
 export { PactyraClient } from "./client";
 export { PACTYRA_CORE_PROGRAM_ID, PACTYRA_VERIFIER_PROGRAM_ID, REFERENCE_TREASURY_PROGRAM_ID } from "./constants";
 export { Tier, AgentStatus, CapabilityStatus, CapabilityType, OutcomeResult, Severity } from "./types";
-export { deriveAgentPda, deriveCapabilityPda, deriveBondPda, derivePolicyPda, deriveVerifierRegistryPda, deriveConsumedNoncePda, deriveReceiptPda } from "./pdas";
+export { deriveAgentPda, deriveCapabilityPda, deriveBondPda, derivePolicyPda, deriveVerifierRegistryPda, deriveConsumedNoncePda, deriveExecutionPda, deriveReceiptPda } from "./pdas";
 export { PactyraX402Adapter } from "./adapters/x402";

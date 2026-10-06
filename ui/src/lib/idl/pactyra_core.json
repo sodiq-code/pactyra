@@ -1,0 +1,3860 @@
+{
+  "address": "EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC",
+  "metadata": {
+    "name": "pactyra_core",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Core protocol for evidence-bound economic authority"
+  },
+  "instructions": [
+    {
+      "name": "assert_capability",
+      "docs": [
+        "Assert that a capability is valid for the requested action.",
+        "This is the core enforcement instruction with all security checks."
+      ],
+      "discriminator": [
+        32,
+        167,
+        114,
+        216,
+        19,
+        22,
+        182,
+        218
+      ],
+      "accounts": [
+        {
+          "name": "agent"
+        },
+        {
+          "name": "capability"
+        },
+        {
+          "name": "policy"
+        },
+        {
+          "name": "consumed_nonce",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  110,
+                  111,
+                  110,
+                  99,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "agent.agent_id",
+                "account": "Agent"
+              },
+              {
+                "kind": "arg",
+                "path": "action.action_nonce"
+              }
+            ]
+          }
+        },
+        {
+          "name": "execution",
+          "docs": [
+            "Execution PDA — binds this capability assertion to the actual on-chain",
+            "action. Seeds: [b\"execution\", agent_id, action_nonce]. The action_nonce",
+            "ties the Execution to the same nonce used for replay protection."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  120,
+                  101,
+                  99,
+                  117,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "agent.agent_id",
+                "account": "Agent"
+              },
+              {
+                "kind": "arg",
+                "path": "action.action_nonce"
+              }
+            ]
+          }
+        },
+        {
+          "name": "delegate_scope",
+          "docs": [
+            "Optional: if a delegate (session key) is signing instead of the authority root,",
+            "this account must be provided and the delegate scope is verified."
+          ],
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  108,
+                  101,
+                  103,
+                  97,
+                  116,
+                  101,
+                  95,
+                  115,
+                  99,
+                  111,
+                  112,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "agent.agent_id",
+                "account": "Agent"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority_root",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "agent"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "action",
+          "type": {
+            "defined": {
+              "name": "ActionParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "cancel_operation",
+      "docs": [
+        "Cancel a proposed timelocked operation (only proposer can cancel)."
+      ],
+      "discriminator": [
+        64,
+        80,
+        246,
+        116,
+        95,
+        207,
+        78,
+        13
+      ],
+      "accounts": [
+        {
+          "name": "operation",
+          "writable": true
+        },
+        {
+          "name": "proposer",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "close_receipt",
+      "docs": [
+        "Close a receipt account and reclaim rent.",
+        "Only the agent's authority root can close receipts.",
+        "Receipts can only be closed after the authority epoch has advanced",
+        "(ensuring they are historical, not active evidence)."
+      ],
+      "discriminator": [
+        126,
+        254,
+        244,
+        203,
+        124,
+        164,
+        134,
+        89
+      ],
+      "accounts": [
+        {
+          "name": "agent"
+        },
+        {
+          "name": "receipt",
+          "writable": true
+        },
+        {
+          "name": "authority_root",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "agent"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "create_policy",
+      "docs": [
+        "Create a new policy. Policies are immutable once created."
+      ],
+      "discriminator": [
+        27,
+        81,
+        33,
+        27,
+        196,
+        103,
+        246,
+        53
+      ],
+      "accounts": [
+        {
+          "name": "policy",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  108,
+                  105,
+                  99,
+                  121
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "params.version_tag"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "CreatePolicyParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "delegate_authority",
+      "docs": [
+        "Grant a delegate (session key) with bounded scope."
+      ],
+      "discriminator": [
+        228,
+        17,
+        85,
+        163,
+        65,
+        139,
+        36,
+        206
+      ],
+      "accounts": [
+        {
+          "name": "agent"
+        },
+        {
+          "name": "delegate_scope",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  108,
+                  101,
+                  103,
+                  97,
+                  116,
+                  101,
+                  95,
+                  115,
+                  99,
+                  111,
+                  112,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "agent.agent_id",
+                "account": "Agent"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority_root",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "agent"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "delegate",
+          "type": "pubkey"
+        },
+        {
+          "name": "max_amount_per_action",
+          "type": "u64"
+        },
+        {
+          "name": "expires_in_seconds",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "deprecate_verifier",
+      "docs": [
+        "Deprecate a verifier — marks it as inactive in the registry."
+      ],
+      "discriminator": [
+        165,
+        224,
+        1,
+        190,
+        243,
+        58,
+        47,
+        101
+      ],
+      "accounts": [
+        {
+          "name": "verifier_registry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  101,
+                  114,
+                  105,
+                  102,
+                  105,
+                  101,
+                  114,
+                  95,
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "verifier_registry"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "verifier_index",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "execute_operation",
+      "docs": [
+        "Execute a timelocked operation after the delay has passed."
+      ],
+      "discriminator": [
+        105,
+        240,
+        250,
+        159,
+        65,
+        132,
+        111,
+        185
+      ],
+      "accounts": [
+        {
+          "name": "operation",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "freeze_agent",
+      "docs": [
+        "Freeze an agent — prevents all future capability assertions."
+      ],
+      "discriminator": [
+        142,
+        40,
+        239,
+        10,
+        18,
+        216,
+        106,
+        176
+      ],
+      "accounts": [
+        {
+          "name": "agent",
+          "writable": true
+        },
+        {
+          "name": "authority_root",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "agent"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize_protocol",
+      "docs": [
+        "Initialize the protocol with a verifier registry."
+      ],
+      "discriminator": [
+        188,
+        233,
+        252,
+        106,
+        134,
+        146,
+        202,
+        91
+      ],
+      "accounts": [
+        {
+          "name": "verifier_registry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  101,
+                  114,
+                  105,
+                  102,
+                  105,
+                  101,
+                  114,
+                  95,
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "lock_bond",
+      "docs": [
+        "Lock a bond by transferring real USDC to the protocol vault.",
+        "The bond is escrowed in a PDA-owned token account.",
+        "Can be called again to re-lock after a slash."
+      ],
+      "discriminator": [
+        30,
+        142,
+        81,
+        179,
+        253,
+        64,
+        109,
+        162
+      ],
+      "accounts": [
+        {
+          "name": "agent",
+          "writable": true
+        },
+        {
+          "name": "bond",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  110,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "agent.agent_id",
+                "account": "Agent"
+              }
+            ]
+          }
+        },
+        {
+          "name": "agent_token",
+          "writable": true
+        },
+        {
+          "name": "bond_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  110,
+                  100,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "usdc_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "usdc_mint"
+        },
+        {
+          "name": "authority_root",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "agent"
+          ]
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "mark_executed",
+      "docs": [
+        "Mark an asserted Execution as executed.",
+        "",
+        "Called via CPI by the target program (the program stored in",
+        "`execution.target_program`) immediately after it applies the",
+        "action's on-chain effects — for example, after the reference-treasury",
+        "transfers USDC to the recipient.",
+        "",
+        "Security: The `executor` signer must equal `execution.target_program`.",
+        "In a CPI call the calling program's ID is automatically a signer, so",
+        "only the intended target program can advance an Execution from",
+        "`Asserted` to `Executed`. This is the cryptographic binding between",
+        "a capability assertion and the actual on-chain action."
+      ],
+      "discriminator": [
+        48,
+        99,
+        75,
+        230,
+        190,
+        61,
+        49,
+        134
+      ],
+      "accounts": [
+        {
+          "name": "execution",
+          "docs": [
+            "The Execution PDA to advance from Asserted -> Executed.",
+            "Seeds: [b\"execution\", agent_id, action_nonce]"
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  120,
+                  101,
+                  99,
+                  117,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "execution.agent_id",
+                "account": "Execution"
+              },
+              {
+                "kind": "account",
+                "path": "execution.action_nonce",
+                "account": "Execution"
+              }
+            ]
+          }
+        },
+        {
+          "name": "executor",
+          "docs": [
+            "The target program that is authorized to mark this Execution as executed.",
+            "In a CPI call the calling program's ID is automatically a signer, so",
+            "only the intended target program can satisfy this check. The address",
+            "constraint verifies it matches execution.target_program."
+          ],
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "propose_operation",
+      "docs": [
+        "Propose a timelocked trust-root operation.",
+        "The operation can only be executed after TIMELOCK_DELAY_SECONDS."
+      ],
+      "discriminator": [
+        138,
+        188,
+        18,
+        209,
+        140,
+        122,
+        139,
+        187
+      ],
+      "accounts": [
+        {
+          "name": "operation",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "operation_type",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "record_outcome",
+      "docs": [
+        "Record a performance outcome from a registered verifier.",
+        "Updates agent counters and triggers authority transitions.",
+        "",
+        "Security:",
+        "1. The verifier cannot fabricate the outcome because the",
+        "evidence_hash must match the keccak256 of the Pyth price update",
+        "account data. An independent observer can re-verify the hash.",
+        "2. The verifier cannot fabricate outcomes for actions that never",
+        "happened — the Execution PDA must exist, be in `Executed` status,",
+        "and its stored action_id must equal the action_id argument.",
+        "This cryptographically binds the receipt to an on-chain action",
+        "that was authorized via `assert_capability` and subsequently",
+        "marked executed by the target program via `mark_executed`."
+      ],
+      "discriminator": [
+        130,
+        121,
+        6,
+        102,
+        151,
+        160,
+        252,
+        6
+      ],
+      "accounts": [
+        {
+          "name": "agent",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  103,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "agent.agent_id",
+                "account": "Agent"
+              }
+            ]
+          }
+        },
+        {
+          "name": "receipt",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  99,
+                  101,
+                  105,
+                  112,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "agent.agent_id",
+                "account": "Agent"
+              },
+              {
+                "kind": "arg",
+                "path": "action_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "verifier_registry",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  101,
+                  114,
+                  105,
+                  102,
+                  105,
+                  101,
+                  114,
+                  95,
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "policy"
+        },
+        {
+          "name": "execution",
+          "docs": [
+            "The Execution PDA that binds this receipt to an actual on-chain action.",
+            "Seeds: [b\"execution\", agent_id, action_nonce]. The action_id argument",
+            "is verified against execution.action_id in the instruction body."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  120,
+                  101,
+                  99,
+                  117,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "agent.agent_id",
+                "account": "Agent"
+              },
+              {
+                "kind": "account",
+                "path": "execution.action_nonce",
+                "account": "Execution"
+              }
+            ]
+          }
+        },
+        {
+          "name": "bond",
+          "writable": true,
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  110,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "agent.agent_id",
+                "account": "Agent"
+              }
+            ]
+          }
+        },
+        {
+          "name": "bond_vault",
+          "docs": [
+            "Optional: bond vault token account (for real USDC slash transfer)"
+          ],
+          "writable": true,
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  110,
+                  100,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "usdc_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "slash_destination",
+          "docs": [
+            "Optional: slash destination token account (receives slashed USDC)"
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "usdc_mint"
+        },
+        {
+          "name": "verifier_operator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "action_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "capability_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "result",
+          "type": {
+            "defined": {
+              "name": "OutcomeResult"
+            }
+          }
+        },
+        {
+          "name": "severity",
+          "type": {
+            "defined": {
+              "name": "Severity"
+            }
+          }
+        },
+        {
+          "name": "evidence_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "register_agent",
+      "docs": [
+        "Register a new agent. The signer becomes the authority root."
+      ],
+      "discriminator": [
+        135,
+        157,
+        66,
+        195,
+        2,
+        113,
+        175,
+        30
+      ],
+      "accounts": [
+        {
+          "name": "agent",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  103,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "agent_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "agent_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "register_verifier",
+      "docs": [
+        "Register a verifier in the registry.",
+        "Only the protocol authority can call this."
+      ],
+      "discriminator": [
+        67,
+        234,
+        172,
+        169,
+        184,
+        188,
+        145,
+        156
+      ],
+      "accounts": [
+        {
+          "name": "verifier_registry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  101,
+                  114,
+                  105,
+                  102,
+                  105,
+                  101,
+                  114,
+                  95,
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "verifier_registry"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "verifier_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "verifier_program",
+          "type": "pubkey"
+        },
+        {
+          "name": "operator_key",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "replace_protocol_authority",
+      "docs": [
+        "Replace the protocol authority — transfers control of the VerifierRegistry."
+      ],
+      "discriminator": [
+        128,
+        179,
+        36,
+        83,
+        245,
+        146,
+        146,
+        22
+      ],
+      "accounts": [
+        {
+          "name": "verifier_registry",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  101,
+                  114,
+                  105,
+                  102,
+                  105,
+                  101,
+                  114,
+                  95,
+                  114,
+                  101,
+                  103,
+                  105,
+                  115,
+                  116,
+                  114,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "verifier_registry"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "new_authority",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "request_capability",
+      "docs": [
+        "Request a capability for an agent."
+      ],
+      "discriminator": [
+        226,
+        4,
+        251,
+        9,
+        238,
+        112,
+        59,
+        47
+      ],
+      "accounts": [
+        {
+          "name": "agent"
+        },
+        {
+          "name": "policy"
+        },
+        {
+          "name": "capability",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  97,
+                  112,
+                  97,
+                  98,
+                  105,
+                  108,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "agent.agent_id",
+                "account": "Agent"
+              },
+              {
+                "kind": "account",
+                "path": "agent.current_epoch",
+                "account": "Agent"
+              },
+              {
+                "kind": "arg",
+                "path": "params.target_program"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority_root",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "agent"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "RequestCapabilityParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "revoke_capability",
+      "docs": [
+        "Revoke a capability. Only the agent's authority root can call this."
+      ],
+      "discriminator": [
+        26,
+        112,
+        110,
+        143,
+        126,
+        19,
+        23,
+        73
+      ],
+      "accounts": [
+        {
+          "name": "agent"
+        },
+        {
+          "name": "capability",
+          "writable": true
+        },
+        {
+          "name": "authority_root",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "agent"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "revoke_delegate",
+      "docs": [
+        "Revoke a delegate (session key)."
+      ],
+      "discriminator": [
+        142,
+        66,
+        98,
+        126,
+        102,
+        60,
+        92,
+        163
+      ],
+      "accounts": [
+        {
+          "name": "agent"
+        },
+        {
+          "name": "delegate_scope",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  108,
+                  101,
+                  103,
+                  97,
+                  116,
+                  101,
+                  95,
+                  115,
+                  99,
+                  111,
+                  112,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "agent.agent_id",
+                "account": "Agent"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority_root",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "agent"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "supersede_policy",
+      "docs": [
+        "Supersede a policy — marks it as superseded and points to the new policy."
+      ],
+      "discriminator": [
+        76,
+        45,
+        101,
+        169,
+        243,
+        171,
+        57,
+        5
+      ],
+      "accounts": [
+        {
+          "name": "old_policy",
+          "writable": true
+        },
+        {
+          "name": "new_policy"
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "old_policy"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "unfreeze_agent",
+      "docs": [
+        "Unfreeze an agent — restores active status."
+      ],
+      "discriminator": [
+        31,
+        194,
+        10,
+        120,
+        66,
+        217,
+        180,
+        103
+      ],
+      "accounts": [
+        {
+          "name": "agent",
+          "writable": true
+        },
+        {
+          "name": "authority_root",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "agent"
+          ]
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Agent",
+      "discriminator": [
+        47,
+        166,
+        112,
+        147,
+        155,
+        197,
+        86,
+        7
+      ]
+    },
+    {
+      "name": "Bond",
+      "discriminator": [
+        224,
+        128,
+        48,
+        251,
+        182,
+        246,
+        111,
+        196
+      ]
+    },
+    {
+      "name": "Capability",
+      "discriminator": [
+        192,
+        140,
+        41,
+        92,
+        236,
+        64,
+        181,
+        99
+      ]
+    },
+    {
+      "name": "ConsumedNonce",
+      "discriminator": [
+        203,
+        122,
+        100,
+        36,
+        241,
+        214,
+        161,
+        246
+      ]
+    },
+    {
+      "name": "DelegateScope",
+      "discriminator": [
+        197,
+        110,
+        84,
+        1,
+        101,
+        175,
+        26,
+        55
+      ]
+    },
+    {
+      "name": "Execution",
+      "discriminator": [
+        50,
+        148,
+        225,
+        163,
+        129,
+        33,
+        229,
+        40
+      ]
+    },
+    {
+      "name": "Policy",
+      "discriminator": [
+        222,
+        135,
+        7,
+        163,
+        235,
+        177,
+        33,
+        68
+      ]
+    },
+    {
+      "name": "Receipt",
+      "discriminator": [
+        39,
+        154,
+        73,
+        106,
+        80,
+        102,
+        145,
+        153
+      ]
+    },
+    {
+      "name": "TimelockedOperation",
+      "discriminator": [
+        137,
+        217,
+        242,
+        107,
+        214,
+        178,
+        50,
+        102
+      ]
+    },
+    {
+      "name": "VerifierRegistry",
+      "discriminator": [
+        21,
+        219,
+        168,
+        135,
+        51,
+        182,
+        88,
+        129
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "AgentFrozen",
+      "discriminator": [
+        49,
+        38,
+        208,
+        185,
+        219,
+        3,
+        92,
+        27
+      ]
+    },
+    {
+      "name": "AgentRegistered",
+      "discriminator": [
+        191,
+        78,
+        217,
+        54,
+        232,
+        100,
+        189,
+        85
+      ]
+    },
+    {
+      "name": "AgentUnfrozen",
+      "discriminator": [
+        209,
+        209,
+        139,
+        83,
+        146,
+        43,
+        100,
+        252
+      ]
+    },
+    {
+      "name": "AuthorityDowngraded",
+      "discriminator": [
+        69,
+        171,
+        224,
+        32,
+        105,
+        200,
+        194,
+        241
+      ]
+    },
+    {
+      "name": "AuthorityUpgraded",
+      "discriminator": [
+        171,
+        20,
+        231,
+        161,
+        62,
+        144,
+        53,
+        154
+      ]
+    },
+    {
+      "name": "BondLocked",
+      "discriminator": [
+        89,
+        45,
+        139,
+        7,
+        22,
+        105,
+        232,
+        59
+      ]
+    },
+    {
+      "name": "BondSlashed",
+      "discriminator": [
+        59,
+        7,
+        252,
+        195,
+        234,
+        156,
+        42,
+        54
+      ]
+    },
+    {
+      "name": "CapabilityAsserted",
+      "discriminator": [
+        140,
+        14,
+        234,
+        209,
+        244,
+        92,
+        110,
+        114
+      ]
+    },
+    {
+      "name": "CapabilityIssued",
+      "discriminator": [
+        199,
+        150,
+        145,
+        174,
+        36,
+        46,
+        88,
+        117
+      ]
+    },
+    {
+      "name": "CapabilityRevoked",
+      "discriminator": [
+        83,
+        213,
+        58,
+        135,
+        225,
+        22,
+        5,
+        14
+      ]
+    },
+    {
+      "name": "DelegateGranted",
+      "discriminator": [
+        64,
+        15,
+        157,
+        81,
+        216,
+        0,
+        90,
+        100
+      ]
+    },
+    {
+      "name": "DelegateRevoked",
+      "discriminator": [
+        10,
+        200,
+        133,
+        29,
+        238,
+        207,
+        193,
+        124
+      ]
+    },
+    {
+      "name": "ExecutionAsserted",
+      "discriminator": [
+        161,
+        51,
+        131,
+        198,
+        116,
+        195,
+        236,
+        201
+      ]
+    },
+    {
+      "name": "ExecutionMarked",
+      "discriminator": [
+        107,
+        191,
+        142,
+        30,
+        67,
+        56,
+        192,
+        64
+      ]
+    },
+    {
+      "name": "ExecutionRecorded",
+      "discriminator": [
+        231,
+        133,
+        106,
+        58,
+        31,
+        56,
+        123,
+        10
+      ]
+    },
+    {
+      "name": "OperationCancelled",
+      "discriminator": [
+        35,
+        79,
+        124,
+        242,
+        195,
+        248,
+        114,
+        0
+      ]
+    },
+    {
+      "name": "OperationExecuted",
+      "discriminator": [
+        205,
+        223,
+        227,
+        106,
+        178,
+        86,
+        163,
+        162
+      ]
+    },
+    {
+      "name": "OperationProposed",
+      "discriminator": [
+        252,
+        68,
+        199,
+        155,
+        10,
+        17,
+        178,
+        206
+      ]
+    },
+    {
+      "name": "OutcomeRecorded",
+      "discriminator": [
+        4,
+        69,
+        202,
+        1,
+        151,
+        45,
+        204,
+        96
+      ]
+    },
+    {
+      "name": "PolicyCreated",
+      "discriminator": [
+        59,
+        189,
+        65,
+        121,
+        86,
+        157,
+        108,
+        10
+      ]
+    },
+    {
+      "name": "PolicySuperseded",
+      "discriminator": [
+        255,
+        166,
+        123,
+        160,
+        206,
+        125,
+        114,
+        54
+      ]
+    },
+    {
+      "name": "ProtocolAuthorityReplaced",
+      "discriminator": [
+        250,
+        3,
+        15,
+        129,
+        59,
+        205,
+        21,
+        251
+      ]
+    },
+    {
+      "name": "ProtocolInitialized",
+      "discriminator": [
+        173,
+        122,
+        168,
+        254,
+        9,
+        118,
+        76,
+        132
+      ]
+    },
+    {
+      "name": "ReceiptClosed",
+      "discriminator": [
+        127,
+        232,
+        161,
+        69,
+        46,
+        187,
+        159,
+        188
+      ]
+    },
+    {
+      "name": "VerifierDeprecated",
+      "discriminator": [
+        96,
+        186,
+        228,
+        36,
+        234,
+        71,
+        62,
+        96
+      ]
+    },
+    {
+      "name": "VerifierRegistered",
+      "discriminator": [
+        203,
+        97,
+        26,
+        57,
+        161,
+        104,
+        177,
+        144
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "AgentNotActive",
+      "msg": "The agent is not active"
+    },
+    {
+      "code": 6001,
+      "name": "CapabilityNotActive",
+      "msg": "The capability is not active"
+    },
+    {
+      "code": 6002,
+      "name": "StaleEpoch",
+      "msg": "The authority epoch is stale"
+    },
+    {
+      "code": 6003,
+      "name": "PolicyMismatch",
+      "msg": "The policy does not match"
+    },
+    {
+      "code": 6004,
+      "name": "CapabilityExpired",
+      "msg": "The capability has expired"
+    },
+    {
+      "code": 6005,
+      "name": "NonceAlreadyConsumed",
+      "msg": "The nonce has already been consumed"
+    },
+    {
+      "code": 6006,
+      "name": "TargetNotInScope",
+      "msg": "The target is not in the permitted scope"
+    },
+    {
+      "code": 6007,
+      "name": "ActionTypeNotPermitted",
+      "msg": "The action type is not permitted"
+    },
+    {
+      "code": 6008,
+      "name": "AmountExceedsCapability",
+      "msg": "The amount exceeds the capability limit"
+    },
+    {
+      "code": 6009,
+      "name": "BondNotSatisfied",
+      "msg": "The required bond is not satisfied"
+    },
+    {
+      "code": 6010,
+      "name": "WrongAgent",
+      "msg": "The signer is not the agent authority root"
+    },
+    {
+      "code": 6011,
+      "name": "DelegateScopeExceeded",
+      "msg": "The delegate scope was exceeded"
+    },
+    {
+      "code": 6012,
+      "name": "UnauthorizedVerifier",
+      "msg": "The verifier is not authorized"
+    },
+    {
+      "code": 6013,
+      "name": "ActionNotExecuted",
+      "msg": "The action was not executed"
+    },
+    {
+      "code": 6014,
+      "name": "AuthorityRootMismatch",
+      "msg": "The agent authority root does not match"
+    },
+    {
+      "code": 6015,
+      "name": "PolicySuperseded",
+      "msg": "The policy is superseded"
+    },
+    {
+      "code": 6016,
+      "name": "BondAlreadySlashed",
+      "msg": "The bond has already been slashed"
+    },
+    {
+      "code": 6017,
+      "name": "InsufficientBond",
+      "msg": "Insufficient bond amount"
+    },
+    {
+      "code": 6018,
+      "name": "CapabilityRevoked",
+      "msg": "The capability was revoked"
+    },
+    {
+      "code": 6019,
+      "name": "CapabilityAgentMismatch",
+      "msg": "The capability does not belong to this agent"
+    },
+    {
+      "code": 6020,
+      "name": "TargetProgramMismatch",
+      "msg": "The target program does not match"
+    },
+    {
+      "code": 6021,
+      "name": "AmountExceedsTier",
+      "msg": "The amount exceeds the tier limit for this agent"
+    },
+    {
+      "code": 6022,
+      "name": "TimelockNotExpired",
+      "msg": "The operation is not yet executable — timelock not expired"
+    },
+    {
+      "code": 6023,
+      "name": "OperationAlreadyExecuted",
+      "msg": "The operation has already been executed"
+    },
+    {
+      "code": 6024,
+      "name": "OperationCancelled",
+      "msg": "The operation has been cancelled"
+    },
+    {
+      "code": 6025,
+      "name": "DelegateScopeExpired",
+      "msg": "The delegate scope has expired"
+    },
+    {
+      "code": 6026,
+      "name": "DelegateAmountExceedsScope",
+      "msg": "The delegate amount exceeds the scope limit"
+    },
+    {
+      "code": 6027,
+      "name": "AgentFrozen",
+      "msg": "The agent is frozen"
+    },
+    {
+      "code": 6028,
+      "name": "VerifierNotActive",
+      "msg": "The verifier is not active"
+    },
+    {
+      "code": 6029,
+      "name": "PolicyAlreadySuperseded",
+      "msg": "The policy is already superseded"
+    },
+    {
+      "code": 6030,
+      "name": "UnauthorizedCancellation",
+      "msg": "Unauthorized — only the proposer can cancel"
+    },
+    {
+      "code": 6031,
+      "name": "InvalidEvidence",
+      "msg": "The evidence hash is invalid (all zeros)"
+    },
+    {
+      "code": 6032,
+      "name": "ReceiptFromCurrentEpoch",
+      "msg": "Cannot close a receipt from the current authority epoch"
+    },
+    {
+      "code": 6033,
+      "name": "ExecutionNotFound",
+      "msg": "The execution PDA was not found for this action"
+    },
+    {
+      "code": 6034,
+      "name": "ExecutionActionMismatch",
+      "msg": "The execution PDA action_id does not match the recorded action"
+    },
+    {
+      "code": 6035,
+      "name": "ExecutionNotExecuted",
+      "msg": "The execution PDA is still asserted — the action has not been marked executed"
+    },
+    {
+      "code": 6036,
+      "name": "ExecutionAlreadyRecorded",
+      "msg": "The execution PDA has already been recorded — cannot record twice"
+    },
+    {
+      "code": 6037,
+      "name": "UnauthorizedExecutionMarker",
+      "msg": "Only the target program can mark an execution as executed"
+    }
+  ],
+  "types": [
+    {
+      "name": "ActionParams",
+      "docs": [
+        "Parameters for asserting a capability."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "action_type",
+            "type": {
+              "defined": {
+                "name": "CapabilityType"
+              }
+            }
+          },
+          {
+            "name": "target_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "target_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "action_nonce",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Agent",
+      "docs": [
+        "An autonomous agent with earned economic authority."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "authority_root",
+            "type": "pubkey"
+          },
+          {
+            "name": "delegate_authority",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "current_epoch",
+            "type": "u64"
+          },
+          {
+            "name": "policy_root",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "success_count",
+            "type": "u64"
+          },
+          {
+            "name": "total_count",
+            "type": "u64"
+          },
+          {
+            "name": "critical_failures",
+            "type": "u64"
+          },
+          {
+            "name": "bond_amount",
+            "type": "u64"
+          },
+          {
+            "name": "tier",
+            "type": {
+              "defined": {
+                "name": "AuthorityTier"
+              }
+            }
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "AgentStatus"
+              }
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentFrozen",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentRegistered",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "authority_root",
+            "type": "pubkey"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentStatus",
+      "docs": [
+        "Agent status."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Active"
+          },
+          {
+            "name": "Frozen"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentUnfrozen",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AuthorityDowngraded",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "old_tier",
+            "type": {
+              "defined": {
+                "name": "AuthorityTier"
+              }
+            }
+          },
+          {
+            "name": "new_tier",
+            "type": {
+              "defined": {
+                "name": "AuthorityTier"
+              }
+            }
+          },
+          {
+            "name": "new_epoch",
+            "type": "u64"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AuthorityTier",
+      "docs": [
+        "Authority tiers for agent economic access."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Probation"
+          },
+          {
+            "name": "Proven"
+          },
+          {
+            "name": "Trusted"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AuthorityUpgraded",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "old_tier",
+            "type": {
+              "defined": {
+                "name": "AuthorityTier"
+              }
+            }
+          },
+          {
+            "name": "new_tier",
+            "type": {
+              "defined": {
+                "name": "AuthorityTier"
+              }
+            }
+          },
+          {
+            "name": "new_epoch",
+            "type": "u64"
+          },
+          {
+            "name": "success_count",
+            "type": "u64"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Bond",
+      "docs": [
+        "A locked bond backing an agent's authority."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "locked_at",
+            "type": "i64"
+          },
+          {
+            "name": "slashed",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BondLocked",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BondSlashed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Capability",
+      "docs": [
+        "An evidence-bound capability granted to an agent."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "capability_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "capability_type",
+            "type": {
+              "defined": {
+                "name": "CapabilityType"
+              }
+            }
+          },
+          {
+            "name": "target_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "target_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount_limit",
+            "type": "u64"
+          },
+          {
+            "name": "frequency_limit",
+            "type": "u64"
+          },
+          {
+            "name": "expiry",
+            "type": "i64"
+          },
+          {
+            "name": "policy_key",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority_epoch",
+            "type": "u64"
+          },
+          {
+            "name": "nonce",
+            "type": "u64"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "CapabilityStatus"
+              }
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CapabilityAsserted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "capability_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "action_type",
+            "type": {
+              "defined": {
+                "name": "CapabilityType"
+              }
+            }
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "action_nonce",
+            "type": "u64"
+          },
+          {
+            "name": "result",
+            "type": "bool"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CapabilityIssued",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "capability_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "capability_type",
+            "type": {
+              "defined": {
+                "name": "CapabilityType"
+              }
+            }
+          },
+          {
+            "name": "amount_limit",
+            "type": "u64"
+          },
+          {
+            "name": "expiry",
+            "type": "i64"
+          },
+          {
+            "name": "authority_epoch",
+            "type": "u64"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CapabilityRevoked",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "capability_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CapabilityStatus",
+      "docs": [
+        "Capability lifecycle status."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Active"
+          },
+          {
+            "name": "Revoked"
+          },
+          {
+            "name": "Expired"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CapabilityType",
+      "docs": [
+        "Capability action classes."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "PayService"
+          },
+          {
+            "name": "Trade"
+          },
+          {
+            "name": "TreasuryWithdraw"
+          },
+          {
+            "name": "Delegate"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ConsumedNonce",
+      "docs": [
+        "Tracks consumed action nonces for replay protection."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "nonce",
+            "type": "u64"
+          },
+          {
+            "name": "consumed_at",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CreatePolicyParams",
+      "docs": [
+        "Parameters for creating a policy."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "version_tag",
+            "type": "string"
+          },
+          {
+            "name": "capability_type",
+            "type": {
+              "defined": {
+                "name": "CapabilityType"
+              }
+            }
+          },
+          {
+            "name": "min_successes",
+            "type": "u64"
+          },
+          {
+            "name": "min_success_rate_bps",
+            "type": "u16"
+          },
+          {
+            "name": "critical_failure_limit",
+            "type": "u64"
+          },
+          {
+            "name": "min_bond_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "max_amount_usdc",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DelegateGranted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "delegate",
+            "type": "pubkey"
+          },
+          {
+            "name": "max_amount_per_action",
+            "type": "u64"
+          },
+          {
+            "name": "expires_at",
+            "type": "i64"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DelegateRevoked",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "delegate",
+            "type": "pubkey"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DelegateScope",
+      "docs": [
+        "Delegate scope for session keys — bounds what a delegate can do."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "delegate",
+            "type": "pubkey"
+          },
+          {
+            "name": "max_amount_per_action",
+            "type": "u64"
+          },
+          {
+            "name": "expires_at",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Execution",
+      "docs": [
+        "An Execution PDA — binds a capability assertion to the actual on-chain",
+        "action it authorized. Created in assert_capability, advanced to Executed",
+        "by the target program via mark_executed, and finalized to Recorded in",
+        "record_outcome."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "action_id",
+            "docs": [
+              "Deterministic hash of (agent_id, capability_id, action_type, target_program,",
+              "target_account, amount, action_nonce). Computed identically in",
+              "assert_capability and record_outcome so the receipt is bound to the",
+              "exact action that was asserted and executed."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "capability_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "action_type",
+            "type": {
+              "defined": {
+                "name": "CapabilityType"
+              }
+            }
+          },
+          {
+            "name": "target_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "target_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "action_nonce",
+            "type": "u64"
+          },
+          {
+            "name": "authority_epoch",
+            "type": "u64"
+          },
+          {
+            "name": "asserted_at",
+            "type": "i64"
+          },
+          {
+            "name": "executed_at",
+            "type": "i64"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "ExecutionStatus"
+              }
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ExecutionAsserted",
+      "docs": [
+        "Emitted when assert_capability initializes an Execution PDA with status=Asserted."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "action_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "capability_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "target_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "action_nonce",
+            "type": "u64"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ExecutionMarked",
+      "docs": [
+        "Emitted when the target program marks an Execution as Executed via mark_executed."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "action_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "executor",
+            "type": "pubkey"
+          },
+          {
+            "name": "executed_at",
+            "type": "i64"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ExecutionRecorded",
+      "docs": [
+        "Emitted when record_outcome finalizes an Execution to Recorded status."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "action_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "receipt",
+            "type": "pubkey"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ExecutionStatus",
+      "docs": [
+        "Lifecycle status of an Execution PDA.",
+        "An Execution PDA binds an asserted capability to the actual on-chain",
+        "effects it authorized, so that record_outcome cannot be fabricated for",
+        "actions that never happened."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Asserted"
+          },
+          {
+            "name": "Executed"
+          },
+          {
+            "name": "Recorded"
+          }
+        ]
+      }
+    },
+    {
+      "name": "OperationCancelled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "operation_type",
+            "type": "u8"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "OperationExecuted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "operation_type",
+            "type": "u8"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "OperationProposed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "operation_type",
+            "type": "u8"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "execute_after",
+            "type": "i64"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "OutcomeRecorded",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "receipt_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "result",
+            "type": {
+              "defined": {
+                "name": "OutcomeResult"
+              }
+            }
+          },
+          {
+            "name": "severity",
+            "type": {
+              "defined": {
+                "name": "Severity"
+              }
+            }
+          },
+          {
+            "name": "verifier",
+            "type": "pubkey"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "OutcomeResult",
+      "docs": [
+        "Receipt outcome result."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Pass"
+          },
+          {
+            "name": "Fail"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Policy",
+      "docs": [
+        "A fixed policy that defines authority requirements."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "policy_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "version_tag",
+            "type": "string"
+          },
+          {
+            "name": "capability_type",
+            "type": {
+              "defined": {
+                "name": "CapabilityType"
+              }
+            }
+          },
+          {
+            "name": "min_successes",
+            "type": "u64"
+          },
+          {
+            "name": "min_success_rate_bps",
+            "type": "u16"
+          },
+          {
+            "name": "critical_failure_limit",
+            "type": "u64"
+          },
+          {
+            "name": "min_bond_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "max_amount_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "PolicyStatus"
+              }
+            }
+          },
+          {
+            "name": "created_slot",
+            "type": "u64"
+          },
+          {
+            "name": "superseded_by",
+            "type": {
+              "option": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PolicyCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "policy_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "version_tag",
+            "type": "string"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PolicyStatus",
+      "docs": [
+        "Policy lifecycle status."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Active"
+          },
+          {
+            "name": "Superseded"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PolicySuperseded",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "old_policy_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "new_policy_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProtocolAuthorityReplaced",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProtocolInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Receipt",
+      "docs": [
+        "A performance receipt recording a verified outcome."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "receipt_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "action_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "capability_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "policy_key",
+            "type": "pubkey"
+          },
+          {
+            "name": "verifier",
+            "type": "pubkey"
+          },
+          {
+            "name": "result",
+            "type": {
+              "defined": {
+                "name": "OutcomeResult"
+              }
+            }
+          },
+          {
+            "name": "severity",
+            "type": {
+              "defined": {
+                "name": "Severity"
+              }
+            }
+          },
+          {
+            "name": "evidence_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "authority_epoch",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ReceiptClosed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "receipt_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "authority_epoch",
+            "type": "u64"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RequestCapabilityParams",
+      "docs": [
+        "Parameters for requesting a capability."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "capability_type",
+            "type": {
+              "defined": {
+                "name": "CapabilityType"
+              }
+            }
+          },
+          {
+            "name": "target_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "target_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount_limit",
+            "type": "u64"
+          },
+          {
+            "name": "frequency_limit",
+            "type": "u64"
+          },
+          {
+            "name": "ttl_seconds",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Severity",
+      "docs": [
+        "Receipt outcome severity."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "None"
+          },
+          {
+            "name": "Ordinary"
+          },
+          {
+            "name": "Critical"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TimelockedOperation",
+      "docs": [
+        "A timelocked trust-root operation awaiting execution."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "operation_type",
+            "type": "u8"
+          },
+          {
+            "name": "proposer",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposed_at",
+            "type": "i64"
+          },
+          {
+            "name": "execute_after",
+            "type": "i64"
+          },
+          {
+            "name": "executed",
+            "type": "bool"
+          },
+          {
+            "name": "cancelled",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VerifierDeprecated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "verifier_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VerifierEntry",
+      "docs": [
+        "A single verifier entry in the registry."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "verifier_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "verifier_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "operator_key",
+            "type": "pubkey"
+          },
+          {
+            "name": "active",
+            "type": "bool"
+          },
+          {
+            "name": "registered_slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VerifierRegistered",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "verifier_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "verifier_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "operator_key",
+            "type": "pubkey"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VerifierRegistry",
+      "docs": [
+        "Registry of authorized verifiers."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "verifiers",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "VerifierEntry"
+                }
+              }
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}

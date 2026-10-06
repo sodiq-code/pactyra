@@ -182,6 +182,70 @@ export async function getTokenBalance(
 }
 
 // ============================================================
+// Execution PDA helpers
+// ============================================================
+
+/**
+ * Derive the Execution PDA for a given agent and action nonce.
+ * Seeds: [b"execution", agent_id, action_nonce]
+ */
+export function deriveExecutionPda(
+  agentId: Uint8Array,
+  actionNonce: BN,
+  programId: PublicKey
+): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [
+      Buffer.from("execution"),
+      Buffer.from(agentId),
+      actionNonce.toArrayLike(Buffer, "le", 8),
+    ],
+    programId
+  );
+}
+
+/**
+ * Derive the bond vault PDA. Seeds: [b"bond_vault", usdc_mint]
+ */
+export function deriveBondVaultPda(
+  usdcMint: PublicKey,
+  programId: PublicKey
+): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("bond_vault"), usdcMint.toBuffer()],
+    programId
+  );
+}
+
+/**
+ * Compute the deterministic action_id for assert_capability.
+ * keccak256(agent_id || capability_id || action_type || target_program ||
+ *           target_account || amount || action_nonce)
+ */
+export function computeActionId(
+  agentId: Uint8Array,
+  capabilityId: Uint8Array,
+  actionTypeByte: number,
+  targetProgram: PublicKey,
+  targetAccount: PublicKey,
+  amount: BN,
+  actionNonce: BN
+): Uint8Array {
+  const { keccak_256 } = require("js-sha3");
+  const data = Buffer.concat([
+    Buffer.from(agentId),
+    Buffer.from(capabilityId),
+    Buffer.from([actionTypeByte]),
+    targetProgram.toBuffer(),
+    targetAccount.toBuffer(),
+    amount.toArrayLike(Buffer, "le", 8),
+    actionNonce.toArrayLike(Buffer, "le", 8),
+  ]);
+  const hashHex = keccak_256(data);
+  return new Uint8Array(Buffer.from(hashHex, "hex"));
+}
+
+// ============================================================
 // Assertion helpers
 // ============================================================
 
