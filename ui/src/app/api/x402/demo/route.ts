@@ -22,7 +22,6 @@ const DEVNET_RPC = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com"
 const USDC_MINT = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU")
 const PAY_TO = process.env.PAY_TO || "A55wG1G5nLVxn9Ns91ogrqZ6cHVi2yPd7WRi8GCyc3PE"
 const PAYMENT_AMOUNT = 10_000 // 0.01 USDC
-const RESOURCE_URL = process.env.X402_RESOURCE_URL || 'http://localhost:3000/api/x402/resource'
 
 /**
  * x402 V2 Server-Side Demo
@@ -36,7 +35,7 @@ const RESOURCE_URL = process.env.X402_RESOURCE_URL || 'http://localhost:3000/api
  *
  * GET /api/x402/demo
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   const steps: any[] = []
 
   try {
@@ -48,6 +47,10 @@ export async function GET() {
       )
     }
 
+    // Construct the resource URL dynamically from the request
+    const url = new URL(request.url)
+    const resourceUrl = `${url.protocol}//${url.host}/api/x402/resource`
+
     const secretKey = JSON.parse(process.env.SOLANA_WALLET_SECRET_KEY)
     const payer = Keypair.fromSecretKey(Buffer.from(secretKey))
     const connection = new Connection(DEVNET_RPC, 'confirmed')
@@ -56,7 +59,7 @@ export async function GET() {
 
     // Step 2: Check PACTYRA agent state
     const PERMANENT_AGENT = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2'
-    const agentRes = await fetch(`https://pactyra-ui.vercel.app/api/agent?id=${PERMANENT_AGENT}`)
+    const agentRes = await fetch(`${url.protocol}//${url.host}/api/agent?id=${PERMANENT_AGENT}`)
     const agentData = await agentRes.json()
 
     if (!agentData.found) {
@@ -74,7 +77,7 @@ export async function GET() {
     })
 
     // Step 3: Make initial request — expect 402
-    const initialResponse = await fetch(RESOURCE_URL)
+    const initialResponse = await fetch(resourceUrl)
 
     if (initialResponse.status !== 402) {
       return NextResponse.json({
@@ -186,7 +189,7 @@ export async function GET() {
     })
 
     // Step 6: Retry request with payment proof
-    const paidResponse = await fetch(RESOURCE_URL, {
+    const paidResponse = await fetch(resourceUrl, {
       headers: {
         'X-PAYMENT': signature,
         'X-PAYMENT-NETWORK': requirement.network,
