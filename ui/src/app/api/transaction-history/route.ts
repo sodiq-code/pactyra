@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 import { Connection, PublicKey } from '@solana/web3.js'
 
-const DEVNET_RPC = 'process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com"'
+const DEVNET_RPC = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com"
 
 export async function GET(request: NextRequest) {
   try {

@@ -94,7 +94,7 @@ const PROGRAMS = [
 const TOTAL_INSTRUCTIONS = PROGRAMS.reduce((s, p) => s + p.instructions, 0)
 const MULTISIG_PDA = '7vPjrrEEeszXDNiigpczbzNH376ak5EDfsxvT4UGSpkv'
 const GITHUB_URL = 'https://github.com/sodiq-code/pactyra'
-const VERCEL_URL = 'https://pactyra-ui.vercel.app'
+const VERCEL_URL = 'https://pactyra.vercel.app'
 const SOLANA_FM_BASE = 'https://solana.fm/address'
 
 const shortHash = (h: string, head = 4, tail = 4): string =>

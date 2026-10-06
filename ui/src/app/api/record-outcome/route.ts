@@ -6,7 +6,7 @@ import { loadWalletKeypair, makeAnchorWallet } from '@/lib/wallet'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-const DEVNET_RPC = 'process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com"'
+const DEVNET_RPC = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com"
 const idl: Idl = require('@/lib/idl/pactyra_core.json')
 
 export async function POST(request: NextRequest) {
