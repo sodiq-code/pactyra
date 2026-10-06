@@ -58,12 +58,15 @@ Multisig PDA: 7vPjrrEEeszXDNiigpczbzNH376ak5EDfsxvT4UGSpkv (3-of-5 threshold)
 | Lock bond | [`5MqTqxj3ac...7GkE`](https://solana.fm/tx/5MqTqxj3aczMkcJh7aKsm5zNjrGxmhMM7vEVGacuBHG3PXKMBrTbhbhh5cnk9RKH6yzja21wuE5hnCGVekhY7GkE?cluster=devnet) |
 | Create multisig | [`2DirBGA2WG...Myo2`](https://solana.fm/tx/2DirBGA2WGtNXPQxu32wxzbF6C679Q2zeg5srBLZMadSdSAZHL5wH2veQNNTvLYM6MUQ9KaafuvqzgiEu79sMyo2?cluster=devnet) |
 | Transfer authority to multisig | [`4tTr8y31WH...uXNQK`](https://solana.fm/tx/4tTr8y31WHfrXRhamTZ7q4Fiq3qLQfyPwJXdGNqP3TtNvVq6pfsM6KGwFrFzbqzkuBBeyKL9MimrDoVgqB8uXNQK?cluster=devnet) |
+| Upgrade pactyra-core (Execution PDA) | [`2GcKadnGSn...k96D`](https://solana.fm/tx/2GcKadnGSnAUh1hGq9VPdeJaDKraLhaHnizvMKQWeCk46X3ewhp9YsThx4WZLes6fx76x3PqXa7HozLZoqX5k96D?cluster=devnet) |
+| Upgrade pactyra-verifier | [`29KVUGLhN8...NcoEW`](https://solana.fm/tx/29KVUGLhN8s8QdjPhVsw87o1id2XHgU7Ad8wSHDX3WAKCjEmzgfgXDPgB9VGXJjUhb572Vpx9xEpoXStf5wNcoEW?cluster=devnet) |
+| Upgrade reference-treasury | [`t9GA9JJdgA...PQT`](https://solana.fm/tx/t9GA9JJdgAL2yTx8csXNfQh3p28sWVVRcAY2TtsrxhTxZ25Jz4aoVnvwS29rSUeyWwGeaUtYCZ1gHPUtsBFcPQT?cluster=devnet) |
 
 ## pactyra-core
 
-### Instructions (20)
+### Instructions (21)
 
-#### Core protocol (9)
+#### Core protocol (10)
 
 | Instruction | Description |
 |---|---|
@@ -71,10 +74,11 @@ Multisig PDA: 7vPjrrEEeszXDNiigpczbzNH376ak5EDfsxvT4UGSpkv (3-of-5 threshold)
 | `register_agent` | Registers a new agent with the signer as authority root (Tier 1 / Probation) |
 | `register_verifier` | Registers a verifier operator in the VerifierRegistry (protocol authority only) |
 | `create_policy` | Creates an immutable policy defining capability requirements |
-| `lock_bond` | Locks a bond for an agent (re-lockable after slash) |
+| `lock_bond` | Locks a bond by transferring real USDC to a PDA-owned vault (re-lockable after slash) |
 | `request_capability` | Issues an evidence-bound capability with TTL, amount limit, target scope, and authority epoch binding |
-| `assert_capability` | The core enforcement instruction — validates 13 security checks before authorizing an action |
-| `record_outcome` | Records a verified outcome from a registered verifier, triggers authority transitions |
+| `assert_capability` | The core enforcement instruction — validates 13 security checks and creates an Execution PDA |
+| `mark_executed` | Called by the target program via CPI to prove an action was performed (Asserted → Executed) |
+| `record_outcome` | Records a verified outcome — requires Execution PDA in Executed status, triggers authority transitions |
 | `revoke_capability` | Revokes a capability (agent authority root only) |
 
 #### Governance layer (11)
