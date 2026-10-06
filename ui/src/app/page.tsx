@@ -280,6 +280,8 @@ export default function Page() {
   const [txHistoryLoading, setTxHistoryLoading] = useState(false)
   const [showTxHistory, setShowTxHistory] = useState(false)
   const [showJudgeMode, setShowJudgeMode] = useState(false)
+  const [x402DemoLoading, setX402DemoLoading] = useState(false)
+  const [x402DemoResult, setX402DemoResult] = useState<any>(null)
 
   const fetchAgent = useCallback(async (id: string, silent = false) => {
     if (!silent) setAgentLoading(true)
@@ -401,6 +403,25 @@ export default function Page() {
       toast({ title: 'Record failed', description: e.message, variant: 'destructive' })
     } finally {
       setRecording('')
+    }
+  }
+
+  const runX402Demo = async () => {
+    setX402DemoLoading(true)
+    setX402DemoResult(null)
+    try {
+      const res = await fetch('/api/x402/demo', { cache: 'no-store' })
+      const data = await res.json()
+      setX402DemoResult(data)
+      if (data.ok) {
+        toast({ title: 'x402 payment verified', description: `Signature: ${data.signature?.slice(0, 8)}...` })
+      } else {
+        toast({ title: 'x402 demo failed', description: data.message || data.error || 'Unknown error', variant: 'destructive' })
+      }
+    } catch (e: any) {
+      toast({ title: 'x402 demo failed', description: e.message, variant: 'destructive' })
+    } finally {
+      setX402DemoLoading(false)
     }
   }
 
@@ -1128,6 +1149,97 @@ export default function Page() {
                   ) : (
                     <div className="text-sm text-muted-foreground py-4 text-center font-mono">No transactions found</div>
                   )
+                )}
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* X402 PAYMENT */}
+          <section>
+            <SectionHeader icon={DollarSign} title="x402 Payment" hint="real USDC · on-chain verified" />
+            <Card className="bg-card/50 backdrop-blur border-border/50">
+              <CardContent className="pt-6 space-y-4">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Real x402 V2 HTTP payment protocol integration. The adapter checks PACTYRA capability, then makes a <span className="text-foreground font-medium">real on-chain USDC transfer</span>. No simulated signatures — the facilitator verifies the transaction on Solana before returning the resource.
+                </p>
+
+                {/* x402 flow visualization */}
+                <div className="flex items-center justify-between gap-1 text-[10px] font-mono">
+                  {[
+                    { label: '402', desc: 'Payment Required', color: 'amber' },
+                    { label: '✓', desc: 'Capability', color: 'emerald' },
+                    { label: '$', desc: 'USDC Transfer', color: 'sky' },
+                    { label: '200', desc: 'Verified', color: 'emerald' },
+                  ].map((s, i) => (
+                    <div key={i} className="flex items-center gap-1">
+                      <div className={cn('flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-md border',
+                        s.color === 'amber' ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+                        : s.color === 'emerald' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                        : 'bg-sky-500/10 border-sky-500/20 text-sky-400')}>
+                        <span className="font-bold text-sm">{s.label}</span>
+                        <span className="text-[8px] text-muted-foreground uppercase">{s.desc}</span>
+                      </div>
+                      {i < 3 && <ChevronRight className="h-3 w-3 text-muted-foreground/40" />}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Run demo button */}
+                <div className="flex items-center gap-3">
+                  <Button onClick={runX402Demo} disabled={x402DemoLoading}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    {x402DemoLoading ? 'Running x402 flow...' : 'Run Real x402 Payment'}
+                  </Button>
+                  <span className="text-[10px] text-muted-foreground">
+                    Pays 0.01 USDC on devnet
+                  </span>
+                </div>
+
+                {/* Results */}
+                {x402DemoResult && (
+                  <div className="space-y-2">
+                    {x402DemoResult.ok ? (
+                      <>
+                        <div className="flex items-center gap-2 p-3 rounded-md bg-emerald-500/10 border border-emerald-500/20">
+                          <Check className="h-4 w-4 text-emerald-400" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-medium text-emerald-400">Payment verified on-chain</div>
+                            <div className="text-[10px] text-muted-foreground font-mono break-all">
+                              Signature: {x402DemoResult.signature?.slice(0, 16)}...{x402DemoResult.signature?.slice(-8)}
+                            </div>
+                          </div>
+                          <a href={x402DemoResult.explorerUrl} target="_blank" rel="noreferrer"
+                            className="text-emerald-400 hover:text-emerald-300 shrink-0" title="View on Solana.fm">
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </a>
+                        </div>
+                        {/* Show step results */}
+                        {x402DemoResult.steps?.map((s: any, i: number) => (
+                          <div key={i} className="flex items-center gap-2 text-[11px] py-1">
+                            <span className={cn('flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold',
+                              s.result === 'success' || s.result === 'verified' || s.result === 'passed'
+                                ? 'bg-emerald-500/15 text-emerald-400'
+                                : 'bg-rose-500/15 text-rose-400')}>
+                              {s.result === 'success' || s.result === 'verified' || s.result === 'passed' ? '✓' : '✗'}
+                            </span>
+                            <span className="text-muted-foreground">{s.action}</span>
+                            {s.signature && (
+                              <a href={`https://solana.fm/tx/${s.signature}?cluster=devnet`} target="_blank" rel="noreferrer"
+                                className="text-sky-400 hover:text-sky-300 ml-auto font-mono text-[10px]">
+                                {s.signature.slice(0, 8)}...{s.signature.slice(-4)}
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-2 p-3 rounded-md bg-rose-500/10 border border-rose-500/20">
+                        <AlertTriangle className="h-4 w-4 text-rose-400 shrink-0" />
+                        <div className="text-xs text-rose-400">{x402DemoResult.error || x402DemoResult.message || 'Failed'}</div>
+                      </div>
+                    )}
+                  </div>
                 )}
               </CardContent>
             </Card>
