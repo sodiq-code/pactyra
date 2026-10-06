@@ -349,11 +349,11 @@ With PACTYRA: the agent must earn the authority to pay through verified performa
 ## Test results
 
 ```
-  31 formal tests passing (44s)
+  32 formal tests passing (44s)
   19 SDK tests passing (71ms)
   7 demo runner tests passing (16s)
   ─────────────────────────────
-  57 total tests
+  58 total tests
 ```
 
 ## Architecture
