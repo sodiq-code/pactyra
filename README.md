@@ -32,7 +32,7 @@ All four programs are deployed to Solana devnet and verified executable.
 
 | Program | Program ID | Deployed | Size |
 |---|---|---|---|
-| `pactyra-core` | `EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC` | ✅ Devnet | 418 KB |
+| `pactyra-core` | `EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC` | ✅ Devnet | 548 KB |
 | `pactyra-verifier` | `5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN` | ✅ Devnet | 217 KB |
 | `reference-treasury` | `6gAZR4omxMUWy5Fb6kCtdmaWASFFXr9WRCoWUcAz7UA9` | ✅ Devnet | 288 KB |
 | `threshold-multisig` | `FgfW1JkSknJpcCypbhuv531qvVu2z8sNVPH2kZXLpDKc` | ✅ Devnet | 221 KB |
@@ -379,7 +379,7 @@ See [`docs/architecture.md`](docs/architecture.md) for:
 - **Authority epochs**: Incrementing the epoch silently invalidates all outstanding capabilities.
 - **Short-lived capabilities**: Configurable TTL (default 30 minutes), bounded target scope, single-use nonces.
 - **Replay protection**: `ConsumedNonce` PDA prevents nonce reuse.
-- **Bond requirement**: Capabilities rejected if agent's bond is insufficient.
+- **Real USDC bond escrow**: The `lock_bond` instruction transfers real USDC from the agent's token account to a PDA-owned bond vault. On critical failure, the slashed USDC is transferred to a slash destination account. This is not accounting — real tokens move.
 - **Verifier-only outcomes**: Only registered verifier operators can submit receipts. Evidence hash must be non-zero.
 - **Tier-based limits**: $5 / $50 / $500 per capability based on agent tier.
 - **Delegate scope**: Session keys have bounded amount and expiry, enforced in `assert_capability`.

@@ -1,4 +1,6 @@
 use anchor_lang::prelude::*;
+use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
 declare_id!("EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC");
 
@@ -449,14 +451,23 @@ pub mod pactyra_core {
         Ok(())
     }
 
-    /// Lock a bond for an agent.
-    /// Tracks the bond amount in the Agent and Bond accounts.
+    /// Lock a bond by transferring real USDC to the protocol vault.
+    /// The bond is escrowed in a PDA-owned token account.
     /// Can be called again to re-lock after a slash.
     pub fn lock_bond(ctx: Context<LockBond>, amount: u64) -> Result<()> {
         require!(amount > 0, PactyraError::InsufficientBond);
 
         let agent = &mut ctx.accounts.agent;
         let clock = Clock::get()?;
+
+        // Transfer real USDC from agent's token account to the bond vault
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.agent_token.to_account_info(),
+            to: ctx.accounts.bond_vault.to_account_info(),
+            authority: ctx.accounts.authority_root.to_account_info(),
+        };
+        let cpi_program = ctx.accounts.token_program.to_account_info();
+        token::transfer(CpiContext::new(cpi_program, cpi_accounts), amount)?;
 
         // Update agent bond amount
         agent.bond_amount += amount;
@@ -791,12 +802,38 @@ pub mod pactyra_core {
         if is_critical {
             agent.critical_failures += 1;
 
-            // Slash bond if it exists
+            // Slash bond if it exists — transfer real USDC to slash destination
             if let Some(bond) = &mut ctx.accounts.bond {
                 if !bond.slashed {
                     bond.slashed = true;
                     let slashed_amount = bond.amount;
                     bond.amount = 0;
+
+                    // Transfer real USDC from bond vault to slash destination
+                    if slashed_amount > 0 {
+                        if let Some(bond_vault) = &ctx.accounts.bond_vault {
+                            if let Some(slash_destination) = &ctx.accounts.slash_destination {
+                                let signer_seeds = &[
+                                    b"bond_vault".as_ref(),
+                                    bond_vault.mint.as_ref(),
+                                    &[ctx.bumps.bond_vault.unwrap_or(0)],
+                                ];
+                                let signer = &[&signer_seeds[..]];
+
+                                let cpi_accounts = Transfer {
+                                    from: bond_vault.to_account_info(),
+                                    to: slash_destination.to_account_info(),
+                                    authority: bond_vault.to_account_info(),
+                                };
+                                let cpi_program = ctx.accounts.token_program.to_account_info();
+                                token::transfer(
+                                    CpiContext::new_with_signer(cpi_program, cpi_accounts, signer),
+                                    slashed_amount,
+                                )?;
+                            }
+                        }
+                    }
+
                     emit!(BondSlashed {
                         agent_id: agent.agent_id,
                         amount: slashed_amount,
@@ -1207,9 +1244,28 @@ pub struct LockBond<'info> {
     )]
     pub bond: Account<'info, Bond>,
 
+    #[account(
+        mut,
+        constraint = agent_token.mint == usdc_mint.key()
+    )]
+    pub agent_token: Account<'info, TokenAccount>,
+
+    #[account(
+        mut,
+        seeds = [b"bond_vault", usdc_mint.key().as_ref()],
+        bump,
+        token::mint = usdc_mint,
+        token::authority = bond_vault,
+    )]
+    pub bond_vault: Account<'info, TokenAccount>,
+
+    pub usdc_mint: Account<'info, Mint>,
+
     #[account(mut)]
     pub authority_root: Signer<'info>,
 
+    pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
 }
 
@@ -1322,9 +1378,30 @@ pub struct RecordOutcome<'info> {
     )]
     pub bond: Option<Account<'info, Bond>>,
 
+    /// Optional: bond vault token account (for real USDC slash transfer)
+    /// CHECK: Verified via seeds and token constraints
+    #[account(
+        mut,
+        seeds = [b"bond_vault", usdc_mint.key().as_ref()],
+        bump,
+        token::mint = usdc_mint,
+        token::authority = bond_vault,
+    )]
+    pub bond_vault: Option<Account<'info, TokenAccount>>,
+
+    /// Optional: slash destination token account (receives slashed USDC)
+    #[account(
+        mut,
+        constraint = slash_destination.mint == usdc_mint.key()
+    )]
+    pub slash_destination: Option<Account<'info, TokenAccount>>,
+
+    pub usdc_mint: Account<'info, Mint>,
+
     #[account(mut)]
     pub verifier_operator: Signer<'info>,
 
+    pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
 

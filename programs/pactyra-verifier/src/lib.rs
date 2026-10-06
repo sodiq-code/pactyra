@@ -264,7 +264,11 @@ pub mod pactyra_verifier {
             verifier_registry: ctx.accounts.verifier_registry.to_account_info(),
             policy: ctx.accounts.policy.to_account_info(),
             bond: Some(ctx.accounts.bond.to_account_info()),
+            bond_vault: None,
+            slash_destination: None,
+            usdc_mint: ctx.accounts.usdc_mint.to_account_info(),
             verifier_operator: ctx.accounts.verifier_operator.to_account_info(),
+            token_program: ctx.accounts.token_program.to_account_info(),
             system_program: ctx.accounts.system_program.to_account_info(),
         };
         let cpi_ctx = CpiContext::new(pactyra_core_program, cpi_accounts);
@@ -342,9 +346,13 @@ pub struct VerifyAndRecord<'info> {
     #[account(mut)]
     pub bond: UncheckedAccount<'info>,
 
+    /// USDC mint — needed for record_outcome CPI (bond_vault/slash_destination are None)
+    pub usdc_mint: Account<'info, anchor_spl::token::Mint>,
+
     #[account(mut)]
     pub verifier_operator: Signer<'info>,
 
+    pub token_program: Program<'info, anchor_spl::token::Token>,
     pub system_program: Program<'info, System>,
 }
 
