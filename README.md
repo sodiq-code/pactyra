@@ -329,7 +329,7 @@ const adapter = new PactyraX402Adapter({
   pactyraClient: client,
   agentId,
   capabilityPda,
-  rpcUrl: 'https://devnet.helius-rpc.com/?api-key=...',
+  rpcUrl: 'https://api.devnet.solana.com',
   usdcMint: new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU'),
   payerTokenAccount,
 });

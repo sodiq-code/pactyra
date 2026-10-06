@@ -19,7 +19,7 @@
  *     pactyraClient,
  *     agentId,
  *     capabilityPda,
- *     rpcUrl: 'https://devnet.helius-rpc.com/?api-key=...',
+ *     rpcUrl: 'https://api.devnet.solana.com',
  *   });
  *
  *   // Make a paid request — capability is checked before payment
