@@ -139,6 +139,7 @@ pub struct Capability {
     pub target_account: Pubkey,
     pub amount_limit: u64,
     pub frequency_limit: u64,
+    pub use_count: u64,
     pub expiry: i64,
     pub policy_key: Pubkey,
     pub authority_epoch: u64,
@@ -374,6 +375,8 @@ pub enum PactyraError {
     ExecutionAlreadyRecorded,
     #[msg("Only the target program can mark an execution as executed")]
     UnauthorizedExecutionMarker,
+    #[msg("The capability frequency limit has been exceeded")]
+    FrequencyLimitExceeded,
 }
 
 // ============================================================
@@ -605,6 +608,7 @@ pub mod pactyra_core {
         capability.target_account = params.target_account;
         capability.amount_limit = params.amount_limit;
         capability.frequency_limit = params.frequency_limit;
+        capability.use_count = 0;
         capability.expiry = clock.unix_timestamp + params.ttl_seconds;
         capability.policy_key = policy.key();
         capability.authority_epoch = agent.current_epoch;
@@ -707,7 +711,13 @@ pub mod pactyra_core {
             PactyraError::BondNotSatisfied
         );
 
-        // Check 13: Delegate scope enforcement (if signer is a delegate, not authority_root)
+        // Check 13: Frequency limit enforcement — capability has a max use count
+        require!(
+            capability.use_count < capability.frequency_limit,
+            PactyraError::FrequencyLimitExceeded
+        );
+
+        // Check 14: Delegate scope enforcement (if signer is a delegate, not authority_root)
         // If agent.authority_root is the signer, no delegate scope check needed.
         // If a delegate signs, the DelegateScope must exist and be valid.
         if let Some(delegate_scope) = &ctx.accounts.delegate_scope {
@@ -737,6 +747,10 @@ pub mod pactyra_core {
         consumed_nonce.nonce = action.action_nonce;
         consumed_nonce.consumed_at = clock.unix_timestamp;
         consumed_nonce.bump = ctx.bumps.consumed_nonce;
+
+        // Increment the capability use count (frequency limit enforcement)
+        let capability = &mut ctx.accounts.capability;
+        capability.use_count += 1;
 
         // Compute deterministic action_id binding this assertion to its exact
         // action parameters. record_outcome recomputes this hash and requires

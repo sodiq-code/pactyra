@@ -61,10 +61,9 @@ async function main() {
     console.log("   (already registered)");
   }
 
-  // 3. Register agent
+  // 3. Register agent (deterministic ID for reproducibility)
   console.log("3. Register agent...");
-  const agentKeypair = Keypair.generate();
-  const agentId = agentKeypair.publicKey.toBytes();
+  const agentId = Buffer.from('deadbeefcafebabedeadbeefcafebabedeadbeefcafebabedeadbeefcafebabe', 'hex');
   try {
     const sig = await client.registerAgent(agentId);
     signatures.push(sig);

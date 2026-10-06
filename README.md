@@ -77,7 +77,7 @@ Multisig PDA: 7vPjrrEEeszXDNiigpczbzNH376ak5EDfsxvT4UGSpkv (3-of-5 threshold)
 | `create_policy` | Creates an immutable policy defining capability requirements |
 | `lock_bond` | Locks a bond by transferring real USDC to a PDA-owned vault (re-lockable after slash) |
 | `request_capability` | Issues an evidence-bound capability with TTL, amount limit, target scope, and authority epoch binding |
-| `assert_capability` | The core enforcement instruction — validates 13 security checks and creates an Execution PDA |
+| `assert_capability` | The core enforcement instruction — validates 14 security checks and creates an Execution PDA |
 | `mark_executed` | Called by the target program via CPI to prove an action was performed (Asserted → Executed) |
 | `record_outcome` | Records a verified outcome — requires Execution PDA in Executed status, triggers authority transitions |
 | `revoke_capability` | Revokes a capability (agent authority root only) |
@@ -316,7 +316,7 @@ The SDK includes a real x402 V2 adapter that performs actual on-chain USDC trans
 Agent → HTTP request to x402 resource
        ← 402 Payment Required + WWW-Authenticate: x402
 Adapter → assert_capability(agent, action, amount)
-         → 13 security checks
+         → 14 security checks
          → PASS: continue to payment
          → FAIL: reject, no payment made
 Adapter → REAL SPL token transfer (USDC) via sendAndConfirmTransaction
@@ -384,7 +384,7 @@ See [`docs/architecture.md`](docs/architecture.md) for:
 - Protocol flow diagram
 - Program relationships (CPI between all 4 programs)
 - Authority transition state machine (T1 → T2 → T3 → T1)
-- Security boundary flow (13 checks in assert_capability)
+- Security boundary flow (14 checks in assert_capability)
 
 ## Documentation
 
@@ -397,9 +397,10 @@ See [`docs/architecture.md`](docs/architecture.md) for:
 
 ## Security model
 
-- **Exact-action binding**: Every capability commits to agent, action type, target program, target account, amount limit, expiry, and authority epoch.
+- **Exact-action binding**: Every capability commits to agent, action type, target program, target account, amount limit, expiry, and authority epoch. The `action_id` is a cryptographic hash (`keccak256`) of all action parameters, recorded in the Execution PDA.
 - **Authority epochs**: Incrementing the epoch silently invalidates all outstanding capabilities.
 - **Short-lived capabilities**: Configurable TTL (default 30 minutes), bounded target scope, single-use nonces.
+- **Frequency limit enforcement**: Capabilities have a `frequency_limit` field that caps the maximum number of uses. Each `assert_capability` call increments `use_count`; when `use_count >= frequency_limit`, the capability is rejected with `FrequencyLimitExceeded`.
 - **Replay protection**: `ConsumedNonce` PDA prevents nonce reuse.
 - **Execution PDA**: Every `assert_capability` call initializes an `Execution` PDA that cryptographically binds the capability assertion to the actual on-chain action. The target program must call `mark_executed` via CPI (signing with its own program ID) to advance the Execution from `Asserted` → `Executed`. The `record_outcome` instruction requires the Execution to be in `Executed` status and verifies that the `action_id` matches — preventing the verifier from fabricating outcomes for actions that never happened. The deterministic `action_id` is `keccak256(agent_id || capability_id || action_type || target_program || target_account || amount || action_nonce)`.
 - **Real USDC bond escrow**: The `lock_bond` instruction transfers real USDC from the agent's token account to a PDA-owned bond vault. On critical failure, the slashed USDC is transferred to a slash destination account. This is not accounting — real tokens move.

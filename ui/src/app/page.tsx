@@ -116,6 +116,7 @@ const SECURITY_CHECKS = [
   'Amount within capability limit',
   'Bond satisfied (≥ policy minimum)',
   'Delegate scope valid (if session key)',
+  'Frequency limit not exceeded (use_count < frequency_limit)',
 ] as const
 
 const EXECUTION_STAGES = [
@@ -625,7 +626,7 @@ export default function Page() {
                   {[
                     { step: '1', title: 'Register & Bond', desc: 'Agent registers with a 5 USDC bond, locked in a PDA vault. Starts at Tier 1 ($5 authority).', color: 'emerald' },
                     { step: '2', title: 'Request Capability', desc: 'Agent requests scoped authority: target program, target account, amount limit, TTL.', color: 'sky' },
-                    { step: '3', title: 'Assert & Execute', desc: 'assert_capability checks 13 security rules. Target program executes and calls mark_executed via CPI.', color: 'amber' },
+                    { step: '3', title: 'Assert & Execute', desc: 'assert_capability checks 14 security rules. Target program executes and calls mark_executed via CPI.', color: 'amber' },
                     { step: '4', title: 'Record Outcome', desc: 'Verifier records outcome. 5 passes → T2 ($50). 20+ at 95% → T3 ($500). Critical fail → slash, T1.', color: 'violet' },
                   ].map((s) => (
                     <div key={s.step} className={cn('flex items-start gap-3 p-3 rounded-lg border',
@@ -986,7 +987,7 @@ export default function Page() {
 
           {/* SECURITY CHECKS */}
           <section>
-            <SectionHeader icon={Shield} title="Security Checks" hint="13 checks in assert_capability" />
+            <SectionHeader icon={Shield} title="Security Checks" hint="14 checks in assert_capability" />
             <Card className="bg-card/50 backdrop-blur border-border/50">
               <CardContent className="pt-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
