@@ -7,9 +7,9 @@ import { Connection, PublicKey } from '@solana/web3.js'
 const DEVNET_RPC = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com"
 
 const PROGRAMS = [
-  { name: 'pactyra-core', id: 'EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC', size: 418, instructions: 20 },
-  { name: 'pactyra-verifier', id: '5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN', size: 217, instructions: 3 },
-  { name: 'reference-treasury', id: '6gAZR4omxMUWy5Fb6kCtdmaWASFFXr9WRCoWUcAz7UA9', size: 288, instructions: 4 },
+  { name: 'pactyra-core', id: 'EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC', size: 582, instructions: 21 },
+  { name: 'pactyra-verifier', id: '5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN', size: 299, instructions: 3 },
+  { name: 'reference-treasury', id: '6gAZR4omxMUWy5Fb6kCtdmaWASFFXr9WRCoWUcAz7UA9', size: 378, instructions: 4 },
   { name: 'threshold-multisig', id: 'FgfW1JkSknJpcCypbhuv531qvVu2z8sNVPH2kZXLpDKc', size: 221, instructions: 7 },
 ]
 
