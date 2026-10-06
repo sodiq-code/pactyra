@@ -1,5 +1,11 @@
 {
   "version": 2,
   "framework": "nextjs",
-  "regions": ["sfo1"]
+  "regions": ["sfo1"],
+  "functions": {
+    "src/app/api/**/route.ts": {
+      "maxDuration": 30,
+      "memory": 1024
+    }
+  }
 }
