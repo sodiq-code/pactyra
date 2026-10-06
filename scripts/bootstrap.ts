@@ -30,8 +30,8 @@ async function main() {
   await provider.connection.requestAirdrop(verifierOperator.publicKey, 10 * LAMPORTS_PER_SOL);
 
   // Generate agent ID
-  const agentKeypair = Keypair.generate();
-  const agentId = agentKeypair.publicKey.toBytes();
+  const agentId = Buffer.from('deadbeefcafebabedeadbeefcafebabedeadbeefcafebabedeadbeefcafebabe', 'hex');
+  const 
 
   console.log("\n=== Bootstrap ===");
   console.log("Authority:", authority.publicKey.toString());

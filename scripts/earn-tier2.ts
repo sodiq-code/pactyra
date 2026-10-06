@@ -16,8 +16,8 @@ async function main() {
   const client = new PactyraClient(provider);
 
   // Use the same agent from bootstrap (in production, load from config)
-  const agentKeypair = Keypair.generate();
-  const agentId = agentKeypair.publicKey.toBytes();
+  const agentId = Buffer.from('deadbeefcafebabedeadbeefcafebabedeadbeefcafebabedeadbeefcafebabe', 'hex');
+  const 
 
   console.log("=== Earn Tier 2 ===");
   console.log("Recording 5 verified successful outcomes...\n");

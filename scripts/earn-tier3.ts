@@ -16,8 +16,8 @@ async function main() {
   anchor.setProvider(provider);
   const client = new PactyraClient(provider);
 
-  const agentKeypair = Keypair.generate();
-  const agentId = agentKeypair.publicKey.toBytes();
+  const agentId = Buffer.from('deadbeefcafebabedeadbeefcafebabedeadbeefcafebabedeadbeefcafebabe', 'hex');
+  const 
 
   console.log("=== Earn Tier 3 ===");
   console.log("Recording 22 more successes + 1 ordinary fail...\n");
