@@ -18,7 +18,7 @@ import {
   deriveVerifierRegistryPda,
 } from "../sdk/src/pdas";
 
-const DEVNET_RPC = "https://devnet.helius-rpc.com/?api-key=4196f886-5f5f-4fdb-8fae-128076aa8468";
+const DEVNET_RPC = "process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com"";
 const EXPLORER = "https://solana.fm/tx";
 
 async function main() {

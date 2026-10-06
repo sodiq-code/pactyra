@@ -40,7 +40,7 @@ All four programs are deployed to Solana devnet and verified executable.
 ### Devnet configuration
 
 ```
-RPC: https://devnet.helius-rpc.com/?api-key=4196f886-5f5f-4fdb-8fae-128076aa8468
+RPC: process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com"
 Wallet: A55wG1G5nLVxn9Ns91ogrqZ6cHVi2yPd7WRi8GCyc3PE
 USDC mint: 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU (6 decimals)
 Pyth Pull Oracle: pythWSnswVUd12oZpeFP8e9CVaEqJg25g1Vtc2biRsT

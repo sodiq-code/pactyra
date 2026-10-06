@@ -10,7 +10,7 @@ import { AnchorProvider, BN } from "@coral-xyz/anchor";
 import { Keypair, PublicKey } from "@solana/web3.js";
 import fs from "fs";
 
-const DEVNET_RPC = "https://devnet.helius-rpc.com/?api-key=4196f886-5f5f-4fdb-8fae-128076aa8468";
+const DEVNET_RPC = "process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com"";
 const MULTISIG_PROGRAM_ID = new PublicKey("FgfW1JkSknJpcCypbhuv531qvVu2z8sNVPH2kZXLpDKc");
 const PACTYRA_CORE_ID = new PublicKey("EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC");
 

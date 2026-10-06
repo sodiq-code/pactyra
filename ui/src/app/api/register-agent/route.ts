@@ -6,7 +6,7 @@ import { loadWalletKeypair, makeAnchorWallet } from '@/lib/wallet'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-const DEVNET_RPC = 'https://devnet.helius-rpc.com/?api-key=4196f886-5f5f-4fdb-8fae-128076aa8468'
+const DEVNET_RPC = 'process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com"'
 const PACTYRA_CORE_PROGRAM_ID = 'EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC'
 const idl: Idl = require('@/lib/idl/pactyra_core.json')
 

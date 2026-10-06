@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 import { Connection, PublicKey } from '@solana/web3.js'
 
-const DEVNET_RPC = 'https://devnet.helius-rpc.com/?api-key=4196f886-5f5f-4fdb-8fae-128076aa8468'
+const DEVNET_RPC = 'process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com"'
 
 const PROGRAMS = [
   { name: 'pactyra-core', id: 'EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC', size: 418, instructions: 20 },
