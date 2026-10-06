@@ -886,9 +886,10 @@ pub mod pactyra_core {
     /// Updates agent counters and triggers authority transitions.
     ///
     /// Security:
-    /// 1. The verifier cannot fabricate the outcome because the
-    ///    evidence_hash must match the keccak256 of the Pyth price update
-    ///    account data. An independent observer can re-verify the hash.
+    /// 1. The call MUST come through the registered verifier_program via CPI.
+    ///    A verifier operator cannot bypass the objective verifier path by
+    ///    calling record_outcome directly — the verifier_program account must
+    ///    be a CPI signer and must match the registered verifier_program.
     /// 2. The verifier cannot fabricate outcomes for actions that never
     ///    happened — the Execution PDA must exist, be in `Executed` status,
     ///    and its stored action_id must equal the action_id argument.
@@ -905,12 +906,18 @@ pub mod pactyra_core {
     ) -> Result<()> {
         let registry = &ctx.accounts.verifier_registry;
         let operator = ctx.accounts.verifier_operator.key();
+        let verifier_program = ctx.accounts.verifier_program.key();
         let clock = Clock::get()?;
 
-        // Verify the operator is a registered active verifier
+        // Verify the operator AND verifier_program are both registered and active.
+        // This enforces that the call must come through the registered verifier
+        // program — the operator cannot bypass the verifier by calling directly.
         let mut verifier_found = false;
         for entry in &registry.verifiers {
-            if entry.operator_key == operator && entry.active {
+            if entry.operator_key == operator
+                && entry.active
+                && entry.verifier_program == verifier_program
+            {
                 verifier_found = true;
                 break;
             }
@@ -1635,6 +1642,14 @@ pub struct RecordOutcome<'info> {
         constraint = slash_destination.mint == usdc_mint.key()
     )]
     pub slash_destination: Option<Account<'info, TokenAccount>>,
+
+    /// The verifier program that is calling this instruction via CPI.
+    /// Must be a registered verifier_program in the VerifierRegistry and must
+    /// be a CPI signer — this enforces that the operator cannot bypass the
+    /// objective verifier path by calling record_outcome directly.
+    /// CHECK: Verified against the registry in the instruction body.
+    #[account(signer)]
+    pub verifier_program: UncheckedAccount<'info>,
 
     pub usdc_mint: Account<'info, Mint>,
 

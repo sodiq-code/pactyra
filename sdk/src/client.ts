@@ -386,6 +386,7 @@ export class PactyraClient {
         policy: policyPda,
         execution: executionPda,
         bond: bondPda,
+        verifierProgram: PACTYRA_VERIFIER_PROGRAM_ID,
         verifierOperator: this.provider.wallet.publicKey,
         systemProgram: SystemProgram.programId,
       })

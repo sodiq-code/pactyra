@@ -257,6 +257,10 @@ pub mod pactyra_verifier {
         let evidence_hash = anchor_lang::solana_program::keccak::hash(&data).to_bytes();
 
         // CPI into pactyra_core::record_outcome
+        // The verifier_program account is the pactyra_verifier program itself.
+        // In a CPI call, the calling program's ID is automatically a signer,
+        // so pactyra_core can verify that the call came through the registered
+        // verifier program — the operator cannot bypass the verifier.
         let pactyra_core_program = ctx.accounts.pactyra_core_program.to_account_info();
         let cpi_accounts = pactyra_core::cpi::accounts::RecordOutcome {
             agent: ctx.accounts.agent.to_account_info(),
@@ -267,6 +271,7 @@ pub mod pactyra_verifier {
             bond: Some(ctx.accounts.bond.to_account_info()),
             bond_vault: None,
             slash_destination: None,
+            verifier_program: ctx.accounts.verifier_program_self.to_account_info(),
             usdc_mint: ctx.accounts.usdc_mint.to_account_info(),
             verifier_operator: ctx.accounts.verifier_operator.to_account_info(),
             token_program: ctx.accounts.token_program.to_account_info(),
@@ -353,6 +358,13 @@ pub struct VerifyAndRecord<'info> {
     /// CHECK: Owned by pactyra-core; verified in CPI.
     #[account(mut)]
     pub execution: UncheckedAccount<'info>,
+
+    /// The pactyra_verifier program itself. When CPI'd into pactyra_core,
+    /// the Solana runtime marks this account as a signer, proving the call
+    /// came through the registered verifier program.
+    /// CHECK: Constrained to the verifier program ID.
+    #[account(address = crate::ID)]
+    pub verifier_program_self: UncheckedAccount<'info>,
 
     /// USDC mint — needed for record_outcome CPI (bond_vault/slash_destination are None)
     pub usdc_mint: Account<'info, anchor_spl::token::Mint>,
