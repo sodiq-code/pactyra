@@ -10,7 +10,7 @@ const USDC_MINT = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
 
 // The facilitator's wallet — receives the USDC payment.
 // This is the PACTYRA devnet wallet.
-const PAY_TO = process.env.PAY_TO || "A55wG1G5nLVxn9Ns91ogrqZ6cHVi2yPd7WRi8GCyc3PE"
+const PAY_TO = process.env.PAY_TO || "4ZokQYezBqFkUUQVWi7axR2qT6SS3vm2Q37ZzdPwyiBN"
 
 // Payment amount: 0.01 USDC (10,000 base units at 6 decimals)
 const PAYMENT_AMOUNT = 10_000
