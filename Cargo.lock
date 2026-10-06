@@ -1071,6 +1071,7 @@ name = "pactyra-core"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
+ "anchor-spl",
 ]
 
 [[package]]
@@ -1078,6 +1079,7 @@ name = "pactyra-verifier"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
+ "anchor-spl",
  "pactyra-core",
 ]
 
@@ -2748,6 +2750,13 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 3.0.6",
+]
+
+[[package]]
+name = "threshold-multisig"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
 ]
 
 [[package]]
