@@ -1,5 +1,6 @@
 # PACTYRA
 
+[![CI](https://github.com/sodiq-code/pactyra/actions/workflows/ci.yml/badge.svg)](https://github.com/sodiq-code/pactyra/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Solana](https://img.shields.io/badge/Solana-Devnet-9945FF.svg?logo=solana&logoColor=white)](https://solana.com)
 [![Pyth](https://img.shields.io/badge/Pyth-Network-00D2FF.svg)](https://pyth.network)
