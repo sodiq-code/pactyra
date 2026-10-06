@@ -330,7 +330,7 @@ export default function Page() {
   }, [fetchAgent, fetchDeployment, fetchTxHistory])
 
   useEffect(() => {
-    const t = setInterval(() => fetchAgent(activeAgentId, true), 30000)
+    const t = setInterval(() => fetchAgent(activeAgentId, true), 60000)
     return () => clearInterval(t)
   }, [activeAgentId, fetchAgent])
 
