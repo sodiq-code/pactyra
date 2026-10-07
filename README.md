@@ -907,11 +907,11 @@ The objective is simple:
 Current repository test suite:
 
 ```text
-32 formal tests
+37 formal tests
 21 SDK tests
 7 demo-runner tests
 -------------------
-60 total tests
+65 total tests
 ```
 
 Run locally:
@@ -1019,7 +1019,7 @@ NETWORK       Solana Devnet
 PROGRAMS      4 deployed
 INSTRUCTIONS  35
 SECURITY      14 capability checks
-TESTS         60
+TESTS         65
 x402          V2
 USDC          Real devnet transfers
 OPEN SOURCE   MIT
