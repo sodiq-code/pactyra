@@ -704,15 +704,21 @@ pub mod pactyra_core {
         );
 
         // Check 14: Delegate scope enforcement.
-        // The account constraint on `agent` already ensures the signer is either
-        // authority_root or the delegate. If the signer is NOT authority_root,
-        // apply the full delegate scope checks.
+        // If the signer is the authority_root, delegate_scope is not required.
+        // If the signer is NOT the authority_root, a valid DelegateScope must
+        // exist and match the signer as the delegate.
         let signer_key = ctx.accounts.signer.key();
         let is_authority_root = signer_key == agent.authority_root;
 
         if !is_authority_root {
-            // Signer is a delegate — verify the delegate scope is valid
-            let delegate_scope = &ctx.accounts.delegate_scope;
+            // Signer is a delegate — the DelegateScope must exist and be valid.
+            // The account constraint on `agent` already ensures the delegate
+            // matches, but we still need to check expiry and amount limit.
+            let delegate_scope = ctx
+                .accounts
+                .delegate_scope
+                .as_ref()
+                .ok_or(PactyraError::WrongAgent)?;
             require!(
                 delegate_scope.delegate == signer_key,
                 PactyraError::WrongAgent
@@ -727,7 +733,7 @@ pub mod pactyra_core {
             );
         }
         // If is_authority_root is true, no delegate scope checks needed —
-        // the authority_root has full authority.
+        // the authority_root has full authority and delegate_scope can be None.
 
         // Mark nonce as consumed (replay protection via PDA init)
         let consumed_nonce = &mut ctx.accounts.consumed_nonce;
@@ -1471,7 +1477,7 @@ pub struct RequestCapability<'info> {
 pub struct AssertCapability<'info> {
     #[account(
         constraint = agent.authority_root == signer.key()
-            || delegate_scope.delegate == signer.key(),
+            || (delegate_scope.is_some() && delegate_scope.as_ref().unwrap().delegate == signer.key()),
     )]
     pub agent: Account<'info, Agent>,
 
@@ -1507,19 +1513,18 @@ pub struct AssertCapability<'info> {
     )]
     pub execution: Account<'info, Execution>,
 
-    /// Delegate scope PDA. Required so that the program can verify whether the
-    /// signer is the authority_root or a delegated session key.
+    /// Optional: if a delegate (session key) is signing instead of the authority
+    /// root, this account must exist and be valid. When authority_root signs,
+    /// this account is not required and can be None.
     /// Seeds: [b"delegate_scope", agent_id]
-    /// CHECK: Verified in instruction logic.
     #[account(
         seeds = [b"delegate_scope", agent.agent_id.as_ref()],
         bump,
     )]
-    pub delegate_scope: Account<'info, DelegateScope>,
+    pub delegate_scope: Option<Account<'info, DelegateScope>>,
 
     /// The signer — either the agent's authority_root (direct execution)
-    /// or a delegated session key (delegated execution). The constraint on
-    /// the agent account above ensures only these two can sign.
+    /// or a delegated session key (delegated execution).
     #[account(mut)]
     pub signer: Signer<'info>,
 

@@ -65,19 +65,9 @@ export async function GET(request: NextRequest) {
       } catch {}
     }
 
-    // Ensure delegate_scope exists
-    const [delegateScopePda] = PublicKey.findProgramAddressSync([Buffer.from('delegate_scope'), agentId], PACTYRA_CORE)
-    try { await program.account.delegateScope.fetch(delegateScopePda) } catch {
-      try {
-        await program.methods.delegateAuthority(payer.publicKey, new BN(5_000_000), new BN(86400 * 30))
-          .accounts({ agent: agentPda, delegateScope: delegateScopePda,
-            authorityRoot: payer.publicKey, systemProgram: SystemProgram.programId }).rpc()
-      } catch (e: any) {
-        return NextResponse.json({ ok: false, message: 'delegate_authority failed: ' + (e.message?.slice(0, 200) || ''), steps })
-      }
-    }
-
     // Call assert_capability using a RAW transaction (bypass Anchor SDK)
+    // delegate_scope is Optional — since authority_root is signing, we don't
+    // need to create or pass a DelegateScope PDA.
     const actionNonce = new BN(Math.floor(Date.now() / 1000))
     const [consumedNoncePda] = PublicKey.findProgramAddressSync(
       [Buffer.from('nonce'), agentId, actionNonce.toArrayLike(Buffer, 'le', 8)], PACTYRA_CORE)
@@ -110,16 +100,24 @@ export async function GET(request: NextRequest) {
     // 2: policy
     // 3: consumed_nonce (mut, init)
     // 4: execution (mut, init)
-    // 5: delegate_scope (optional)
-    // 6: authority_root (signer, mut)
+    // 5: delegate_scope (optional — not passed when authority_root signs)
+    // 6: signer (signer, mut)
     // 7: system_program
+    //
+    // When delegate_scope is Optional and the signer is authority_root,
+    // Anchor expects the account to still be in the account list but can
+    // accept it as None. We pass the delegate_scope PDA address — Anchor
+    // will check the seeds and determine it's Optional (account not
+    // initialized → None).
+    const [delegateScopePda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('delegate_scope'), agentId], PACTYRA_CORE)
     const keys = [
       { pubkey: agentPda, isSigner: false, isWritable: true },
       { pubkey: capabilityPda, isSigner: false, isWritable: true },
       { pubkey: policyPda, isSigner: false, isWritable: false },
       { pubkey: consumedNoncePda, isSigner: false, isWritable: true },
       { pubkey: executionPda, isSigner: false, isWritable: true },
-      { pubkey: delegateScopePda, isSigner: false, isWritable: true },
+      { pubkey: delegateScopePda, isSigner: false, isWritable: false },
       { pubkey: payer.publicKey, isSigner: true, isWritable: true },
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
     ]
