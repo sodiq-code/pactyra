@@ -9,6 +9,7 @@ import {
   Keypair,
   Transaction,
   sendAndConfirmTransaction,
+  SystemProgram,
 } from '@solana/web3.js'
 import {
   createTransferInstruction,
@@ -17,7 +18,7 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   getAssociatedTokenAddress,
 } from '@solana/spl-token'
-import { Program, AnchorProvider, Idl } from '@coral-xyz/anchor'
+import { Program, AnchorProvider, BN, Idl } from '@coral-xyz/anchor'
 
 const DEVNET_RPC = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com"
 const USDC_MINT = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU")
@@ -26,15 +27,22 @@ const PAYMENT_AMOUNT = 10_000 // 0.01 USDC
 const PERMANENT_AGENT = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2'
 
 /**
- * x402 V2 Server-Side Demo with PACTYRA Capability Enforcement
+ * x402 V2 Server-Side Demo with REAL PACTYRA assert_capability() Enforcement
  *
- * Performs the complete x402 V2 flow:
- * 1. Fetch the resource → get 402 with x402 V2 requirements
- * 2. Verify PACTYRA capability on-chain (tier, bond, status, amount limit)
- * 3. Create and submit REAL SPL token transfer (USDC)
- * 4. Encode payment as base64 JSON per x402 V2 spec
- * 5. Retry request with X-PAYMENT header
- * 6. Facilitator verifies on-chain → returns 200 + X-PAYMENT-RESPONSE
+ * This endpoint calls the actual pactyra-core::assert_capability() instruction
+ * on Solana devnet before making the USDC payment.
+ *
+ * Flow:
+ * 1. Load payer wallet (the agent's authority_root)
+ * 2. Ensure a capability exists (create if needed)
+ * 3. Ensure a delegate_scope exists (create if needed — required by Anchor's
+ *    seeds constraint for Optional accounts with bump = account.bump)
+ * 4. Call assert_capability() — creates Execution PDA, verifies security checks
+ * 5. If assert_capability PASSES → make the REAL USDC payment
+ * 6. If assert_capability FAILS → no payment is made
+ * 7. Retry the x402 resource with the payment proof
+ *
+ * GET /api/x402/demo
  */
 export async function GET(request: NextRequest) {
   const steps: any[] = []
@@ -54,75 +62,177 @@ export async function GET(request: NextRequest) {
     const payer = Keypair.fromSecretKey(Buffer.from(secretKey))
     const connection = new Connection(DEVNET_RPC, 'confirmed')
 
-    steps.push({ step: 1, action: 'Load payer wallet', result: 'success', payer: payer.publicKey.toString() })
-
-    // Step 2: Verify PACTYRA capability on-chain
-    // This checks the agent's real on-chain state: tier, bond, status, and amount limit
-    const PACTYRA_CORE = new PublicKey('EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC')
-    const agentId = Buffer.from(PERMANENT_AGENT, 'hex')
-    const [agentPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from('agent'), agentId], PACTYRA_CORE
-    )
-
-    // Load the IDL and fetch the agent account directly from Solana
+    const anchorWallet = {
+      publicKey: payer.publicKey,
+      signTransaction: async (tx: any) => { tx.sign(payer); return tx },
+      signAllTransactions: async (txs: any[]) => { txs.forEach(t => t.sign(payer)); return txs },
+    }
+    const provider = new AnchorProvider(connection, anchorWallet as any, { commitment: 'confirmed' })
     const idl: Idl = require('@/lib/idl/pactyra_core.json')
-    const provider = new AnchorProvider(connection, { publicKey: payer.publicKey } as any, { commitment: 'confirmed' })
     const program = new Program(idl, provider)
 
-    let agentData: any
+    steps.push({ step: 1, action: 'Load payer wallet (agent authority_root)', result: 'success', payer: payer.publicKey.toString() })
+
+    // Derive PDAs
+    const agentId = Buffer.from(PERMANENT_AGENT, 'hex')
+    const [agentPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('agent'), agentId], program.programId
+    )
+    const [policyPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('policy'), Buffer.from('PAY-V1')], program.programId
+    )
+    const payToPubkey = new PublicKey(PAY_TO)
+
+    // Fetch agent to get current epoch
+    const agentData = await program.account.agent.fetch(agentPda)
+    const epoch = agentData.currentEpoch.toNumber()
+
+    // Derive capability PDA
+    const [capabilityPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('capability'), agentId, new BN(epoch).toArrayLike(Buffer, 'le', 8), payToPubkey.toBuffer()],
+      program.programId
+    )
+
+    // Ensure capability exists
+    let capabilityExists = false
     try {
-      agentData = await program.account.agent.fetch(agentPda)
-    } catch {
-      return NextResponse.json({ error: 'Agent not found on devnet', steps })
+      await program.account.capability.fetch(capabilityPda)
+      capabilityExists = true
+    } catch {}
+
+    if (!capabilityExists) {
+      try {
+        await program.methods
+          .requestCapability({
+            capabilityType: { payService: {} },
+            targetProgram: payToPubkey,
+            targetAccount: payToPubkey,
+            amountLimit: new BN(5_000_000),
+            frequencyLimit: new BN(1000),
+            ttlSeconds: new BN(86400 * 30),
+          })
+          .accounts({
+            agent: agentPda,
+            policy: policyPda,
+            capability: capabilityPda,
+            authorityRoot: payer.publicKey,
+            systemProgram: SystemProgram.programId,
+          })
+          .rpc()
+      } catch {}
     }
 
-    // Verify PACTYRA capability conditions by reading the agent's on-chain state.
-    // The SDK adapter (sdk/src/adapters/x402.ts) calls the actual
-    // assert_capability() instruction which performs all 14 security checks.
-    // This server-side demo performs 3 of those checks by reading the agent
-    // account directly — sufficient for the demo flow, but the SDK adapter
-    // is the full enforcement primitive.
-    const tierName = agentData.tier.probation ? 'Probation'
-      : agentData.tier.proven ? 'Proven'
-      : agentData.tier.trusted ? 'Trusted' : 'Unknown'
-    const tierMax = agentData.tier.probation ? 5_000_000
-      : agentData.tier.proven ? 50_000_000
-      : 500_000_000
-    const isActive = !!agentData.status.active
-    const bondAmount = agentData.bondAmount.toNumber()
-    const minBondRequired = 5_000_000 // 5 USDC minimum
+    // Ensure delegate_scope exists (required by Anchor's seeds constraint)
+    // The delegate_scope PDA must exist so Anchor can read the bump field.
+    // We set delegate = authority_root itself, so the delegate checks pass
+    // (the signer IS the delegate AND the authority_root).
+    const [delegateScopePda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('delegate_scope'), agentId], program.programId
+    )
 
-    // Check 1: Agent must be Active
-    if (!isActive) {
-      steps.push({ step: 2, action: 'PACTYRA capability check', result: 'failed', error: 'AgentFrozen' })
-      return NextResponse.json({ error: 'Agent is frozen — cannot assert capability', steps })
+    let delegateScopeExists = false
+    try {
+      await program.account.delegateScope.fetch(delegateScopePda)
+      delegateScopeExists = true
+    } catch {}
+
+    if (!delegateScopeExists) {
+      try {
+        await program.methods
+          .delegateAuthority(
+            payer.publicKey, // delegate = authority_root itself
+            new BN(5_000_000), // max_amount_per_action = $5
+            new BN(86400 * 30), // expires_in_seconds = 30 days
+          )
+          .accounts({
+            agent: agentPda,
+            delegateScope: delegateScopePda,
+            authorityRoot: payer.publicKey,
+            systemProgram: SystemProgram.programId,
+          })
+          .rpc()
+      } catch (e: any) {
+        // Might already exist (race condition) — continue anyway
+      }
     }
 
-    // Check 2: Bond must be satisfied
-    if (bondAmount < minBondRequired) {
-      steps.push({ step: 2, action: 'PACTYRA capability check', result: 'failed', error: 'BondNotSatisfied' })
-      return NextResponse.json({ error: 'Bond not satisfied — cannot assert capability', steps })
-    }
+    // Call REAL assert_capability() on-chain
+    const actionNonce = new BN(Math.floor(Date.now() / 1000))
 
-    // Check 3: Amount must be within tier limit
-    if (PAYMENT_AMOUNT > tierMax) {
-      steps.push({ step: 2, action: 'PACTYRA capability check', result: 'failed', error: 'AmountExceedsTier' })
-      return NextResponse.json({ error: 'Amount exceeds tier limit', steps })
+    const [consumedNoncePda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('nonce'), agentId, actionNonce.toArrayLike(Buffer, 'le', 8)],
+      program.programId
+    )
+    const [executionPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('execution'), agentId, actionNonce.toArrayLike(Buffer, 'le', 8)],
+      program.programId
+    )
+
+    let assertSig: string
+    try {
+      assertSig = await program.methods
+        .assertCapability({
+          actionType: { payService: {} },
+          targetProgram: payToPubkey,
+          targetAccount: payToPubkey,
+          amount: new BN(PAYMENT_AMOUNT),
+          actionNonce: actionNonce,
+        })
+        .accounts({
+          agent: agentPda,
+          capability: capabilityPda,
+          policy: policyPda,
+          consumedNonce: consumedNoncePda,
+          execution: executionPda,
+          delegateScope: delegateScopePda,
+          authorityRoot: payer.publicKey,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc()
+    } catch (e: any) {
+      steps.push({
+        step: 2,
+        action: 'PACTYRA assert_capability() — REAL on-chain enforcement',
+        result: 'failed',
+        error: e.message?.slice(0, 200),
+        capabilityPda: capabilityPda.toString(),
+        delegateScopePda: delegateScopePda.toString(),
+      })
+      return NextResponse.json({
+        ok: false,
+        message: 'assert_capability() rejected the action — payment NOT made',
+        steps,
+      })
     }
 
     steps.push({
       step: 2,
-      action: 'PACTYRA capability verification (on-chain state check)',
+      action: 'PACTYRA assert_capability() — REAL on-chain enforcement',
       result: 'passed',
-      tier: tierName,
-      tierMax: tierMax / 1_000_000 + ' USDC',
-      bond: bondAmount / 1_000_000 + ' USDC',
-      status: 'Active',
-      epoch: agentData.currentEpoch.toNumber(),
-      checks: ['Agent is Active', 'Bond satisfied (≥ 5 USDC)', 'Amount within tier limit'],
+      signature: assertSig,
+      capabilityPda: capabilityPda.toString(),
+      executionPda: executionPda.toString(),
+      delegateScopePda: delegateScopePda.toString(),
+      explorerUrl: `https://solana.fm/tx/${assertSig}?cluster=devnet`,
+      checks: [
+        'Agent is Active (not Frozen)',
+        'Capability is Active (not Revoked)',
+        'Capability belongs to this Agent',
+        'Authority epoch is current',
+        'Policy matches capability',
+        'Policy is Active (not Superseded)',
+        'Capability not expired (TTL)',
+        'Action type matches capability (PayService)',
+        'Target program matches capability',
+        'Target account matches capability',
+        'Amount within capability limit',
+        'Bond satisfied (≥ 5 USDC)',
+        'Delegate scope valid (delegate = authority_root)',
+      ],
+      note: 'Execution PDA created with deterministic action_id. ConsumedNonce PDA created for replay protection.',
     })
 
-    // Step 3: Make initial request — expect 402
+    // Make initial x402 request — expect 402
     const initialResponse = await fetch(resourceUrl)
 
     if (initialResponse.status !== 402) {
@@ -146,14 +256,12 @@ export async function GET(request: NextRequest) {
       amount: parseInt(requirement.maxTotalAmount.value) / 1_000_000 + ' USDC',
     })
 
-    // Step 4: Make the REAL USDC payment
-    const payTo = new PublicKey(requirement.payTo)
-
+    // Make the REAL USDC payment (only reached if assert_capability passed)
     const payerTokenAccount = await getAssociatedTokenAddress(
       USDC_MINT, payer.publicKey, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
     )
     const payeeTokenAccount = await getAssociatedTokenAddress(
-      USDC_MINT, payTo, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
+      USDC_MINT, payToPubkey, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
     )
 
     const transaction = new Transaction()
@@ -162,7 +270,7 @@ export async function GET(request: NextRequest) {
     if (!payeeAccountInfo) {
       transaction.add(
         createAssociatedTokenAccountInstruction(
-          payer.publicKey, payeeTokenAccount, payTo, USDC_MINT,
+          payer.publicKey, payeeTokenAccount, payToPubkey, USDC_MINT,
           TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
         )
       )
@@ -179,42 +287,37 @@ export async function GET(request: NextRequest) {
     transaction.recentBlockhash = blockhash
     transaction.feePayer = payer.publicKey
 
-    const signature = await sendAndConfirmTransaction(connection, transaction, [payer])
+    const paymentSig = await sendAndConfirmTransaction(connection, transaction, [payer])
 
     steps.push({
       step: 4,
-      action: 'REAL USDC payment submitted to Solana',
+      action: 'REAL USDC payment submitted to Solana (after assert_capability passed)',
       result: 'success',
-      signature,
+      signature: paymentSig,
       amount: PAYMENT_AMOUNT / 1_000_000 + ' USDC',
       payer: payer.publicKey.toString(),
-      payTo: requirement.payTo,
-      explorerUrl: `https://solana.fm/tx/${signature}?cluster=devnet`,
+      payTo: PAY_TO,
+      explorerUrl: `https://solana.fm/tx/${paymentSig}?cluster=devnet`,
     })
 
-    // Step 5: Retry with X-PAYMENT header (base64-encoded JSON per x402 V2 spec)
+    // Retry with X-PAYMENT header (base64-encoded JSON per x402 V2 spec)
     const paymentPayload = {
-      signature,
+      signature: paymentSig,
       network: requirement.network,
       requirement: requirement,
     }
     const xPaymentHeader = Buffer.from(JSON.stringify(paymentPayload)).toString('base64')
 
     const paidResponse = await fetch(resourceUrl, {
-      headers: {
-        'X-PAYMENT': xPaymentHeader,
-      },
+      headers: { 'X-PAYMENT': xPaymentHeader },
     })
 
     const paidData = await paidResponse.json()
 
-    // Decode X-PAYMENT-RESPONSE
     let receipt: any = null
     const receiptHeader = paidResponse.headers.get('x-payment-response')
     if (receiptHeader) {
-      try {
-        receipt = JSON.parse(Buffer.from(receiptHeader, 'base64').toString())
-      } catch {}
+      try { receipt = JSON.parse(Buffer.from(receiptHeader, 'base64').toString()) } catch {}
     }
 
     steps.push({
@@ -224,22 +327,20 @@ export async function GET(request: NextRequest) {
       httpStatus: paidResponse.status,
       x402Version: paidData.x402Version,
       paymentVerified: paidData.data?.paymentVerified || receipt,
-      xPaymentResponse: receipt,
     })
 
     return NextResponse.json({
       ok: paidResponse.status === 200,
       message: paidResponse.status === 200
-        ? 'x402 V2 flow complete — REAL payment verified on-chain'
+        ? 'x402 V2 flow complete — assert_capability() enforced before REAL payment verified on-chain'
         : 'x402 V2 flow failed at verification step',
       steps,
-      signature,
-      explorerUrl: `https://solana.fm/tx/${signature}?cluster=devnet`,
+      assertSignature: assertSig,
+      assertExplorerUrl: `https://solana.fm/tx/${assertSig}?cluster=devnet`,
+      paymentSignature: paymentSig,
+      paymentExplorerUrl: `https://solana.fm/tx/${paymentSig}?cluster=devnet`,
     })
   } catch (err: any) {
-    return NextResponse.json({
-      error: err.message,
-      steps,
-    }, { status: 500 })
+    return NextResponse.json({ error: err.message, steps }, { status: 500 })
   }
 }
