@@ -137,8 +137,9 @@ export async function GET(request: NextRequest) {
     } catch {}
 
     if (!delegateScopeExists) {
+      let delegateSig: string | null = null
       try {
-        await program.methods
+        delegateSig = await program.methods
           .delegateAuthority(
             payer.publicKey, // delegate = authority_root itself
             new BN(5_000_000), // max_amount_per_action = $5
@@ -152,7 +153,11 @@ export async function GET(request: NextRequest) {
           })
           .rpc()
       } catch (e: any) {
-        // Might already exist (race condition) — continue anyway
+        return NextResponse.json({
+          ok: false,
+          message: 'Failed to create delegate_scope: ' + (e.message?.slice(0, 200) || 'unknown'),
+          steps: [...steps, { step: 1.5, action: 'Create delegate_scope PDA', result: 'failed', error: e.message?.slice(0, 200) }],
+        })
       }
     }
 
