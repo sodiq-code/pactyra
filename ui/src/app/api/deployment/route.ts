@@ -39,7 +39,6 @@ export async function GET() {
     const balance = await connection.getBalance(new PublicKey(wallet))
 
     return NextResponse.json({
-      rpc: DEVNET_RPC,
       cluster: 'devnet',
       wallet,
       balanceSOL: balance / 1e9,
