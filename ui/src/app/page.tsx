@@ -590,18 +590,39 @@ export default function Page() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-2">
-                <Button onClick={() => handleRecordOutcome('pass', 'none')} disabled={recording !== ''}
+                <Button onClick={() => { fetchAgent(activeAgentId); fetchDeployment(); fetchTxHistory(activeAgentId) }}
                   className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] sm:min-h-9">
-                  <Check className="h-4 w-4" />
-                  {recording === 'success' ? 'Recording...' : 'Record Success'}
-                </Button>
-                <Button onClick={() => handleRecordOutcome('fail', 'critical')} disabled={recording !== ''}
-                  variant="outline"
-                  className="flex-1 border-rose-500/40 text-rose-400 hover:bg-rose-500/10 hover:text-rose-400 min-h-[44px] sm:min-h-9">
-                  <AlertTriangle className="h-4 w-4" />
-                  {recording === 'critical' ? 'Recording...' : 'Record Critical Failure'}
+                  <RefreshCw className={cn('h-4 w-4', agentLoading && 'animate-spin')} />
+                  Refresh On-Chain State
                 </Button>
               </div>
+
+              {/* Authority transition evidence */}
+              {criticalFailures > 0 && (
+                <div className="mt-4 p-3 rounded-lg bg-rose-500/5 border border-rose-500/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="h-3.5 w-3.5 text-rose-400" />
+                    <span className="text-xs font-semibold text-rose-400">Authority Degradation Evidence</span>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground leading-relaxed">
+                    This agent has {criticalFailures} critical failure{criticalFailures > 1 ? 's' : ''} recorded on-chain.
+                    The bond was slashed (real USDC transferred out), authority reset to Tier 1,
+                    and the epoch incremented from 1 to {epoch} — invalidating all prior capabilities.
+                    The agent still has its key, but no longer has the authority.
+                  </div>
+                  <div className="mt-2 flex items-center gap-2 text-[10px] font-mono">
+                    <span className="text-emerald-400">$5</span>
+                    <ChevronRight className="h-3 w-3 text-muted-foreground/40" />
+                    <span className="text-muted-foreground">verified success</span>
+                    <ChevronRight className="h-3 w-3 text-muted-foreground/40" />
+                    <span className="text-rose-400">critical failure</span>
+                    <ChevronRight className="h-3 w-3 text-muted-foreground/40" />
+                    <span className="text-rose-400">bond slashed</span>
+                    <ChevronRight className="h-3 w-3 text-muted-foreground/40" />
+                    <span className="text-rose-400">epoch {epoch}</span>
+                  </div>
+                </div>
+              )}
 
               {authorityRoot && (
                 <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
