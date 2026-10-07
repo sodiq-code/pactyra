@@ -578,8 +578,6 @@ pub mod pactyra_core {
             PactyraError::BondNotSatisfied
         );
 
-        let capability = &mut ctx.accounts.capability;
-
         let capability_id = {
             let mut hash_data = Vec::new();
             hash_data.extend_from_slice(&agent.agent_id);
@@ -592,6 +590,7 @@ pub mod pactyra_core {
             hash.to_bytes()
         };
 
+        let capability = &mut ctx.accounts.capability;
         capability.capability_id = capability_id;
         capability.agent_id = agent.agent_id;
         capability.capability_type = params.capability_type;
@@ -623,7 +622,6 @@ pub mod pactyra_core {
     /// This is the core enforcement instruction with all security checks.
     pub fn assert_capability(ctx: Context<AssertCapability>, action: ActionParams) -> Result<()> {
         let agent = &ctx.accounts.agent;
-        let capability = &ctx.accounts.capability;
         let policy = &ctx.accounts.policy;
         let clock = Clock::get()?;
 
@@ -635,25 +633,25 @@ pub mod pactyra_core {
 
         // Check 2: Capability must be active
         require!(
-            capability.status == CapabilityStatus::Active,
+            ctx.accounts.capability.status == CapabilityStatus::Active,
             PactyraError::CapabilityNotActive
         );
 
         // Check 3: Capability must belong to this agent
         require!(
-            capability.agent_id == agent.agent_id,
+            ctx.accounts.capability.agent_id == agent.agent_id,
             PactyraError::CapabilityAgentMismatch
         );
 
         // Check 4: Authority epoch must be current
         require!(
-            capability.authority_epoch == agent.current_epoch,
+            ctx.accounts.capability.authority_epoch == agent.current_epoch,
             PactyraError::StaleEpoch
         );
 
         // Check 5: Policy must match
         require!(
-            capability.policy_key == policy.key(),
+            ctx.accounts.capability.policy_key == policy.key(),
             PactyraError::PolicyMismatch
         );
 
@@ -665,31 +663,31 @@ pub mod pactyra_core {
 
         // Check 7: Capability must not be expired
         require!(
-            clock.unix_timestamp < capability.expiry,
+            clock.unix_timestamp < ctx.accounts.capability.expiry,
             PactyraError::CapabilityExpired
         );
 
         // Check 8: Action type must match capability
         require!(
-            capability.capability_type == action.action_type,
+            ctx.accounts.capability.capability_type == action.action_type,
             PactyraError::ActionTypeNotPermitted
         );
 
         // Check 9: Target program must match
         require!(
-            capability.target_program == action.target_program,
+            ctx.accounts.capability.target_program == action.target_program,
             PactyraError::TargetProgramMismatch
         );
 
         // Check 10: Target account must match
         require!(
-            capability.target_account == action.target_account,
+            ctx.accounts.capability.target_account == action.target_account,
             PactyraError::TargetNotInScope
         );
 
         // Check 11: Amount must be within limit
         require!(
-            action.amount <= capability.amount_limit,
+            action.amount <= ctx.accounts.capability.amount_limit,
             PactyraError::AmountExceedsCapability
         );
 
@@ -701,33 +699,35 @@ pub mod pactyra_core {
 
         // Check 13: Frequency limit enforcement — capability has a max use count
         require!(
-            capability.use_count < capability.frequency_limit,
+            ctx.accounts.capability.use_count < ctx.accounts.capability.frequency_limit,
             PactyraError::FrequencyLimitExceeded
         );
 
-        // Check 14: Delegate scope enforcement (if signer is a delegate, not authority_root)
-        // If agent.authority_root is the signer, no delegate scope check needed.
-        // If a delegate signs, the DelegateScope must exist and be valid.
-        if let Some(delegate_scope) = &ctx.accounts.delegate_scope {
-            // The delegate scope exists — verify the signer matches the delegate
+        // Check 14: Delegate scope enforcement.
+        // The account constraint on `agent` already ensures the signer is either
+        // authority_root or the delegate. If the signer is NOT authority_root,
+        // apply the full delegate scope checks.
+        let signer_key = ctx.accounts.signer.key();
+        let is_authority_root = signer_key == agent.authority_root;
+
+        if !is_authority_root {
+            // Signer is a delegate — verify the delegate scope is valid
+            let delegate_scope = &ctx.accounts.delegate_scope;
             require!(
-                delegate_scope.delegate == ctx.accounts.authority_root.key(),
+                delegate_scope.delegate == signer_key,
                 PactyraError::WrongAgent
             );
-            // Verify the delegate scope hasn't expired
             require!(
                 clock.unix_timestamp < delegate_scope.expires_at,
                 PactyraError::DelegateScopeExpired
             );
-            // Verify the action amount doesn't exceed the delegate's per-action limit
             require!(
                 action.amount <= delegate_scope.max_amount_per_action,
                 PactyraError::DelegateAmountExceedsScope
             );
-        } else {
-            // No delegate scope provided — the signer must be the authority_root directly
-            // This is already enforced by has_one = authority_root on the agent account
         }
+        // If is_authority_root is true, no delegate scope checks needed —
+        // the authority_root has full authority.
 
         // Mark nonce as consumed (replay protection via PDA init)
         let consumed_nonce = &mut ctx.accounts.consumed_nonce;
@@ -737,8 +737,7 @@ pub mod pactyra_core {
         consumed_nonce.bump = ctx.bumps.consumed_nonce;
 
         // Increment the capability use count (frequency limit enforcement)
-        let capability = &mut ctx.accounts.capability;
-        capability.use_count += 1;
+        ctx.accounts.capability.use_count += 1;
 
         // Compute deterministic action_id binding this assertion to its exact
         // action parameters. record_outcome recomputes this hash and requires
@@ -747,7 +746,7 @@ pub mod pactyra_core {
         let action_id = {
             let mut hash_data = Vec::new();
             hash_data.extend_from_slice(&agent.agent_id);
-            hash_data.extend_from_slice(&capability.capability_id);
+            hash_data.extend_from_slice(&ctx.accounts.capability.capability_id);
             hash_data.extend_from_slice(&[action.action_type as u8]);
             hash_data.extend_from_slice(action.target_program.as_ref());
             hash_data.extend_from_slice(action.target_account.as_ref());
@@ -763,7 +762,7 @@ pub mod pactyra_core {
         let execution = &mut ctx.accounts.execution;
         execution.action_id = action_id;
         execution.agent_id = agent.agent_id;
-        execution.capability_id = capability.capability_id;
+        execution.capability_id = ctx.accounts.capability.capability_id;
         execution.action_type = action.action_type;
         execution.target_program = action.target_program;
         execution.target_account = action.target_account;
@@ -777,7 +776,7 @@ pub mod pactyra_core {
 
         emit!(CapabilityAsserted {
             agent_id: agent.agent_id,
-            capability_id: capability.capability_id,
+            capability_id: ctx.accounts.capability.capability_id,
             action_type: action.action_type,
             amount: action.amount,
             action_nonce: action.action_nonce,
@@ -788,7 +787,7 @@ pub mod pactyra_core {
         emit!(ExecutionAsserted {
             action_id,
             agent_id: agent.agent_id,
-            capability_id: capability.capability_id,
+            capability_id: ctx.accounts.capability.capability_id,
             target_program: action.target_program,
             action_nonce: action.action_nonce,
             slot: clock.slot,
@@ -1470,10 +1469,14 @@ pub struct RequestCapability<'info> {
 #[derive(Accounts)]
 #[instruction(action: ActionParams)]
 pub struct AssertCapability<'info> {
-    #[account(has_one = authority_root)]
+    #[account(
+        constraint = agent.authority_root == signer.key()
+            || delegate_scope.delegate == signer.key(),
+    )]
     pub agent: Account<'info, Agent>,
 
     #[account(
+        mut,
         constraint = capability.agent_id == agent.agent_id,
     )]
     pub capability: Account<'info, Capability>,
@@ -1485,7 +1488,7 @@ pub struct AssertCapability<'info> {
 
     #[account(
         init,
-        payer = authority_root,
+        payer = signer,
         space = 8 + ConsumedNonce::INIT_SPACE,
         seeds = [b"nonce", agent.agent_id.as_ref(), action.action_nonce.to_le_bytes().as_ref()],
         bump
@@ -1497,24 +1500,28 @@ pub struct AssertCapability<'info> {
     /// ties the Execution to the same nonce used for replay protection.
     #[account(
         init,
-        payer = authority_root,
+        payer = signer,
         space = 8 + Execution::INIT_SPACE,
         seeds = [b"execution", agent.agent_id.as_ref(), action.action_nonce.to_le_bytes().as_ref()],
         bump
     )]
     pub execution: Account<'info, Execution>,
 
-    /// Optional: if a delegate (session key) is signing instead of the authority root,
-    /// this account must be provided and the delegate scope is verified.
-    /// CHECK: Verified in instruction logic. Seeds: [b"delegate_scope", agent_id]
+    /// Delegate scope PDA. Required so that the program can verify whether the
+    /// signer is the authority_root or a delegated session key.
+    /// Seeds: [b"delegate_scope", agent_id]
+    /// CHECK: Verified in instruction logic.
     #[account(
         seeds = [b"delegate_scope", agent.agent_id.as_ref()],
-        bump = delegate_scope.bump,
+        bump,
     )]
-    pub delegate_scope: Option<Account<'info, DelegateScope>>,
+    pub delegate_scope: Account<'info, DelegateScope>,
 
+    /// The signer — either the agent's authority_root (direct execution)
+    /// or a delegated session key (delegated execution). The constraint on
+    /// the agent account above ensures only these two can sign.
     #[account(mut)]
-    pub authority_root: Signer<'info>,
+    pub signer: Signer<'info>,
 
     pub system_program: Program<'info, System>,
 }

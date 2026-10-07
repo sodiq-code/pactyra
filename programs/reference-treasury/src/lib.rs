@@ -147,8 +147,8 @@ pub mod reference_treasury {
             policy: ctx.accounts.policy.to_account_info(),
             consumed_nonce: ctx.accounts.consumed_nonce.to_account_info(),
             execution: ctx.accounts.execution.to_account_info(),
-            delegate_scope: None,
-            authority_root: ctx.accounts.authority_root.to_account_info(),
+            delegate_scope: ctx.accounts.delegate_scope.to_account_info(),
+            signer: ctx.accounts.authority_root.to_account_info(),
             system_program: ctx.accounts.system_program.to_account_info(),
         };
         let cpi_ctx = CpiContext::new(pactyra_core_program.clone(), cpi_accounts);
@@ -308,6 +308,12 @@ pub struct AuthorizedTransfer<'info> {
     /// CHECK: Owned by pactyra-core; verified in CPI.
     #[account(mut)]
     pub execution: UncheckedAccount<'info>,
+
+    /// DelegateScope PDA, required by assert_capability.
+    /// Seeds: [b"delegate_scope", agent.agent_id]
+    /// CHECK: Owned by pactyra-core; verified in CPI.
+    #[account(mut)]
+    pub delegate_scope: UncheckedAccount<'info>,
 
     /// CHECK: Constrained by `address = pactyra_core::ID`.
     #[account(address = pactyra_core::ID)]
