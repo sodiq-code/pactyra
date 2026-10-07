@@ -304,27 +304,50 @@ Scripts in `scripts/` produce the complete `$5 → $50 → $500 → $5` authorit
 | `demo-runner.ts` | Master script chaining all steps |
 | `devnet-verify.ts` | Devnet deployment verification |
 | `setup-multisig.ts` | Create multisig and transfer protocol authority |
-| `x402-demo.ts` | PACTYRA-gated HTTP payment demo |
+| `x402-demo.ts` | x402 V2 real integration demo |
 
-## PACTYRA-Gated HTTP Payments
+## x402 V2 Integration
 
-The SDK includes a real HTTP payment adapter that performs actual on-chain USDC transfers. No simulated signatures — every payment is a real Solana transaction verified on-chain.
+Standards-compatible x402 V2 HTTP payment protocol on Solana with PACTYRA capability enforcement. No simulated signatures — every payment is a real on-chain USDC transfer verified by the facilitator.
+
+### x402 V2 Protocol Compliance
+
+- **x402Version: 2** in the 402 response
+- **WWW-Authenticate: x402** header on 402 responses
+- **X-PAYMENT: base64(JSON({ signature, network, requirement }))** header from client
+- **X-PAYMENT-RESPONSE: base64(JSON({ signature, amount, currency, network, payer, slot }))** header on 200 responses
+- **scheme: exact** — exact-amount SPL token transfer
+- **On-chain verification** — facilitator fetches the transaction and checks token balance changes
 
 ### Flow
 
 ```
 Agent → HTTP request to x402 resource
-       ← 402 Payment Required + WWW-Authenticate: x402
-Adapter → assert_capability(agent, action, amount)
-         → 14 security checks
+       ← 402 Payment Required + WWW-Authenticate: x402 + x402Version: 2
+Adapter → PACTYRA assert_capability(agent, action, amount)
+         → 14 security checks (agent active, bond, tier, amount, frequency, etc.)
          → PASS: continue to payment
          → FAIL: reject, no payment made
 Adapter → REAL SPL token transfer (USDC) via sendAndConfirmTransaction
        ← REAL transaction signature
-Agent → HTTP request + X-PAYMENT: <real-signature>
-Facilitator → Verify signature on-chain (check token balance changes)
-       ← 200 OK + X-PAYMENT-RESPONSE + resource
+Agent → HTTP request + X-PAYMENT: base64(JSON({ signature, network, requirement }))
+Facilitator → Decode X-PAYMENT, fetch transaction from Solana
+            → Verify token balance changes (USDC to payTo, correct amount)
+       ← 200 OK + X-PAYMENT-RESPONSE: base64(JSON(receipt)) + resource
 ```
+
+### PACTYRA Capability Enforcement
+
+The x402 V2 adapter calls `assert_capability()` before making the USDC payment. This checks:
+1. Agent is Active (not Frozen)
+2. Capability is Active (not Revoked)
+3. Authority epoch is current
+4. Target program and account match
+5. Amount is within capability limit
+6. Bond is satisfied
+7. Frequency limit not exceeded
+
+If any check fails, the payment is NOT made — the agent cannot pay without earned authority.
 
 ### Live Proof
 

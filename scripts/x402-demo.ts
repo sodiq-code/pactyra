@@ -1,5 +1,5 @@
 /**
- * PACTYRA-gated HTTP Payment Demo
+ * x402 V2 Real Integration Demo
  *
  * Tests the complete x402 payment flow with REAL on-chain USDC transfers:
  *
@@ -62,7 +62,7 @@ function loadKeypair(): Keypair {
 }
 
 async function main() {
-  console.log('=== PACTYRA PACTYRA-gated HTTP Payment Demo ===\n')
+  console.log('=== PACTYRA x402 V2 Real Integration Demo ===\n')
 
   console.log('This demo performs REAL on-chain USDC transfers on Solana devnet.')
   console.log('No simulated signatures.\n')
@@ -235,7 +235,7 @@ async function main() {
     }
 
     console.log('')
-    console.log('=== HTTP payment flow complete ===')
+    console.log('=== x402 V2 flow complete ===')
     console.log('')
     console.log('  Agent → HTTP GET /api/x402/resource')
     console.log('         ← 402 Payment Required')

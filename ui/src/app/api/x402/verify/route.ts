@@ -10,7 +10,7 @@ const USDC_MINT = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
 const PAY_TO = process.env.PAY_TO || "A55wG1G5nLVxn9Ns91ogrqZ6cHVi2yPd7WRi8GCyc3PE"
 
 /**
- * HTTP Payment Facilitator — Payment Verification Endpoint
+ * x402 V2 Facilitator — Payment Verification Endpoint
  *
  * Called by the x402 adapter (or any x402 client) to verify a payment
  * before retrying the request with the X-PAYMENT header.

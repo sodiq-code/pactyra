@@ -1,22 +1,23 @@
 /**
- * PACTYRA x402 HTTP Payment Adapter
+ * PACTYRA x402 V2 Adapter
  *
- * Real x402 HTTP payment protocol integration with PACTYRA capability gating.
- * No simulated signatures — every payment is a real on-chain USDC transfer.
+ * Standards-compatible x402 V2 HTTP payment protocol on Solana with PACTYRA
+ * capability gating. No simulated signatures — every payment is a real
+ * on-chain USDC transfer.
  *
- * Flow:
+ * x402 V2 Protocol Flow:
  *   1. Agent makes HTTP request to an x402-enabled service
- *   2. Service returns 402 Payment Required with x402 requirements
- *   3. Adapter checks PACTYRA assert_capability (13 security checks)
+ *   2. Service returns 402 Payment Required with x402 V2 requirements
+ *   3. Adapter calls PACTYRA assert_capability (14 security checks)
  *   4. If capability passes, adapter creates a real SPL token transfer
  *   5. Transaction is signed and submitted to Solana
- *   6. Real transaction signature is sent as X-PAYMENT header
- *   7. Service verifies the payment on-chain and returns the resource
+ *   6. Payment payload (base64-encoded JSON with signature) sent as X-PAYMENT
+ *   7. Facilitator verifies the payment on-chain and returns 200
  *
- * x402-style HTTP payment headers:
+ * x402 V2 Headers:
  *   - WWW-Authenticate: x402 (server → client, 402 response)
- *   - X-PAYMENT: <transaction-signature> (client → server, payment proof)
- *   - X-PAYMENT-RESPONSE: <base64-encoded-receipt> (server → client, verified)
+ *   - X-PAYMENT: base64(JSON({ signature, network, requirement })) (client → server)
+ *   - X-PAYMENT-RESPONSE: base64(JSON({ signature, amount, currency, ... })) (server → client)
  *
  * Usage:
  *   import { PactyraX402Adapter } from '@pactyra/client/adapters/x402';
@@ -238,13 +239,19 @@ export class PactyraX402Adapter {
       }
     }
 
-    // Step 5: Retry the request with the REAL payment signature
+    // Step 5: Retry with X-PAYMENT header (base64-encoded JSON per x402 V2 spec)
+    const paymentPayload = {
+      signature,
+      network: requirement.network || 'solana-devnet',
+      requirement,
+    }
+    const xPaymentHeader = Buffer.from(JSON.stringify(paymentPayload)).toString('base64')
+
     const paidResponse = await fetch(url, {
       method,
       headers: {
         ...headers,
-        'X-PAYMENT': signature,
-        'X-PAYMENT-NETWORK': requirement.network || 'solana-devnet',
+        'X-PAYMENT': xPaymentHeader,
       },
       body,
     })
