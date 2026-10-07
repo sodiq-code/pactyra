@@ -166,10 +166,12 @@ export async function GET(request: NextRequest) {
           policy: policyPda,
           consumedNonce: consumedNoncePda,
           execution: executionPda,
-          delegateScope: delegateScopePda,
           authorityRoot: payer.publicKey,
           systemProgram: SystemProgram.programId,
         })
+        .remainingAccounts([
+          { pubkey: delegateScopePda, isSigner: false, isWritable: false },
+        ])
         .rpc()
     } catch (e: any) {
       steps.push({
