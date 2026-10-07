@@ -296,15 +296,15 @@ https://pactyra-ui.vercel.app/api/x402/demo
 
 **Capability assertion**
 
-`4jcdSDtNazgSdazdf1NzmjToXV2muM3vv63ceSVfdsMJJHEjYdEsApJbUs6pyy3MfGoyqJLEojyFUL7dbbcgDQvK`
+`37bLS2cnHU2fN8J6b7K98JsANpXpPWunvJesrJgDTcWjCULh8arqaDFv1e9XR6WpQWRTN1oLN6zwZQZaZDvXwozr`
 
 **USDC payment**
 
-`4Jb7qzPqVfoHFCAtoC6HqC9rhCxZBbc7fNkDGk4uEDTBVfBDMHpn3zgx7DWqvVja9FtbLX4CzaXF3yMDRbb9weKP`
+`3mLXMrAGrJKccSgZFDdZ3v7zJ4otCCtBFWobW2MPQ9MH7xxEDg2VTaKAvS8nGr7xjrMbh91nWGtU3xrQcp7kADKi`
 
-[View assertion transaction](https://solana.fm/tx/4jcdSDtNazgSdazdf1NzmjToXV2muM3vv63ceSVfdsMJJHEjYdEsApJbUs6pyy3MfGoyqJLEojyFUL7dbbcgDQvK?cluster=devnet)
+[View assertion transaction](https://solana.fm/tx/37bLS2cnHU2fN8J6b7K98JsANpXpPWunvJesrJgDTcWjCULh8arqaDFv1e9XR6WpQWRTN1oLN6zwZQZaZDvXwozr?cluster=devnet)
 
-[View USDC payment](https://solana.fm/tx/4Jb7qzPqVfoHFCAtoC6HqC9rhCxZBbc7fNkDGk4uEDTBVfBDMHpn3zgx7DWqvVja9FtbLX4CzaXF3yMDRbb9weKP?cluster=devnet)
+[View USDC payment](https://solana.fm/tx/3mLXMrAGrJKccSgZFDdZ3v7zJ4otCCtBFWobW2MPQ9MH7xxEDg2VTaKAvS8nGr7xjrMbh91nWGtU3xrQcp7kADKi?cluster=devnet)
 
 ---
 
