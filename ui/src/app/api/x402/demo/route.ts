@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
     const tierMax = agentData.tier.probation ? 5_000_000
       : agentData.tier.proven ? 50_000_000
       : 500_000_000
-    const isActive = agentData.status.active === true
+    const isActive = !!agentData.status.active
     const bondAmount = agentData.bondAmount.toNumber()
     const minBondRequired = 5_000_000 // 5 USDC minimum
 
