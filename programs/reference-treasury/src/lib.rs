@@ -1,3 +1,6 @@
+#![allow(deprecated)]
+#![allow(unexpected_cfgs)]
+
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
@@ -49,10 +52,7 @@ pub mod reference_treasury {
 
     /// Initialize a treasury instance.
     /// Creates a vault token account (PDA) for holding USDC.
-    pub fn initialize_treasury(
-        ctx: Context<InitializeTreasury>,
-        fee_bps: u16,
-    ) -> Result<()> {
+    pub fn initialize_treasury(ctx: Context<InitializeTreasury>, fee_bps: u16) -> Result<()> {
         let treasury = &mut ctx.accounts.treasury;
         treasury.authority = ctx.accounts.authority.key();
         treasury.usdc_mint = ctx.accounts.usdc_mint.key();
@@ -125,10 +125,7 @@ pub mod reference_treasury {
         require!(!treasury.paused, TreasuryError::TreasuryPaused);
 
         let vault = &ctx.accounts.vault;
-        require!(
-            vault.amount >= amount,
-            TreasuryError::InsufficientBalance
-        );
+        require!(vault.amount >= amount, TreasuryError::InsufficientBalance);
 
         // Build the action parameters for assert_capability
         let action = pactyra_core::ActionParams {
@@ -184,11 +181,8 @@ pub mod reference_treasury {
             execution: ctx.accounts.execution.to_account_info(),
             executor: ctx.accounts.treasury.to_account_info(),
         };
-        let cpi_ctx = CpiContext::new_with_signer(
-            pactyra_core_program.clone(),
-            cpi_accounts,
-            signer,
-        );
+        let cpi_ctx =
+            CpiContext::new_with_signer(pactyra_core_program.clone(), cpi_accounts, signer);
         pactyra_core::cpi::mark_executed(cpi_ctx)?;
 
         emit!(AuthorizedTransferExecuted {
@@ -286,7 +280,6 @@ pub struct AuthorizedTransfer<'info> {
     pub treasury: Account<'info, Treasury>,
 
     // --- PACTYRA CPI accounts ---
-
     /// The agent whose capability is being asserted.
     #[account(mut)]
     pub agent: Account<'info, pactyra_core::Agent>,
@@ -321,7 +314,6 @@ pub struct AuthorizedTransfer<'info> {
     pub pactyra_core_program: UncheckedAccount<'info>,
 
     // --- Token accounts ---
-
     #[account(mut, constraint = vault.mint == treasury.usdc_mint)]
     pub vault: Account<'info, TokenAccount>,
 
@@ -329,13 +321,11 @@ pub struct AuthorizedTransfer<'info> {
     pub recipient_token: Account<'info, TokenAccount>,
 
     // --- Signers ---
-
     /// The agent's authority root — must sign to prove the agent authorized this action.
     #[account(mut)]
     pub authority_root: Signer<'info>,
 
     // --- Programs ---
-
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }

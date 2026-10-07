@@ -1,3 +1,6 @@
+#![allow(deprecated)]
+#![allow(unexpected_cfgs)]
+
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
@@ -9,44 +12,35 @@ declare_id!("EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC");
 // ============================================================
 
 /// Authority tiers for agent economic access.
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug, InitSpace)]
+#[derive(
+    AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug, InitSpace, Default,
+)]
 pub enum AuthorityTier {
+    #[default]
     Probation,
     Proven,
     Trusted,
 }
 
-impl Default for AuthorityTier {
-    fn default() -> Self {
-        AuthorityTier::Probation
-    }
-}
-
 /// Agent status.
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug, InitSpace)]
+#[derive(
+    AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug, InitSpace, Default,
+)]
 pub enum AgentStatus {
+    #[default]
     Active,
     Frozen,
 }
 
-impl Default for AgentStatus {
-    fn default() -> Self {
-        AgentStatus::Active
-    }
-}
-
 /// Capability lifecycle status.
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug, InitSpace)]
+#[derive(
+    AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug, InitSpace, Default,
+)]
 pub enum CapabilityStatus {
+    #[default]
     Active,
     Revoked,
     Expired,
-}
-
-impl Default for CapabilityStatus {
-    fn default() -> Self {
-        CapabilityStatus::Active
-    }
 }
 
 /// Capability action classes.
@@ -74,16 +68,13 @@ pub enum OutcomeResult {
 }
 
 /// Policy lifecycle status.
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug, InitSpace)]
+#[derive(
+    AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug, InitSpace, Default,
+)]
 pub enum PolicyStatus {
+    #[default]
     Active,
     Superseded,
-}
-
-impl Default for PolicyStatus {
-    fn default() -> Self {
-        PolicyStatus::Active
-    }
 }
 
 // ============================================================
@@ -289,8 +280,11 @@ const T1_TO_T2_THRESHOLD: u64 = 5;
 const TIMELOCK_DELAY_SECONDS: i64 = 86400;
 
 /// Operation type constants for timelocked operations.
+#[allow(dead_code)]
 const OP_REGISTER_VERIFIER: u8 = 1;
+#[allow(dead_code)]
 const OP_DEPRECATE_VERIFIER: u8 = 2;
+#[allow(dead_code)]
 const OP_REPLACE_AUTHORITY: u8 = 3;
 
 // ============================================================
@@ -462,10 +456,7 @@ pub mod pactyra_core {
     }
 
     /// Create a new policy. Policies are immutable once created.
-    pub fn create_policy(
-        ctx: Context<CreatePolicy>,
-        params: CreatePolicyParams,
-    ) -> Result<()> {
+    pub fn create_policy(ctx: Context<CreatePolicy>, params: CreatePolicyParams) -> Result<()> {
         let policy = &mut ctx.accounts.policy;
         let clock = Clock::get()?;
 
@@ -630,10 +621,7 @@ pub mod pactyra_core {
 
     /// Assert that a capability is valid for the requested action.
     /// This is the core enforcement instruction with all security checks.
-    pub fn assert_capability(
-        ctx: Context<AssertCapability>,
-        action: ActionParams,
-    ) -> Result<()> {
+    pub fn assert_capability(ctx: Context<AssertCapability>, action: ActionParams) -> Result<()> {
         let agent = &ctx.accounts.agent;
         let capability = &ctx.accounts.capability;
         let policy = &ctx.accounts.policy;
@@ -959,10 +947,7 @@ pub mod pactyra_core {
         // we enforce that the hash is non-zero and stored onchain for independent verification.
         // The pactyra_verifier's verify_and_record instruction computes the hash from
         // real Pyth account data before CPI-ing here.
-        require!(
-            evidence_hash != [0u8; 32],
-            PactyraError::InvalidEvidence
-        );
+        require!(evidence_hash != [0u8; 32], PactyraError::InvalidEvidence);
 
         // Create the receipt
         let receipt = &mut ctx.accounts.receipt;
@@ -987,8 +972,7 @@ pub mod pactyra_core {
         }
 
         // Handle critical failure: slash bond, downgrade, epoch++
-        let is_critical =
-            result == OutcomeResult::Fail && severity == Severity::Critical;
+        let is_critical = result == OutcomeResult::Fail && severity == Severity::Critical;
 
         if is_critical {
             agent.critical_failures += 1;
@@ -1052,9 +1036,7 @@ pub mod pactyra_core {
             let old_tier = agent.tier;
 
             // T1 -> T2: after 5 verified successes (protocol constant)
-            if agent.tier == AuthorityTier::Probation
-                && agent.success_count >= T1_TO_T2_THRESHOLD
-            {
+            if agent.tier == AuthorityTier::Probation && agent.success_count >= T1_TO_T2_THRESHOLD {
                 agent.tier = AuthorityTier::Proven;
                 emit!(AuthorityUpgraded {
                     agent_id: agent.agent_id,
@@ -1073,9 +1055,7 @@ pub mod pactyra_core {
                 && agent.bond_amount >= policy.min_bond_usdc
             {
                 let success_rate_bps = if agent.total_count > 0 {
-                    ((agent.success_count as u128 * 10000)
-                        / agent.total_count as u128)
-                        as u16
+                    ((agent.success_count as u128 * 10000) / agent.total_count as u128) as u16
                 } else {
                     0
                 };
@@ -1224,10 +1204,7 @@ pub mod pactyra_core {
     }
 
     /// Deprecate a verifier — marks it as inactive in the registry.
-    pub fn deprecate_verifier(
-        ctx: Context<DeprecateVerifier>,
-        verifier_index: u8,
-    ) -> Result<()> {
+    pub fn deprecate_verifier(ctx: Context<DeprecateVerifier>, verifier_index: u8) -> Result<()> {
         let registry = &mut ctx.accounts.verifier_registry;
         let clock = Clock::get()?;
 
@@ -1265,10 +1242,7 @@ pub mod pactyra_core {
 
     /// Propose a timelocked trust-root operation.
     /// The operation can only be executed after TIMELOCK_DELAY_SECONDS.
-    pub fn propose_operation(
-        ctx: Context<ProposeOperation>,
-        operation_type: u8,
-    ) -> Result<()> {
+    pub fn propose_operation(ctx: Context<ProposeOperation>, operation_type: u8) -> Result<()> {
         let clock = Clock::get()?;
         let op = &mut ctx.accounts.operation;
 
