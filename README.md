@@ -470,3 +470,27 @@ MIT — see [LICENSE](LICENSE)
 - **Live Demo:** [https://pactyra-ui.vercel.app](https://pactyra-ui.vercel.app)
 - **SDK:** `npm install @sodiq-code/pactyra-client` (GitHub Packages)
 - **Programs:** [pactyra-core](https://solana.fm/address/EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC?cluster=devnet) · [pactyra-verifier](https://solana.fm/address/5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN?cluster=devnet) · [reference-treasury](https://solana.fm/address/6gAZR4omxMUWy5Fb6kCtdmaWASFFXr9WRCoWUcAz7UA9?cluster=devnet) · [threshold-multisig](https://solana.fm/address/FgfW1JkSknJpcCypbhuv531qvVu2z8sNVPH2kZXLpDKc?cluster=devnet)
+
+## Demo state explanation
+
+The live demo agent on devnet shows the **authority degradation path** — the most compelling demonstration of PACTYRA's security model:
+
+```
+Agent registered at Tier 1 ($5 authority)
+     ↓
+5 verified successful outcomes (reached T2 threshold)
+     ↓
+1 critical failure detected by objective verifier
+     ↓
+Bond slashed — real USDC transferred out of bond vault
+     ↓
+Authority reset from $50 → $5 (Tier 2 → Tier 1)
+     ↓
+Epoch incremented (all prior capabilities invalidated)
+     ↓
+Agent retains its key — but no longer has the authority
+```
+
+This is the protocol working as designed: an agent that fails is economically penalized, regardless of whether it still possesses its private key. The agent cannot spend $50 again until it earns back the authority through verified performance.
+
+The "Authority Degradation Evidence" panel in the UI displays this on-chain proof — judges can verify the critical failure, bond slash, and epoch increment directly on Solana.fm.
