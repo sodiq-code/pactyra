@@ -100,7 +100,7 @@
 Before recording:
 - [ ] Ensure devnet agent has 0 successes (reset if needed)
 - [ ] Verify Vercel app is loading correctly
-- [ ] Test all buttons work (register, lock bond, record outcome, governance)
+- [ ] Test all interactive elements work (refresh, judge mode, x402 demo, transaction history)
 - [ ] Close unnecessary browser tabs
 - [ ] Set screen resolution to 1920×1080
 - [ ] Test microphone audio levels

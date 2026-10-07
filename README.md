@@ -5,7 +5,7 @@
 [![Solana](https://img.shields.io/badge/Solana-Devnet-9945FF.svg?logo=solana&logoColor=white)](https://solana.com)
 [![Pyth](https://img.shields.io/badge/Pyth-Network-00D2FF.svg)](https://pyth.network)
 [![Deployed on Vercel](https://img.shields.io/badge/Vercel-Live-000000.svg?logo=vercel&logoColor=white)](https://pactyra-ui.vercel.app)
-[![Anchor](https://img.shields.io/badge/Anchor-1.2.0-2D2D2D.svg)](https://www.anchor-lang.com)
+[![Anchor](https://img.shields.io/badge/Anchor-0.31.1-2D2D2D.svg)](https://www.anchor-lang.com)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Rust](https://img.shields.io/badge/Rust-1.89-CE422B.svg?logo=rust&logoColor=white)](https://www.rust-lang.org)
 
@@ -467,7 +467,7 @@ The Execution PDA closes the trust gap between the verifier and the on-chain act
 
 - Rust 1.89+
 - Solana CLI 4.x (Agave)
-- Anchor 1.2+
+- Anchor 0.31.1+
 - Node.js 18+
 
 ### Install and build

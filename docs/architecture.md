@@ -174,3 +174,68 @@ Agent signs transaction
   USDC       (no USDC
   transfer   moved)
 ```
+
+## Protocol Lifecycle (Current Implementation)
+
+```
+AGENT
+  │
+  ▼
+REGISTER + LOCK BOND (5 USDC → PDA vault)
+  │
+  ▼
+REQUEST CAPABILITY (target, amount, TTL, frequency_limit)
+  │
+  ▼
+ASSERT CAPABILITY (14 security checks)
+  │                    ↓
+  │              EXECUTION PDA created (status: Asserted)
+  │                    ↓
+  │              action_id = keccak256(agent, capability, action, target, amount, nonce)
+  │
+  ▼
+TARGET PROGRAM EXECUTES
+  │
+  ↓
+MARK EXECUTED (CPI from target program → status: Executed)
+  │
+  ▼
+OBJECTIVE VERIFIER (pactyra-verifier)
+  │  ↓ Pyth PriceUpdateV2 freshness check
+  │  ↓ verifier_program CPI signer required
+  │
+  ▼
+RECORD OUTCOME (status: Recorded)
+  │                    ↓
+  │              Verifier program provenance enforced
+  │              Bond, bond_vault, slash_destination mandatory
+  │
+  ├── PASS → authority upgrade (T1→T2 after 5✓, T2→T3 after 20+ at 95%)
+  │
+  └── CRITICAL FAIL → bond slashed (real USDC transfer)
+                       → authority downgrade to T1
+                       → epoch++ (all capabilities invalidated)
+
+## x402 V2 Integration
+
+```
+Agent → HTTP GET /api/x402/resource
+       ← 402 + WWW-Authenticate: x402 + x402Version: 2
+PACTYRA → capability verification (agent active, bond, tier, amount)
+       → PASS: continue to payment
+       → FAIL: reject, no payment made
+Adapter → REAL SPL token transfer (USDC)
+       ← REAL transaction signature
+Agent → HTTP GET + X-PAYMENT: base64(JSON({ signature, network, requirement }))
+Facilitator → Decode, fetch transaction from Solana, verify token balance changes
+       ← 200 OK + X-PAYMENT-RESPONSE: base64(JSON(receipt))
+```
+
+## Security Model Summary
+
+- 14 security checks in assert_capability
+- Execution PDA lifecycle: Asserted → Executed → Recorded
+- Verifier-program provenance (CPI signer required)
+- Real USDC bond escrow (mandatory slash transfer)
+- Frequency limit enforcement (use_count < frequency_limit)
+- x402 V2 standards-compatible payment protocol
