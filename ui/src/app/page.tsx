@@ -604,13 +604,20 @@ export default function Page() {
               </div>
 
               {authorityRoot && (
-                <div className="mt-4 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                   <span>Authority root:</span>
                   <a href={`${SOLANA_FM_BASE}/${authorityRoot}?cluster=devnet`} target="_blank" rel="noreferrer"
                     className="font-mono hover:text-foreground inline-flex items-center gap-0.5"
                     title="View on Solana.fm">
                     {shortHash(authorityRoot, 6, 6)}
                     <ExternalLink className="h-3 w-3" />
+                  </a>
+                  <Separator orientation="vertical" className="h-3 bg-border/40" />
+                  <a href={`${SOLANA_FM_BASE}/${agentPda}?cluster=devnet`} target="_blank" rel="noreferrer"
+                    className="text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1 font-mono text-[11px]"
+                    title="Verify this agent's on-chain state on Solana.fm">
+                    <Shield className="h-3 w-3" />
+                    Verify this claim
                   </a>
                 </div>
               )}
