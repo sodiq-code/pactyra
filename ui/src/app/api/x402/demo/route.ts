@@ -145,6 +145,11 @@ export async function GET(request: NextRequest) {
       program.programId
     )
 
+    // Derive delegate_scope PDA (required by Anchor seeds constraint, even when Optional)
+    const [delegateScopePda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('delegate_scope'), agentId], program.programId
+    )
+
     let assertSig: string
     try {
       assertSig = await program.methods
@@ -161,6 +166,7 @@ export async function GET(request: NextRequest) {
           policy: policyPda,
           consumedNonce: consumedNoncePda,
           execution: executionPda,
+          delegateScope: delegateScopePda,
           authorityRoot: payer.publicKey,
           systemProgram: SystemProgram.programId,
         })
