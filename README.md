@@ -370,8 +370,6 @@ GET https://pactyra-ui.vercel.app/api/x402/demo
 
 The demo endpoint calls the actual `pactyra-core::assert_capability()` instruction on Solana before making the USDC payment. This is the real enforcement primitive — not a mirror of checks. If `assert_capability()` fails, no payment is made.
 
-The demo endpoint calls the actual `pactyra-core::assert_capability()` instruction on Solana before making the USDC payment. This is the real enforcement primitive — not a mirror of checks. If `assert_capability()` fails, no payment is made.
-
 The demo builds a raw transaction that calls `assert_capability()` with the correct instruction discriminator and borsh-serialized ActionParams, bypassing the Anchor SDK's account resolution to ensure the Optional delegate_scope PDA is handled correctly. The instruction creates an Execution PDA (with deterministic action_id) and a ConsumedNonce PDA (for replay protection).
 
 The endpoint generates TWO on-chain transactions per run:
@@ -392,11 +390,6 @@ On-chain verification (assert_capability):
 - 9 account keys (agent, capability, policy, consumed_nonce, execution, delegate_scope, authority_root, system_program + program itself)
 - 1 inner instruction (PDA creation)
 - No errors
-
-On-chain verification (USDC payment):
-- Payer (A55wG1...): −10,000 base units (−0.01 USDC)
-- Payee (4ZokQY...): +10,000 base units (+0.01 USDC)
-- Mint: 4zMMC9srt5Ri... (USDC)
 
 ### Usage
 

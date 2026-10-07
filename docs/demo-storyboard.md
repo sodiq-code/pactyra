@@ -119,3 +119,27 @@ After recording:
 - [ ] Add the $5 → $50 → $500 → $5 text overlay during the loop
 - [ ] Upload to YouTube or Vimeo (unlisted is fine)
 - [ ] Test the video link works before submitting
+
+## x402 V2 Demo (Live)
+
+The x402 demo button on the live app performs:
+
+1. **PACTYRA assert_capability()** — real on-chain enforcement (creates Execution PDA + ConsumedNonce PDA, verifies 13 security checks)
+2. **402 Payment Required** — x402 V2 response with `WWW-Authenticate: x402`
+3. **REAL USDC transfer** — 0.01 USDC on Solana devnet
+4. **X-PAYMENT header** — base64-encoded JSON with transaction signature
+5. **On-chain verification** — facilitator verifies token balance changes
+6. **HTTP 200** — resource returned with `X-PAYMENT-RESPONSE` header
+
+The demo generates TWO on-chain signatures per run:
+- assert_capability signature (PACTYRA enforcement)
+- USDC payment signature (real payment)
+
+## Reference Treasury Enforcement (Strongest Proof)
+
+The reference treasury demonstrates the complete enforcement path:
+1. `assert_capability()` CPI — verifies all security checks
+2. USDC transfer — real tokens move
+3. `mark_executed()` CPI — Execution PDA advances to Executed status
+
+If `assert_capability()` fails, the transaction reverts and no USDC moves.
