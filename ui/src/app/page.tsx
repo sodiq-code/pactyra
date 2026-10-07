@@ -1157,11 +1157,11 @@ export default function Page() {
 
           {/* X402 PAYMENT */}
           <section>
-            <SectionHeader icon={DollarSign} title="x402 Payment" hint="real USDC · on-chain verified" />
+            <SectionHeader icon={DollarSign} title="HTTP Payments" hint="real USDC · on-chain verified" />
             <Card className="bg-card/50 backdrop-blur border-border/50">
               <CardContent className="pt-6 space-y-4">
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Real x402 V2 HTTP payment protocol integration. The adapter checks PACTYRA capability, then makes a <span className="text-foreground font-medium">real on-chain USDC transfer</span>. No simulated signatures — the facilitator verifies the transaction on Solana before returning the resource.
+                  Real PACTYRA-gated HTTP payment with on-chain USDC transfer. The adapter checks PACTYRA capability, then makes a <span className="text-foreground font-medium">real on-chain USDC transfer</span>. No simulated signatures — the facilitator verifies the transaction on Solana before returning the resource.
                 </p>
 
                 {/* x402 flow visualization */}
@@ -1190,7 +1190,7 @@ export default function Page() {
                   <Button onClick={runX402Demo} disabled={x402DemoLoading}
                     className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2">
                     <DollarSign className="h-4 w-4" />
-                    {x402DemoLoading ? 'Running x402 flow...' : 'Run Real x402 Payment'}
+                    {x402DemoLoading ? 'Running payment flow...' : 'Run Real Payment'}
                   </Button>
                   <span className="text-[10px] text-muted-foreground">
                     Pays 0.01 USDC on devnet

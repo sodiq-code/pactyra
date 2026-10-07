@@ -24,7 +24,7 @@ const PAY_TO = process.env.PAY_TO || "A55wG1G5nLVxn9Ns91ogrqZ6cHVi2yPd7WRi8GCyc3
 const PAYMENT_AMOUNT = 10_000 // 0.01 USDC
 
 /**
- * x402 V2 Server-Side Demo
+ * PACTYRA-gated HTTP Payment Demo
  *
  * Performs the complete x402 flow server-side:
  * 1. Fetch the resource → get 402 Payment Required
@@ -211,7 +211,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       ok: paidResponse.status === 200,
       message: paidResponse.status === 200
-        ? 'x402 V2 flow complete — REAL payment verified on-chain'
+        ? 'HTTP payment flow complete — REAL payment verified on-chain'
         : 'x402 flow failed at verification step',
       steps,
       signature,

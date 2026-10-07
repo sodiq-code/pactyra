@@ -304,11 +304,11 @@ Scripts in `scripts/` produce the complete `$5 → $50 → $500 → $5` authorit
 | `demo-runner.ts` | Master script chaining all steps |
 | `devnet-verify.ts` | Devnet deployment verification |
 | `setup-multisig.ts` | Create multisig and transfer protocol authority |
-| `x402-demo.ts` | x402 V2 real integration demo |
+| `x402-demo.ts` | PACTYRA-gated HTTP payment demo |
 
-## x402 V2 Integration
+## PACTYRA-Gated HTTP Payments
 
-The SDK includes a real x402 V2 adapter that performs actual on-chain USDC transfers. No simulated signatures — every payment is a real Solana transaction verified on-chain.
+The SDK includes a real HTTP payment adapter that performs actual on-chain USDC transfers. No simulated signatures — every payment is a real Solana transaction verified on-chain.
 
 ### Flow
 

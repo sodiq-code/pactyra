@@ -16,7 +16,7 @@ const PAY_TO = process.env.PAY_TO || "4ZokQYezBqFkUUQVWi7axR2qT6SS3vm2Q37ZzdPwyi
 const PAYMENT_AMOUNT = 10_000
 
 /**
- * x402 V2 Facilitator — Resource Endpoint
+ * HTTP Payment Facilitator — Resource Endpoint
  *
  * Implements the x402 HTTP payment protocol:
  *

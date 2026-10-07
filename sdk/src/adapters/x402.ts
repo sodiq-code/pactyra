@@ -1,5 +1,5 @@
 /**
- * PACTYRA x402 V2 Adapter
+ * PACTYRA x402 HTTP Payment Adapter
  *
  * Real x402 HTTP payment protocol integration with PACTYRA capability gating.
  * No simulated signatures — every payment is a real on-chain USDC transfer.
@@ -13,7 +13,7 @@
  *   6. Real transaction signature is sent as X-PAYMENT header
  *   7. Service verifies the payment on-chain and returns the resource
  *
- * x402 V2 headers:
+ * x402-style HTTP payment headers:
  *   - WWW-Authenticate: x402 (server → client, 402 response)
  *   - X-PAYMENT: <transaction-signature> (client → server, payment proof)
  *   - X-PAYMENT-RESPONSE: <base64-encoded-receipt> (server → client, verified)
@@ -113,7 +113,7 @@ export interface X402FetchResult {
 }
 
 // ============================================================
-// PACTYRA x402 V2 Adapter
+// PACTYRA x402 HTTP Payment Adapter
 // ============================================================
 
 export class PactyraX402Adapter {
