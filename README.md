@@ -242,7 +242,7 @@ PACTYRA is deployed and executable on Solana devnet.
 | `threshold-multisig`     | Live on devnet |
 | x402 V2 integration      | Live           |
 | Real USDC devnet payment | Verified       |
-| Automated tests          | 60 passing     |
+| Automated tests          | 66 passing     |
 
 ## Program IDs
 
@@ -292,7 +292,9 @@ The hosted demo currently produces two real Solana transactions:
 https://pactyra-ui.vercel.app/api/x402/demo
 ```
 
-### Latest verified run
+### Example verified run
+
+Run the live endpoint to generate a fresh pair of on-chain proofs. Below is an example from a previous run:
 
 **Capability assertion**
 
@@ -907,11 +909,11 @@ The objective is simple:
 Current repository test suite:
 
 ```text
-37 formal tests
+38 formal tests
 21 SDK tests
 7 demo-runner tests
 -------------------
-65 total tests
+66 total tests
 ```
 
 Run locally:
@@ -1019,7 +1021,7 @@ NETWORK       Solana Devnet
 PROGRAMS      4 deployed
 INSTRUCTIONS  35
 SECURITY      14 capability checks
-TESTS         65
+TESTS         66
 x402          V2
 USDC          Real devnet transfers
 OPEN SOURCE   MIT

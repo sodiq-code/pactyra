@@ -211,6 +211,34 @@ describe("delegate-scope", () => {
     }
   });
 
+  it("Delegate signs after scope expiry → rejected (DelegateScopeExpired)", async () => {
+    // Revoke the delegate scope by setting expiry to now
+    await program.methods
+      .revokeDelegate()
+      .accounts({
+        agent: agentPda,
+        delegateScope: delegateScopePda,
+        authorityRoot: authority.publicKey,
+      })
+      .signers([authority])
+      .rpc();
+
+    // Verify the scope is now expired
+    const scope = await program.account.delegateScope.fetch(delegateScopePda);
+    const clock = await provider.connection.getSlot();
+    const blockTime = await provider.connection.getBlockTime(clock);
+    expect(scope.expiresAt.toNumber()).to.be.lessThanOrEqual(blockTime!);
+
+    const { capPda, targetProgram, targetAccount } = await requestCap(TIER_1_MAX);
+    const nonce = new BN(actionNonce++);
+    try {
+      await assertCap(delegate, capPda, targetProgram, targetAccount, new BN(1_000_000), nonce);
+      expect.fail("Should reject — delegate scope expired");
+    } catch (err: any) {
+      expect(err.toString()).to.include("DelegateScopeExpired");
+    }
+  });
+
   it("Unauthorized signer (not authority_root, not delegate) → rejected", async () => {
     const imposter = Keypair.generate();
     await airdrop(provider.connection, imposter.publicKey, 5);
