@@ -16,7 +16,7 @@
 
 ---
 
-## 60-Second Judge Summary
+## The Thesis
 
 Autonomous agents can already hold wallets, sign transactions, interact with APIs, and spend money.
 
