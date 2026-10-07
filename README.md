@@ -86,8 +86,8 @@ Multisig PDA: 7vPjrrEEeszXDNiigpczbzNH376ak5EDfsxvT4UGSpkv (3-of-5 threshold)
 
 | Instruction | Description |
 |---|---|
-| `delegate_authority` | Grant a session key with bounded scope (max amount, expiry) |
-| `revoke_delegate` | Revoke a session key by setting expiry to now |
+| `delegate_authority` | Grant a delegate scope with bounded amount and expiry (governance primitive) |
+| `revoke_delegate` | Revoke a delegate scope by setting expiry to now |
 | `freeze_agent` | Set agent status to Frozen — blocks all capability assertions |
 | `unfreeze_agent` | Restore agent to Active status |
 | `supersede_policy` | Mark old policy as Superseded and point to new policy |
@@ -142,7 +142,7 @@ Replay protection is enforced via a `ConsumedNonce` PDA that is created on each 
 
 ### Account types (10)
 
-`Agent`, `Policy`, `Capability`, `Bond`, `Receipt`, `VerifierRegistry`, `VerifierEntry`, `ConsumedNonce`, `DelegateScope`, `TimelockedOperation`
+`Agent`, `Bond`, `Capability`, `ConsumedNonce`, `DelegateScope`, `Execution`, `Policy`, `Receipt`, `TimelockedOperation`, `VerifierRegistry`
 
 ### Error codes (38)
 
@@ -456,7 +456,7 @@ See [`docs/architecture.md`](docs/architecture.md) for:
 - **Verifier-program provenance**: The `record_outcome` instruction verifies that the call came through the registered `verifier_program` via CPI. The verifier program's account must be a CPI signer and must match the `verifier_program` stored in the `VerifierRegistry`. A verifier operator cannot bypass the objective verifier path by calling `record_outcome` directly — the Solana runtime marks the calling program as a signer, and only the registered verifier program can satisfy this check.
 - **Verifier-only outcomes**: Only registered verifier operators can submit receipts. Evidence hash must be non-zero.
 - **Tier-based limits**: $5 / $50 / $500 per capability based on agent tier.
-- **Delegate scope**: Session keys have bounded amount and expiry, enforced in `assert_capability`.
+- **Delegate scope**: DelegateScope accounts store bounded amount and expiry for delegated authority. The delegate scope is checked in `assert_capability` when a delegate signs. Full independent session-key execution (where a delegate key signs without the authority_root) is an implemented governance primitive — the scope data structure and validation logic exist on-chain, but the current `assert_capability` requires `authority_root` as signer via `has_one`, so delegated execution requires the authority_root to co-sign.
 - **Agent freeze**: Frozen agents cannot assert capabilities.
 - **Timelock**: 24-hour delay on all trust-root operations.
 - **Multisig**: 3-of-5 threshold for protocol authority operations.

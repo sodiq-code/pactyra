@@ -150,7 +150,7 @@ export async function GET(request: NextRequest) {
       checks: ['Agent is Active', 'Capability is Active', 'Capability belongs to Agent', 'Authority epoch current',
         'Policy matches', 'Policy is Active', 'Capability not expired', 'Action type matches',
         'Target program matches', 'Target account matches', 'Amount within limit', 'Bond satisfied',
-        'Delegate scope valid'],
+        'Frequency limit not exceeded', 'Delegate scope valid'],
     })
 
     // x402 flow
