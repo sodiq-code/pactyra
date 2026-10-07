@@ -993,44 +993,43 @@ pub mod pactyra_core {
         if is_critical {
             agent.critical_failures += 1;
 
-            // Slash bond if it exists — transfer real USDC to slash destination
-            if let Some(bond) = &mut ctx.accounts.bond {
-                if !bond.slashed {
-                    bond.slashed = true;
-                    let slashed_amount = bond.amount;
-                    bond.amount = 0;
+            // Slash bond — transfer real USDC to slash destination.
+            let bond = &mut ctx.accounts.bond;
+            // Bond, bond_vault, and slash_destination are now mandatory
+            // (not Optional), so the real token transfer always executes.
+            if !bond.slashed {
+                bond.slashed = true;
+                let slashed_amount = bond.amount;
+                bond.amount = 0;
 
-                    // Transfer real USDC from bond vault to slash destination
-                    if slashed_amount > 0 {
-                        if let Some(bond_vault) = &ctx.accounts.bond_vault {
-                            if let Some(slash_destination) = &ctx.accounts.slash_destination {
-                                let signer_seeds = &[
-                                    b"bond_vault".as_ref(),
-                                    bond_vault.mint.as_ref(),
-                                    &[ctx.bumps.bond_vault.unwrap_or(0)],
-                                ];
-                                let signer = &[&signer_seeds[..]];
+                // Transfer real USDC from bond vault to slash destination
+                if slashed_amount > 0 {
+                    let bond_vault = &ctx.accounts.bond_vault;
+                    let slash_destination = &ctx.accounts.slash_destination;
+                    let signer_seeds = &[
+                        b"bond_vault".as_ref(),
+                        bond_vault.mint.as_ref(),
+                        &[ctx.bumps.bond_vault],
+                    ];
+                    let signer = &[&signer_seeds[..]];
 
-                                let cpi_accounts = Transfer {
-                                    from: bond_vault.to_account_info(),
-                                    to: slash_destination.to_account_info(),
-                                    authority: bond_vault.to_account_info(),
-                                };
-                                let cpi_program = ctx.accounts.token_program.to_account_info();
-                                token::transfer(
-                                    CpiContext::new_with_signer(cpi_program, cpi_accounts, signer),
-                                    slashed_amount,
-                                )?;
-                            }
-                        }
-                    }
-
-                    emit!(BondSlashed {
-                        agent_id: agent.agent_id,
-                        amount: slashed_amount,
-                        slot: clock.slot,
-                    });
+                    let cpi_accounts = Transfer {
+                        from: bond_vault.to_account_info(),
+                        to: slash_destination.to_account_info(),
+                        authority: bond_vault.to_account_info(),
+                    };
+                    let cpi_program = ctx.accounts.token_program.to_account_info();
+                    token::transfer(
+                        CpiContext::new_with_signer(cpi_program, cpi_accounts, signer),
+                        slashed_amount,
+                    )?;
                 }
+
+                emit!(BondSlashed {
+                    agent_id: agent.agent_id,
+                    amount: slashed_amount,
+                    slot: clock.slot,
+                });
             }
             agent.bond_amount = 0;
 
@@ -1623,10 +1622,12 @@ pub struct RecordOutcome<'info> {
         seeds = [b"bond", agent.agent_id.as_ref()],
         bump = bond.bump,
     )]
-    pub bond: Option<Account<'info, Bond>>,
+    pub bond: Account<'info, Bond>,
 
-    /// Optional: bond vault token account (for real USDC slash transfer)
-    /// CHECK: Verified via seeds and token constraints
+    /// Bond vault token account — mandatory for real USDC slash transfer.
+    /// The vault PDA holds the escrowed USDC. On critical failure, the
+    /// slashed amount is transferred from this vault to the slash destination.
+    /// CHECK: Verified via seeds and token constraints.
     #[account(
         mut,
         seeds = [b"bond_vault", usdc_mint.key().as_ref()],
@@ -1634,14 +1635,16 @@ pub struct RecordOutcome<'info> {
         token::mint = usdc_mint,
         token::authority = bond_vault,
     )]
-    pub bond_vault: Option<Account<'info, TokenAccount>>,
+    pub bond_vault: Account<'info, TokenAccount>,
 
-    /// Optional: slash destination token account (receives slashed USDC)
+    /// Slash destination token account — receives the slashed USDC on
+    /// critical failure. Must be provided so the real token transfer
+    /// always executes when a bond is slashed.
     #[account(
         mut,
         constraint = slash_destination.mint == usdc_mint.key()
     )]
-    pub slash_destination: Option<Account<'info, TokenAccount>>,
+    pub slash_destination: Account<'info, TokenAccount>,
 
     /// The verifier program that is calling this instruction via CPI.
     /// Must be a registered verifier_program in the VerifierRegistry and must

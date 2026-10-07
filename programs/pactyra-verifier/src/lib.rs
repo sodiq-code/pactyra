@@ -268,9 +268,9 @@ pub mod pactyra_verifier {
             verifier_registry: ctx.accounts.verifier_registry.to_account_info(),
             policy: ctx.accounts.policy.to_account_info(),
             execution: ctx.accounts.execution.to_account_info(),
-            bond: Some(ctx.accounts.bond.to_account_info()),
-            bond_vault: None,
-            slash_destination: None,
+            bond: ctx.accounts.bond.to_account_info(),
+            bond_vault: ctx.accounts.bond_vault.to_account_info(),
+            slash_destination: ctx.accounts.slash_destination.to_account_info(),
             verifier_program: ctx.accounts.verifier_program_self.to_account_info(),
             usdc_mint: ctx.accounts.usdc_mint.to_account_info(),
             verifier_operator: ctx.accounts.verifier_operator.to_account_info(),
@@ -351,6 +351,16 @@ pub struct VerifyAndRecord<'info> {
     /// Seeds: [b"bond", agent.agent_id]
     #[account(mut)]
     pub bond: UncheckedAccount<'info>,
+
+    /// Bond vault token account — mandatory for real USDC slash on critical failure.
+    /// CHECK: Verified in pactyra_core via seeds and token constraints.
+    #[account(mut)]
+    pub bond_vault: UncheckedAccount<'info>,
+
+    /// Slash destination token account — receives slashed USDC.
+    /// CHECK: Verified in pactyra_core via mint constraint.
+    #[account(mut)]
+    pub slash_destination: UncheckedAccount<'info>,
 
     /// Execution PDA — required by record_outcome to verify the action was
     /// actually executed on-chain. Must be in Executed status.
