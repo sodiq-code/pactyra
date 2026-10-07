@@ -1265,7 +1265,7 @@ export default function Page() {
                 </div>
                 <div className="flex flex-col gap-0.5 p-2 rounded-md bg-card/30 border border-border/20">
                   <span className="text-[9px] uppercase tracking-wider text-muted-foreground">Security Checks</span>
-                  <span className="font-mono text-sm font-semibold text-violet-400">13</span>
+                  <span className="font-mono text-sm font-semibold text-violet-400">14</span>
                 </div>
               </div>
 
