@@ -44,7 +44,8 @@ export async function GET(request: NextRequest) {
 
     steps.push({ step: 1, action: 'Load payer wallet', result: 'success', payer: payer.publicKey.toString() })
 
-    const agentId = Buffer.from(PERMANENT_AGENT, 'hex')
+    const agentIdHex = url.searchParams.get('agentId') || PERMANENT_AGENT
+    const agentId = Buffer.from(agentIdHex, 'hex')
     const [agentPda] = PublicKey.findProgramAddressSync([Buffer.from('agent'), agentId], PACTYRA_CORE)
     const [policyPda] = PublicKey.findProgramAddressSync([Buffer.from('policy'), Buffer.from('PAY-V1')], PACTYRA_CORE)
     const payToPubkey = new PublicKey(PAY_TO)

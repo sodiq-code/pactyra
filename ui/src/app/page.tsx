@@ -636,7 +636,7 @@ export default function Page() {
     setX402DemoLoading(true)
     setX402DemoResult(null)
     try {
-      const res = await fetch('/api/x402/demo', { cache: 'no-store' })
+      const res = await fetch(`/api/x402/demo?agentId=${activeAgentId}`, { cache: 'no-store' })
       const data = await res.json()
       setX402DemoResult(data)
       if (data.ok) {
