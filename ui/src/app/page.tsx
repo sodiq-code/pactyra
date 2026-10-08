@@ -645,6 +645,166 @@ export default function Page() {
             </CardContent>
           </Card>
 
+          {/* AUTHORITY PROOF */}
+          <section>
+            <SectionHeader icon={Shield} title="Authority Proof" hint="complete lifecycle in one view" />
+            <Card className="bg-card/50 backdrop-blur border-emerald-500/20">
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Left column: Agent state */}
+                  <div className="space-y-3">
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Agent State</div>
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-background/30 border border-border/30">
+                      <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
+                        tierCfg.text)}>
+                        <Shield className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-2">
+                          <span className={cn('text-2xl font-bold', tierCfg.text)}>{tier}</span>
+                          <span className="text-xs text-muted-foreground">Tier</span>
+                        </div>
+                        <div className="flex items-baseline gap-1">
+                          <DollarSign className={cn('h-4 w-4', tierCfg.text)} />
+                          <span className={cn('text-lg font-semibold', tierCfg.text)}>{maxAmount}</span>
+                          <span className="text-[10px] text-muted-foreground">USDC cap</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="p-2.5 rounded-md bg-background/30 border border-border/30">
+                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Bond</div>
+                        <div className="font-mono text-sm font-semibold text-amber-400">{bondAmount} USDC</div>
+                      </div>
+                      <div className="p-2.5 rounded-md bg-background/30 border border-border/30">
+                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Epoch</div>
+                        <div className="font-mono text-sm font-semibold text-sky-400">#{epoch}</div>
+                      </div>
+                      <div className="p-2.5 rounded-md bg-background/30 border border-border/30">
+                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Verified</div>
+                        <div className="font-mono text-sm font-semibold text-emerald-400">{totalCount}</div>
+                      </div>
+                      <div className="p-2.5 rounded-md bg-background/30 border border-border/30">
+                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Success Rate</div>
+                        <div className={cn('font-mono text-sm font-semibold',
+                          successRate >= 90 ? 'text-emerald-400' : successRate >= 70 ? 'text-amber-400' : 'text-rose-400')}>
+                          {successRate}%
+                        </div>
+                      </div>
+                    </div>
+
+                    {criticalFailures > 0 && (
+                      <div className="p-2.5 rounded-md bg-rose-500/5 border border-rose-500/20">
+                        <div className="text-[9px] uppercase tracking-wider text-rose-400">Critical Failures</div>
+                        <div className="font-mono text-sm font-semibold text-rose-400">{criticalFailures}</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right column: Evidence chain */}
+                  <div className="space-y-3">
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Evidence Chain</div>
+
+                    {/* Execution PDA status */}
+                    <div className="p-3 rounded-lg bg-background/30 border border-border/30">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500/15 text-amber-400">
+                          <Shield className="h-3 w-3" />
+                        </div>
+                        <span className="text-xs font-semibold">Execution PDA</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-[10px] font-mono">
+                        <span className={cn('px-1.5 py-0.5 rounded', 'bg-amber-500/10 text-amber-400')}>Asserted</span>
+                        <ChevronRight className="h-2.5 w-2.5 text-muted-foreground/40" />
+                        <span className={cn('px-1.5 py-0.5 rounded', 'bg-emerald-500/10 text-emerald-400')}>Executed</span>
+                        <ChevronRight className="h-2.5 w-2.5 text-muted-foreground/40" />
+                        <span className={cn('px-1.5 py-0.5 rounded', 'bg-teal-500/10 text-teal-400')}>Recorded</span>
+                      </div>
+                    </div>
+
+                    {/* Verifiers */}
+                    <div className="p-3 rounded-lg bg-background/30 border border-border/30">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-500/15 text-sky-400">
+                          <Check className="h-3 w-3" />
+                        </div>
+                        <span className="text-xs font-semibold">Registered Verifiers</span>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-[10px]">
+                          <span className="text-sky-400">●</span>
+                          <span className="font-mono">Verifier A: Pyth (price freshness)</span>
+                          <span className="text-emerald-400 ml-auto">deployed</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-[10px]">
+                          <span className="text-amber-400">●</span>
+                          <span className="font-mono">Verifier B: Service Outcome</span>
+                          <span className="text-emerald-400 ml-auto">live</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Latest authority transition */}
+                    <div className="p-3 rounded-lg bg-background/30 border border-border/30">
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">Latest Authority Transition</div>
+                      {criticalFailures > 0 ? (
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-rose-400 font-mono">$50</span>
+                          <ChevronRight className="h-3 w-3 text-rose-400" />
+                          <span className="text-rose-400 font-mono">$5</span>
+                          <span className="text-[9px] text-rose-400 ml-2">bond slashed + epoch++</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-emerald-400 font-mono">$5</span>
+                          <ChevronRight className="h-3 w-3 text-muted-foreground/40" />
+                          <span className="text-amber-400 font-mono">$50</span>
+                          <ChevronRight className="h-3 w-3 text-muted-foreground/40" />
+                          <span className="text-emerald-400 font-mono">$500</span>
+                          <span className="text-[9px] text-emerald-400 ml-2">earned authority</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Proof links */}
+                    <div className="flex items-center gap-2">
+                      {agentPda && (
+                        <a href={`${SOLANA_FM_BASE}/${agentPda}?cluster=devnet`} target="_blank" rel="noreferrer"
+                          className="flex items-center gap-1 px-2 py-1.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-colors text-[10px] font-mono"
+                          title="Verify agent on Solana.fm">
+                          <Shield className="h-3 w-3" />
+                          Verify Agent
+                        </a>
+                      )}
+                      <a href="https://pactyra-ui.vercel.app/api/verifier/demo" target="_blank" rel="noreferrer"
+                        className="flex items-center gap-1 px-2 py-1.5 rounded-md bg-sky-500/10 border border-sky-500/20 text-sky-400 hover:bg-sky-500/20 transition-colors text-[10px] font-mono"
+                        title="Run verifier-agnostic demo">
+                        <Activity className="h-3 w-3" />
+                        Verifier Demo
+                      </a>
+                      <a href="https://pactyra-ui.vercel.app/api/x402/demo" target="_blank" rel="noreferrer"
+                        className="flex items-center gap-1 px-2 py-1.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20 transition-colors text-[10px] font-mono"
+                        title="Run x402 payment demo">
+                        <DollarSign className="h-3 w-3" />
+                        x402 Demo
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                {/* The key message */}
+                <div className="mt-4 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/15">
+                  <div className="text-xs text-emerald-400 font-medium text-center">
+                    {criticalFailures > 0
+                      ? "The agent still has its key, but it no longer has the authority it had earned."
+                      : "Authority is earned through verified execution — not granted by trust."}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+
           {/* HOW IT WORKS */}
           <section>
             <SectionHeader icon={Activity} title="How It Works" hint="register → earn → spend → prove" />
