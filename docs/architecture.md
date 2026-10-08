@@ -175,6 +175,56 @@ Agent signs transaction
   transfer   moved)
 ```
 
+## Verifier Abstraction
+
+PACTYRA does not prescribe one definition of success. Any verifier that produces a deterministic outcome (pass/fail) with a cryptographic evidence hash can be registered in the VerifierRegistry and feed into `pactyra_core::record_outcome`. Adding a verifier does not require changing core.
+
+```
+┌─────────────┐  ┌─────────────┐  ┌─────────────┐
+│ Pyth        │  │ Service     │  │ Future...   │
+│ Verifier    │  │ Verifier    │  │ (TEE/Sig/ZK)│
+└──────┬──────┘  └──────┬──────┘  └──────┬──────┘
+       │                │                │
+       └────────────────┼────────────────┘
+                        ▼
+              VERIFIED OUTCOME (pass/fail + evidence_hash)
+                        │
+                        ▼
+              pactyra_core::record_outcome
+                        │
+                        ▼
+              AUTHORITY CHANGE (upgrade / downgrade / slash)
+```
+
+### Single entry point
+
+Every verifier feeds into one instruction. `record_outcome` is the only entry point authority transitions respond to:
+
+- `agent` — Agent PDA whose authority is affected
+- `result` — `Pass` or `Fail`
+- `severity` — `None`, `Ordinary`, or `Critical`
+- `evidence_hash` — `keccak256` of the evidence (32 bytes)
+
+Authority effects:
+
+- `Pass` → increments `success_count` (may trigger T1→T2 or T2→T3 upgrade)
+- `Fail` (Ordinary) → increments `failure_count` (no tier change)
+- `Fail` (Critical) → slashes bond, downgrades to Tier 1, increments authority epoch
+
+### Live verifiers (deployed on devnet)
+
+- **Verifier A — Pyth (Price Freshness):** Reads Pyth `PriceUpdateV2`, checks owner + feed ID + publish_time freshness. Evidence hash = `keccak256(pyth_account_data)`.
+- **Verifier B — Service Outcome (Service Delivery):** Combines on-chain payment verification with HTTP 200 response check. Evidence hash = `keccak256(service_status, payment_sig, timestamp)`.
+
+### Planned verifiers (specification stable)
+
+- **TEE Attestation** — verifies SGX/TDX remote attestation quotes + MRENCLAVE
+- **Multi-Sig Committee** — aggregates m-of-n off-chain Ed25519 signatures
+- **ZK Proof** — verifies Groth16/Plonk proofs against a registered verification key
+- **Oracle Quorum** — cross-checks N independent oracle feeds for consensus
+
+Each planned verifier maps its evidence onto the same severity matrix (`none` / `ordinary` / `critical`) and feeds the same `record_outcome` instruction.
+
 ## Protocol Lifecycle (Current Implementation)
 
 ```

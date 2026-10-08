@@ -274,7 +274,7 @@ Deployed to Vercel at [https://pactyra-ui.vercel.app](https://pactyra-ui.vercel.
 - Security check tooltips
 - Copy-to-clipboard on all addresses
 
-### API Routes (7)
+### API Routes (12)
 
 | Route | Method | Description |
 |---|---|---|
@@ -285,6 +285,11 @@ Deployed to Vercel at [https://pactyra-ui.vercel.app](https://pactyra-ui.vercel.
 | `/api/record-outcome` | POST | Record a verified outcome |
 | `/api/request-capability` | POST | Request a capability |
 | `/api/transaction-history?id=<hex>` | GET | Fetch recent transactions for an agent |
+| `/api/verifiers` | GET | Verifier abstraction catalog (live + planned verifiers, record_outcome contract, on-chain VerifierRegistry) |
+| `/api/verifier/service?resource=<url>&payment_sig=<sig>` | GET | Run Service Outcome Verifier |
+| `/api/verifier/demo` | GET | Verifier-agnostic demo (assert → pay → verify → record) |
+| `/api/x402/demo` | GET | x402 V2 demo (assert → real USDC payment → resource delivery) |
+| `/api/proof` | GET | Machine-verifiable proof trail (agent state + transactions + claims) |
 
 ## Demo orchestration
 
@@ -358,9 +363,47 @@ With PACTYRA: the agent must earn the authority to pay through verified performa
 
 ## Verifier-Agnostic Architecture
 
-PACTYRA does not prescribe one definition of success. It provides the economic consequence layer that sits after objective verification.
+PACTYRA does not prescribe one definition of success. Any verifier that produces a deterministic outcome (pass/fail) with a cryptographic evidence hash can be registered in the VerifierRegistry and feed verified outcomes into `pactyra_core::record_outcome`. Adding a new verifier does not require changing core.
 
-### Verifier A — Pyth (Price Freshness)
+```text
+┌─────────────┐  ┌─────────────┐  ┌─────────────┐
+│ Pyth        │  │ Service     │  │ Future...   │
+│ Verifier    │  │ Verifier    │  │ (TEE/Sig/ZK)│
+└──────┬──────┘  └──────┬──────┘  └──────┬──────┘
+       │                │                │
+       └────────────────┼────────────────┘
+                        ▼
+              VERIFIED OUTCOME (pass/fail + evidence_hash)
+                        │
+                        ▼
+              pactyra_core::record_outcome
+                        │
+                        ▼
+              AUTHORITY CHANGE (upgrade / downgrade / slash)
+```
+
+### The single entry point
+
+Every verifier feeds into one instruction. `record_outcome` is the only entry point authority transitions respond to:
+
+| Parameter | Type | Description |
+|---|---|---|
+| `agent` | Agent PDA | Agent whose authority is affected |
+| `result` | `enum { Pass, Fail }` | Outcome of the verification |
+| `severity` | `enum { None, Ordinary, Critical }` | Failure severity |
+| `evidence_hash` | `[u8; 32]` | keccak256 of the evidence |
+
+**Authority effects:**
+
+| Outcome | Effect |
+|---|---|
+| `Pass` | Increments `success_count` — may trigger authority upgrade (T1→T2 after 5✓, T2→T3 after 20+ at 95%) |
+| `Fail` (Ordinary) | Increments `failure_count` — no tier change |
+| `Fail` (Critical) | Slashes bond, downgrades to Tier 1, increments authority epoch (invalidates all outstanding capabilities) |
+
+### Live verifiers (deployed on devnet)
+
+#### Verifier A — Pyth (Price Freshness)
 
 Checks whether a Pyth price feed is fresh or stale. Deployed as `pactyra-verifier` on devnet.
 
@@ -374,7 +417,11 @@ record_outcome() via CPI
 Authority transition
 ```
 
-### Verifier B — Service Outcome (Service Delivery)
+- **Evidence source:** Pyth Pull Oracle account data
+- **Evidence hash:** `keccak256(pyth_account_data)`
+- **Program:** [`5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN`](https://solana.fm/address/5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN?cluster=devnet)
+
+#### Verifier B — Service Outcome (Service Delivery)
 
 Checks whether an x402 service was actually delivered after payment. Live at `/api/verifier/service`.
 
@@ -392,30 +439,40 @@ record_outcome() via verifier
 Authority transition
 ```
 
+- **Evidence source:** HTTP response status + payment tx signature
+- **Evidence hash:** `keccak256(service_status, payment_sig, timestamp)`
+- **Endpoint:** [`/api/verifier/service`](https://pactyra-ui.vercel.app/api/verifier/service)
+
+### Planned verifiers (specification stable, not yet deployed)
+
+The verifier interface is intentionally minimal. Each planned verifier below implements the same `record_outcome` contract with a different evidence source.
+
+| Verifier | Evidence source | Use case |
+|---|---|---|
+| **TEE Attestation** | Remote attestation report (SGX/TDX quote) | Prove an agent executed within a confidential enclave |
+| **Multi-Sig Committee** | Aggregated Ed25519 signatures from m-of-n observers | Off-chain committee attestation for actions that cannot run on-chain |
+| **ZK Proof** | Zero-knowledge proof (Groth16/Plonk) | Prove correct execution without revealing inputs |
+| **Oracle Quorum** | Multiple oracle feed observations | Cross-check Pyth/Switchboard/Chainlink feeds for consensus |
+
+Each planned verifier maps its evidence onto the same severity matrix (`none` / `ordinary` / `critical`) and feeds the same `record_outcome` instruction. No core change is required to add a verifier — only a new program (or off-chain verifier) plus a `register_verifier` call.
+
 ### Run the verifier-agnostic demo
 
 ```text
 https://pactyra-ui.vercel.app/api/verifier/demo
 ```
 
-This endpoint chains: `assert_capability()` → real USDC payment → service delivery → Service Outcome Verifier → evidence hash. Both verifiers feed into the same PACTYRA authority engine.
+This endpoint chains: `assert_capability()` → real USDC payment → service delivery → Service Outcome Verifier → evidence hash. Both live verifiers feed into the same PACTYRA authority engine.
+
+### Verifier catalog API
+
+The full verifier catalog — live + planned verifiers, the shared `record_outcome` contract, and the on-chain VerifierRegistry state — is exposed as a machine-readable API:
 
 ```text
-                    PACTYRA CORE
-                        │
-                Economic Authority
-                        │
-        ┌───────────────┼────────────────┐
-        │               │                │
-   Pyth Verifier   Service Verifier   Future...
-        │               │
- market evidence    x402/service
-        │               │
-        └──────→ VERIFIED OUTCOME ←──────┘
-                       │
-                       ↓
-                AUTHORITY CHANGE
+GET https://pactyra-ui.vercel.app/api/verifiers
 ```
+
+Returns: thesis, architecture flow diagram, live verifiers (with severity matrices), planned verifiers, the single entry-point contract, and the on-chain VerifierRegistry contents.
 
 ## Test results
 

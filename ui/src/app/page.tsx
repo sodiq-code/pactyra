@@ -29,6 +29,7 @@ import { BaseWalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import {
   Shield, Activity, DollarSign, Lock, Zap, Copy, Check, RefreshCw,
   Plus, AlertTriangle, Users, Clock, ExternalLink, Sun, Moon, ChevronRight,
+  Layers, Boxes,
 } from 'lucide-react'
 
 type Tier = 'Probation' | 'Proven' | 'Trusted'
@@ -283,6 +284,8 @@ export default function Page() {
   const [showJudgeMode, setShowJudgeMode] = useState(false)
   const [x402DemoLoading, setX402DemoLoading] = useState(false)
   const [x402DemoResult, setX402DemoResult] = useState<any>(null)
+  const [verifierCatalog, setVerifierCatalog] = useState<any>(null)
+  const [verifierCatalogLoading, setVerifierCatalogLoading] = useState(false)
 
   const fetchAgent = useCallback(async (id: string, silent = false) => {
     if (!silent) setAgentLoading(true)
@@ -324,11 +327,25 @@ export default function Page() {
     }
   }, [])
 
+  const fetchVerifierCatalog = useCallback(async () => {
+    setVerifierCatalogLoading(true)
+    try {
+      const res = await fetch('/api/verifiers', { cache: 'no-store' })
+      const data = await res.json()
+      setVerifierCatalog(data)
+    } catch {
+      // silent
+    } finally {
+      setVerifierCatalogLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     fetchAgent(PERMANENT_AGENT_ID)
     fetchDeployment()
     fetchTxHistory(PERMANENT_AGENT_ID)
-  }, [fetchAgent, fetchDeployment, fetchTxHistory])
+    fetchVerifierCatalog()
+  }, [fetchAgent, fetchDeployment, fetchTxHistory, fetchVerifierCatalog])
 
   useEffect(() => {
     const t = setInterval(() => fetchAgent(activeAgentId, true), 60000)
@@ -1254,6 +1271,256 @@ export default function Page() {
                   <span className="text-amber-400">treasury</span>
                   <ChevronRight className="h-3 w-3" />
                   <span className="text-violet-400">multisig</span>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* VERIFIER ABSTRACTION */}
+          <section>
+            <SectionHeader icon={Layers} title="Verifier Abstraction"
+              hint={verifierCatalog ? `${verifierCatalog.counts.live} live · ${verifierCatalog.counts.planned} planned` : 'loading'} />
+            <Card className="bg-card/50 backdrop-blur border-emerald-500/20">
+              <CardContent className="pt-6 space-y-4">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  PACTYRA does not prescribe one definition of success. Any verifier that produces a deterministic
+                  outcome with a cryptographic evidence hash can feed into{' '}
+                  <code className="font-mono text-foreground/90">pactyra_core::record_outcome</code>.
+                  Adding a verifier does not require changing core.
+                </p>
+
+                {/* Architecture flow diagram */}
+                <div className="p-4 rounded-lg bg-background/40 border border-border/40">
+                  <div className="grid grid-cols-3 gap-2 mb-3">
+                    {(verifierCatalog?.live_verifiers || []).map((v: any) => (
+                      <div key={v.id} className="flex flex-col items-center text-center p-2 rounded-md bg-emerald-500/5 border border-emerald-500/20">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400 mb-1">
+                          <Check className="h-3.5 w-3.5" />
+                        </div>
+                        <div className="text-[10px] font-semibold text-foreground">{v.name}</div>
+                        <div className="text-[9px] text-muted-foreground font-mono">{v.label}</div>
+                      </div>
+                    ))}
+                    <div className="flex flex-col items-center text-center p-2 rounded-md bg-violet-500/5 border border-violet-500/20 border-dashed">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-500/15 text-violet-400 mb-1">
+                        <Boxes className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="text-[10px] font-semibold text-foreground">Future Verifiers</div>
+                      <div className="text-[9px] text-muted-foreground font-mono">TEE · Multi-Sig · ZK · Quorum</div>
+                    </div>
+                  </div>
+                  {/* Converging arrows */}
+                  <div className="flex justify-center gap-6 text-muted-foreground/40 mb-1">
+                    {[0, 1, 2].map((i) => (
+                      <ChevronRight key={i} className="h-3 w-3 rotate-90" />
+                    ))}
+                  </div>
+                  {/* Verified outcome */}
+                  <div className="flex justify-center mb-1">
+                    <div className="px-3 py-1.5 rounded-md bg-sky-500/10 border border-sky-500/30 text-sky-400 text-[10px] font-mono font-semibold">
+                      VERIFIED OUTCOME
+                      <span className="text-muted-foreground ml-2 font-normal">(pass/fail + evidence_hash)</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-center mb-1">
+                    <ChevronRight className="h-3 w-3 rotate-90 text-muted-foreground/40" />
+                  </div>
+                  {/* PACTYRA Core */}
+                  <div className="flex justify-center mb-1">
+                    <div className="px-3 py-1.5 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono font-semibold">
+                      pactyra_core::record_outcome
+                    </div>
+                  </div>
+                  <div className="flex justify-center mb-1">
+                    <ChevronRight className="h-3 w-3 rotate-90 text-muted-foreground/40" />
+                  </div>
+                  {/* Authority change */}
+                  <div className="flex justify-center">
+                    <div className="px-3 py-1.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-mono font-semibold">
+                      AUTHORITY CHANGE
+                      <span className="text-muted-foreground ml-2 font-normal">upgrade · downgrade · slash</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Verifier list */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Live verifiers */}
+                  {(verifierCatalog?.live_verifiers || []).map((v: any) => (
+                    <div key={v.id} className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[9px] font-mono font-bold">LIVE</span>
+                        <span className="text-xs font-semibold text-foreground truncate">{v.name}</span>
+                        <span className="ml-auto text-[9px] text-muted-foreground font-mono">{v.label}</span>
+                      </div>
+                      <div className="text-[11px] text-muted-foreground leading-snug mb-2">{v.description}</div>
+                      <div className="space-y-1 text-[10px] font-mono">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-muted-foreground/70">evidence:</span>
+                          <span className="text-foreground/80 truncate">{v.evidence_hash}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-muted-foreground/70">feed:</span>
+                          <span className="text-sky-400">{v.feed_kind}</span>
+                        </div>
+                      </div>
+                      {/* Severity matrix */}
+                      <div className="mt-2 space-y-0.5">
+                        {v.severity_matrix.map((s: any, i: number) => (
+                          <div key={i} className="flex items-center gap-1.5 text-[9px] font-mono">
+                            <span className={cn('px-1 py-0.5 rounded',
+                              s.severity === 'none' ? 'bg-emerald-500/10 text-emerald-400'
+                              : s.severity === 'ordinary' ? 'bg-amber-500/10 text-amber-400'
+                              : 'bg-rose-500/10 text-rose-400')}>
+                              {s.result}
+                            </span>
+                            <span className="text-muted-foreground">{s.condition}</span>
+                          </div>
+                        ))}
+                      </div>
+                      {/* Link */}
+                      {v.program_url && (
+                        <a href={v.program_url} target="_blank" rel="noreferrer"
+                          className="mt-2 inline-flex items-center gap-1 text-[10px] text-emerald-400 hover:text-emerald-300 font-mono">
+                          Program <ExternalLink className="h-2.5 w-2.5" />
+                        </a>
+                      )}
+                      {v.endpoint_url && (
+                        <a href={v.endpoint_url} target="_blank" rel="noreferrer"
+                          className="mt-2 inline-flex items-center gap-1 text-[10px] text-emerald-400 hover:text-emerald-300 font-mono">
+                          Endpoint <ExternalLink className="h-2.5 w-2.5" />
+                        </a>
+                      )}
+                    </div>
+                  ))}
+
+                  {/* Planned verifiers */}
+                  {(verifierCatalog?.planned_verifiers || []).map((v: any) => (
+                    <div key={v.id} className="p-3 rounded-lg bg-violet-500/5 border border-violet-500/20 border-dashed">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-400 text-[9px] font-mono font-bold">PLANNED</span>
+                        <span className="text-xs font-semibold text-foreground truncate">{v.name}</span>
+                        <span className="ml-auto text-[9px] text-muted-foreground font-mono">{v.label}</span>
+                      </div>
+                      <div className="text-[11px] text-muted-foreground leading-snug mb-2">{v.description}</div>
+                      <div className="space-y-1 text-[10px] font-mono">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-muted-foreground/70">evidence:</span>
+                          <span className="text-foreground/80 truncate">{v.evidence_hash}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-muted-foreground/70">feed:</span>
+                          <span className="text-violet-400">{v.feed_kind}</span>
+                        </div>
+                      </div>
+                      {/* Severity matrix */}
+                      <div className="mt-2 space-y-0.5">
+                        {v.severity_matrix.map((s: any, i: number) => (
+                          <div key={i} className="flex items-center gap-1.5 text-[9px] font-mono">
+                            <span className={cn('px-1 py-0.5 rounded',
+                              s.severity === 'none' ? 'bg-emerald-500/10 text-emerald-400'
+                              : s.severity === 'ordinary' ? 'bg-amber-500/10 text-amber-400'
+                              : 'bg-rose-500/10 text-rose-400')}>
+                              {s.result}
+                            </span>
+                            <span className="text-muted-foreground">{s.condition}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* On-chain registry */}
+                {verifierCatalog?.on_chain_registry && (
+                  <div className="p-3 rounded-lg bg-background/30 border border-border/30">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-500/15 text-sky-400">
+                        <Boxes className="h-3 w-3" />
+                      </div>
+                      <span className="text-xs font-semibold">On-Chain VerifierRegistry</span>
+                      <Badge variant="outline" className="text-[9px] py-0 px-1.5 border-emerald-500/30 text-emerald-400 ml-auto">
+                        {verifierCatalog.on_chain_registry.verifierCount} registered
+                      </Badge>
+                    </div>
+                    <div className="space-y-1">
+                      {verifierCatalog.on_chain_registry.registered_verifiers.map((v: any, i: number) => (
+                        <div key={i} className="flex items-center gap-2 text-[10px] font-mono py-1">
+                          <span className={cn('h-1.5 w-1.5 rounded-full',
+                            v.active ? 'bg-emerald-500' : 'bg-rose-500')} />
+                          <span className="text-muted-foreground">#{v.index}</span>
+                          <a href={v.explorerUrl} target="_blank" rel="noreferrer"
+                            className="text-sky-400 hover:text-sky-300 truncate">
+                            {v.verifierProgram.slice(0, 8)}…{v.verifierProgram.slice(-4)}
+                          </a>
+                          <span className={cn('ml-auto',
+                            v.active ? 'text-emerald-400' : 'text-rose-400')}>
+                            {v.active ? 'active' : 'deprecated'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <a href={verifierCatalog.on_chain_registry.explorerUrl} target="_blank" rel="noreferrer"
+                      className="mt-2 inline-flex items-center gap-1 text-[10px] text-sky-400 hover:text-sky-300 font-mono">
+                      View Registry PDA <ExternalLink className="h-2.5 w-2.5" />
+                    </a>
+                  </div>
+                )}
+
+                {/* Record outcome contract */}
+                {verifierCatalog?.record_outcome_contract && (
+                  <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
+                        <Layers className="h-3 w-3" />
+                      </div>
+                      <span className="text-xs font-semibold text-emerald-400">Single Entry Point</span>
+                    </div>
+                    <code className="text-[11px] text-foreground/90 font-mono block mb-2">
+                      {verifierCatalog.record_outcome_contract.instruction}
+                    </code>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px]">
+                      <div>
+                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">Parameters</div>
+                        {verifierCatalog.record_outcome_contract.parameters.map((p: any, i: number) => (
+                          <div key={i} className="flex items-center gap-1.5 font-mono py-0.5">
+                            <span className="text-foreground">{p.name}</span>
+                            <span className="text-muted-foreground text-[9px]">{p.type}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div>
+                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">Authority Effects</div>
+                        {Object.entries(verifierCatalog.record_outcome_contract.authority_effects).map(([k, v]: any) => (
+                          <div key={k} className="font-mono py-0.5">
+                            <span className={cn(
+                              k === 'Pass' ? 'text-emerald-400'
+                              : k === 'Fail_Ordinary' ? 'text-amber-400'
+                              : 'text-rose-400'
+                            )}>{k}</span>
+                            <span className="text-muted-foreground ml-1.5 text-[9px]">{v}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* API endpoint */}
+                <div className="flex items-center gap-2">
+                  <a href="https://pactyra-ui.vercel.app/api/verifiers" target="_blank" rel="noreferrer"
+                    className="inline-flex items-center gap-1 px-2 py-1.5 rounded-md bg-sky-500/10 border border-sky-500/20 text-sky-400 hover:bg-sky-500/20 transition-colors text-[10px] font-mono">
+                    <Activity className="h-3 w-3" />
+                    GET /api/verifiers
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                  <Button variant="ghost" size="sm"
+                    onClick={() => fetchVerifierCatalog()}
+                    disabled={verifierCatalogLoading}
+                    className="text-xs h-7 gap-1">
+                    <RefreshCw className={cn('h-3 w-3', verifierCatalogLoading && 'animate-spin')} />
+                    Refresh
+                  </Button>
                 </div>
               </CardContent>
             </Card>
