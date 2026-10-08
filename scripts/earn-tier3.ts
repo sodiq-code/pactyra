@@ -1,4 +1,17 @@
 /**
+ * PROTOCOL STATE-MACHINE TEST HARNESS
+ *
+ * This script directly calls record_outcome() to advance the agent through
+ * protocol state transitions. It bypasses the verifier path and is intended
+ * for testing the state machine, not as a production-grade proof path.
+ *
+ * The judge-facing demo uses the real verifier path via the x402 demo endpoint:
+ * https://pactyra-ui.vercel.app/api/x402/demo
+ *
+ * Run: npx ts-node --transpile-only scripts/earn-tier3.ts
+ */
+
+/**
  * Earn Tier 3 — records 22 more successes + 1 ordinary fail (27/28 = 96.4%)
  * to trigger T2→T3 upgrade.
  *

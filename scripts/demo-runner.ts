@@ -1,4 +1,17 @@
 /**
+ * PROTOCOL STATE-MACHINE TEST HARNESS
+ *
+ * This script orchestrates the full protocol state machine test suite. It
+ * directly calls record_outcome() for canned progression and is intended
+ * for testing the state machine, not as a production-grade proof path.
+ *
+ * The judge-facing demo uses the real verifier path via the x402 demo endpoint:
+ * https://pactyra-ui.vercel.app/api/x402/demo
+ *
+ * Run: npx ts-node --transpile-only scripts/demo-runner.ts
+ */
+
+/**
  * Demo Runner — executes the complete $5 → $50 → $500 → $5 authority loop
  * in a single reproducible run.
  *

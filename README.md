@@ -286,20 +286,28 @@ Deployed to Vercel at [https://pactyra-ui.vercel.app](https://pactyra-ui.vercel.
 
 ## Demo orchestration
 
-Scripts in `scripts/` produce the complete `$5 → $50 → $500 → $5` authority loop.
+### Protocol state-machine test harness
+
+Scripts in `scripts/` are **test harness** code that directly calls `record_outcome()` to exercise the protocol state machine. They bypass the verifier path for testing purposes and are not the judge-facing proof path.
+
+The **judge-facing proof path** is the live x402 demo, which calls `assert_capability()` on-chain, creates an Execution PDA, and makes a real USDC payment:
+
+```text
+https://pactyra-ui.vercel.app/api/x402/demo
+```
 
 | Script | Purpose |
 |---|---|
 | `bootstrap.ts` | Initialize protocol, register verifier + agent, create policy, lock bond |
-| `earn-tier2.ts` | 5 verified successes → Tier 1 → Tier 2 |
-| `earn-tier3.ts` | 27/28 successes (96.4%) → Tier 2 → Tier 3 |
+| `earn-tier2.ts` | Test harness: 5 verified successes → Tier 1 → Tier 2 |
+| `earn-tier3.ts` | Test harness: 27/28 successes (96.4%) → Tier 2 → Tier 3 |
 | `unauthorized-transfer.ts` | $400 rejected (AmountExceedsCapability) |
-| `critical-failure.ts` | Bond slash + downgrade + epoch++ |
+| `critical-failure.ts` | Test harness: Bond slash + downgrade + epoch++ |
 | `stale-capability.ts` | Old-epoch capability rejected (StaleEpoch) |
-| `demo-runner.ts` | Master script chaining all steps |
+| `demo-runner.ts` | Test harness: Master script chaining all steps |
 | `devnet-verify.ts` | Devnet deployment verification |
 | `setup-multisig.ts` | Create multisig and transfer protocol authority |
-| `x402-demo.ts` | x402 adapter demo — gates agentic payments with PACTYRA capabilities |
+| `x402-demo.ts` | Standalone x402 demo — gates agentic payments with PACTYRA capabilities |
 
 ## x402 Adapter
 

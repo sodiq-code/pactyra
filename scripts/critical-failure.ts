@@ -1,4 +1,16 @@
 /**
+ * PROTOCOL STATE-MACHINE TEST HARNESS
+ *
+ * This script directly calls record_outcome() with a critical failure to test
+ * the bond slash and authority downgrade path. It bypasses the verifier path.
+ *
+ * The judge-facing demo uses the real verifier path via the x402 demo endpoint:
+ * https://pactyra-ui.vercel.app/api/x402/demo
+ *
+ * Run: npx ts-node --transpile-only scripts/critical-failure.ts
+ */
+
+/**
  * Critical failure — records a critical failure to trigger:
  *   1. Bond slash (5 USDC → 0)
  *   2. Authority downgrade (Tier 3 → Tier 1)
