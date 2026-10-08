@@ -65,7 +65,7 @@ export function SectionTitle({
       <div className={cn('flex h-6 w-6 items-center justify-center rounded-md bg-white/[0.03] border border-white/[0.06]', accentColor)}>
         <Icon className="h-3.5 w-3.5" />
       </div>
-      <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/80">{title}</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-foreground/80">{title}</h2>
       {hint && (
         <span className="ml-auto text-[11px] text-muted-foreground font-mono tracking-normal">{hint}</span>
       )}
@@ -139,7 +139,7 @@ export function AuthorityGauge({
   const [animatedProgress, setAnimatedProgress] = useState(0)
   useEffect(() => {
     const controls = animate(progressRef.current, tierProgress, {
-      duration: 1.2,
+      duration: 0.6,
       ease: [0.22, 1, 0.36, 1],
       onUpdate: (v) => setAnimatedProgress(v),
     })
@@ -158,7 +158,7 @@ export function AuthorityGauge({
   const [displayAmount, setDisplayAmount] = useState(0)
   useEffect(() => {
     const controls = animate(countRef.current, amount, {
-      duration: 1.2,
+      duration: 0.8,
       ease: [0.22, 1, 0.36, 1],
       onUpdate: (v) => setDisplayAmount(Math.round(v)),
     })
@@ -187,7 +187,7 @@ export function AuthorityGauge({
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="rgba(255,255,255,0.04)"
+          stroke="rgba(255,255,255,0.05)"
           strokeWidth={strokeWidth}
         />
         {/* Progress arc */}
@@ -212,7 +212,7 @@ export function AuthorityGauge({
         <div className="flex items-baseline gap-0.5">
           <span className="text-2xl font-light text-muted-foreground">$</span>
           <span
-            className="font-mono text-7xl font-bold tabular-nums pactyra-gold-glow leading-none"
+            className="font-mono text-7xl font-bold tabular-nums pactyra-gold-glow leading-none tracking-[-0.04em]"
             style={{ color: tierColor }}
           >
             {displayAmount}

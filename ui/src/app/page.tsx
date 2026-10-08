@@ -304,7 +304,7 @@ function TopBar({ connected, onRefresh, agentLoading, tier, amount, epoch }: {
   return (
     <header className={cn(
       'fixed top-0 left-0 right-0 z-40 transition-all duration-300',
-      scrolled ? 'pactyra-glass border-b border-white/[0.06] h-14' : 'bg-transparent h-16'
+      scrolled ? 'pactyra-glass border-b border-white/[0.06] h-12' : 'bg-transparent h-16'
     )}>
       <div className="max-w-7xl mx-auto h-full flex items-center justify-between px-4 sm:px-6 lg:pl-28 lg:pr-6">
         {/* Logo + mini authority (on scroll) */}
@@ -433,7 +433,6 @@ export default function Page() {
   const [txHistory, setTxHistory] = useState<TxHistoryData | null>(null)
   const [txHistoryLoading, setTxHistoryLoading] = useState(false)
   const [showTxHistory, setShowTxHistory] = useState(false)
-  const [showJudgeMode, setShowJudgeMode] = useState(false)
   const [x402DemoLoading, setX402DemoLoading] = useState(false)
   const [x402DemoResult, setX402DemoResult] = useState<any>(null)
   const [verifierCatalog, setVerifierCatalog] = useState<any>(null)
@@ -442,6 +441,18 @@ export default function Page() {
   const [demoNarrative, setDemoNarrative] = useState<any>(null)
   const [activeScene, setActiveScene] = useState<number>(1)
   const [activeSection, setActiveSection] = useState('hero')
+  const [gaugeSize, setGaugeSize] = useState(280)
+
+  // Responsive gauge size: 200px mobile, 240px tablet, 280px desktop
+  useEffect(() => {
+    const updateSize = () => {
+      const w = window.innerWidth
+      setGaugeSize(w < 640 ? 200 : w < 1024 ? 240 : 280)
+    }
+    updateSize()
+    window.addEventListener('resize', updateSize)
+    return () => window.removeEventListener('resize', updateSize)
+  }, [])
 
   const fetchAgent = useCallback(async (id: string, silent = false) => {
     if (!silent) setAgentLoading(true)
@@ -790,7 +801,7 @@ export default function Page() {
                   amount={maxAmount}
                   successCount={successCount}
                   totalCount={totalCount}
-                  size={typeof window !== 'undefined' && window.innerWidth < 640 ? 220 : 280}
+                  size={gaugeSize}
                 />
                 <div className="flex items-center gap-3">
                   <TierBadge tier={tier} size="lg" />
@@ -841,6 +852,38 @@ export default function Page() {
                 </div>
               </motion.div>
             )}
+
+            {/* Kill line — the protocol thesis in one sentence */}
+            <div className={cn('mt-4 p-4 rounded-xl border text-center',
+              criticalFailures > 0
+                ? 'bg-rose-500/[0.04] border-rose-500/15'
+                : 'bg-emerald-500/[0.04] border-emerald-500/15')}>
+              <p className={cn('text-sm font-medium',
+                criticalFailures > 0 ? 'text-rose-300' : 'text-emerald-300')}>
+                {criticalFailures > 0
+                  ? 'The agent still has its key, but it no longer has the authority it had earned.'
+                  : 'Authority is earned through verified execution — not granted by trust.'}
+              </p>
+            </div>
+
+            {/* How it works — 4-step flow merged into hero as secondary element */}
+            <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2">
+              {[
+                { step: '1', title: 'Register & Bond', color: '#34D399' },
+                { step: '2', title: 'Request Capability', color: '#60A5FA' },
+                { step: '3', title: 'Assert & Execute', color: '#FBBF24' },
+                { step: '4', title: 'Record Outcome', color: '#A78BFA' },
+              ].map((s) => (
+                <div key={s.step} className="flex items-center gap-2 p-2.5 rounded-lg border"
+                  style={{ borderColor: `${s.color}20`, backgroundColor: `${s.color}08` }}>
+                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-mono text-[10px] font-bold"
+                    style={{ backgroundColor: `${s.color}26`, color: s.color }}>
+                    {s.step}
+                  </div>
+                  <span className="text-[11px] font-medium text-foreground/90">{s.title}</span>
+                </div>
+              ))}
+            </div>
 
             {/* Actions */}
             <div className="mt-4 flex flex-wrap gap-2">
@@ -1244,7 +1287,7 @@ export default function Page() {
                 a critical failure slashes the bond and resets authority to Tier 1. The loop is continuous — authority is earned and revoked on-chain.
               </p>
               {/* Circular flow diagram with animated traveling dot */}
-              <AuthorityLoopDiagram currentTier={tier} size={typeof window !== 'undefined' && window.innerWidth < 640 ? 260 : 320} />
+              <AuthorityLoopDiagram currentTier={tier} size={gaugeSize === 200 ? 260 : gaugeSize === 240 ? 300 : 320} />
               {/* Critical failure note */}
               <div className="flex items-center justify-center gap-2 pt-4 mt-2 border-t border-white/[0.04] text-[10px] text-muted-foreground">
                 <AlertTriangle className="h-3 w-3 text-rose-400" />
@@ -1299,39 +1342,8 @@ export default function Page() {
             </PremiumCard>
           </SectionShell>
 
-          {/* ===== HOW IT WORKS ===== */}
-          <SectionShell id="how" index={8}>
-            <SectionTitle icon={Sparkles} title="How It Works" hint="register → earn → spend → prove" accent="gold" />
-            <PremiumCard className="p-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {[
-                  { step: '1', title: 'Register & Bond', desc: 'Agent registers with a 5 USDC bond, locked in a PDA vault. Starts at Tier 1 ($5 authority).', color: 'emerald' },
-                  { step: '2', title: 'Request Capability', desc: 'Agent requests scoped authority: target program, target account, amount limit, TTL.', color: 'sky' },
-                  { step: '3', title: 'Assert & Execute', desc: 'assert_capability checks 14 security rules. Target program executes and calls mark_executed via CPI.', color: 'amber' },
-                  { step: '4', title: 'Record Outcome', desc: 'Verifier records outcome. 5 passes → T2 ($50). 20+ at 95% → T3 ($500). Critical fail → slash, T1.', color: 'violet' },
-                ].map((s) => {
-                  const colorMap: Record<string, string> = { emerald: '#34D399', sky: '#60A5FA', amber: '#FBBF24', violet: '#A78BFA' }
-                  const color = colorMap[s.color]
-                  return (
-                    <div key={s.step} className="flex items-start gap-3 p-3 rounded-xl border"
-                      style={{ borderColor: `${color}20`, backgroundColor: `${color}0A` }}>
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-mono text-xs font-bold"
-                        style={{ backgroundColor: `${color}26`, color }}>
-                        {s.step}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-xs font-semibold text-foreground mb-0.5">{s.title}</div>
-                        <div className="text-[11px] text-muted-foreground leading-snug">{s.desc}</div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </PremiumCard>
-          </SectionShell>
-
           {/* ===== SECURITY CHECKS ===== */}
-          <SectionShell id="security" index={9}>
+          <SectionShell id="security" index={8}>
             <SectionTitle icon={Lock} title="Security Checks" hint="14 checks in assert_capability" accent="emerald" />
             <PremiumCard className="p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1348,7 +1360,7 @@ export default function Page() {
           </SectionShell>
 
           {/* ===== EXECUTION PDA ===== */}
-          <SectionShell id="execution" index={10}>
+          <SectionShell id="execution" index={9}>
             <SectionTitle icon={Cpu} title="Execution PDA" hint="assert → execute → record" accent="amber" />
             <PremiumCard className="p-6">
               <p className="text-xs text-muted-foreground leading-relaxed mb-4">
@@ -1390,7 +1402,7 @@ export default function Page() {
           </SectionShell>
 
           {/* ===== AGENT OPERATIONS ===== */}
-          <SectionShell id="operations" index={11}>
+          <SectionShell id="operations" index={10}>
             <SectionTitle icon={Plus} title="Agent Operations" hint="register · bond" accent="emerald" />
             <PremiumCard className="p-6 space-y-4">
               <div>
@@ -1428,7 +1440,7 @@ export default function Page() {
           </SectionShell>
 
           {/* ===== GOVERNANCE ===== */}
-          <SectionShell id="governance" index={12}>
+          <SectionShell id="governance" index={11}>
             <SectionTitle icon={Users} title="Governance" hint="delegate · freeze · supersede · replace" accent="violet" />
             <PremiumCard className="p-6 space-y-5">
               <div>
@@ -1565,7 +1577,7 @@ export default function Page() {
           </SectionShell>
 
           {/* ===== X402 PAYMENT ===== */}
-          <SectionShell id="x402" index={13}>
+          <SectionShell id="x402" index={12}>
             <SectionTitle icon={DollarSign} title="x402 Payment" hint="real USDC · on-chain verified" accent="gold" />
             <PremiumCard accent="gold" className="p-6 space-y-4">
               <p className="text-xs text-muted-foreground leading-relaxed">
@@ -1645,7 +1657,7 @@ export default function Page() {
           </SectionShell>
 
           {/* ===== BUSINESS MODEL ===== */}
-          <SectionShell id="business" index={14}>
+          <SectionShell id="business" index={13}>
             <SectionTitle icon={TrendingUp} title="Business Model"
               hint={businessModel ? 'open core · hosted · enterprise' : 'loading'} accent="gold" />
             <PremiumCard accent="gold" className="p-6 space-y-4">
@@ -1712,7 +1724,7 @@ export default function Page() {
           </SectionShell>
 
           {/* ===== DEPLOYMENT STATUS ===== */}
-          <SectionShell id="deployment" index={15}>
+          <SectionShell id="deployment" index={14}>
             <SectionTitle icon={Database} title="Deployment Status"
               hint={deployment ? `${deployment.cluster.toUpperCase()} · ${deployment.balanceSOL.toFixed(2)} SOL` : '—'} accent="sky" />
             <PremiumCard className="p-6">
@@ -1751,7 +1763,7 @@ export default function Page() {
           </SectionShell>
 
           {/* ===== TRANSACTION HISTORY ===== */}
-          <SectionShell id="history" index={16}>
+          <SectionShell id="history" index={15}>
             <SectionTitle icon={Clock} title="Transaction History" hint={txHistory ? `${txHistory.count} txs` : '—'} accent="sky" />
             <PremiumCard className="p-6">
               <div className="flex items-center justify-between mb-3">
