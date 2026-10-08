@@ -1434,6 +1434,67 @@ export default function Page() {
             </Card>
           </section>
 
+          {/* PROOF TRAIL */}
+          <section>
+            <SectionHeader icon={Check} title="Proof Trail" hint="machine-verifiable on-chain evidence" />
+            <Card className="bg-card/50 backdrop-blur border-border/50">
+              <CardContent className="pt-6">
+                <p className="text-xs text-muted-foreground leading-relaxed mb-4">
+                  Every claim below links to a real Solana transaction or account the judge can independently verify on Solana.fm. No trust required — verify on-chain.
+                </p>
+                <div className="space-y-2">
+                  {[
+                    { claim: `Tier ${tier} with $${maxAmount} authority`, proof: 'Agent PDA', url: agentPda ? `${SOLANA_FM_BASE}/${agentPda}?cluster=devnet` : '' },
+                    { claim: `${bondAmount} USDC bond locked`, proof: 'Bond PDA', url: agentPda ? `${SOLANA_FM_BASE}/${agentPda}?cluster=devnet` : '' },
+                    { claim: `Epoch #${epoch} (incremented after critical failure)`, proof: 'Agent PDA', url: agentPda ? `${SOLANA_FM_BASE}/${agentPda}?cluster=devnet` : '' },
+                    { claim: `${totalCount} verified outcomes (${successCount} successful, ${successRate}%)`, proof: 'Agent PDA', url: agentPda ? `${SOLANA_FM_BASE}/${agentPda}?cluster=devnet` : '' },
+                    { claim: `${criticalFailures} critical failure(s) — bond slashed`, proof: 'Bond PDA (slashed=true)', url: agentPda ? `${SOLANA_FM_BASE}/${agentPda}?cluster=devnet` : '' },
+                    { claim: 'assert_capability() called on-chain (14 security checks)', proof: 'See recent transactions', url: 'https://solana.fm/address/8z28iBUkxpcQ5EDW8wSoHGycHhp8UEAjNtnULbxavwsw?cluster=devnet' },
+                    { claim: 'Verifier-agnostic: Pyth + Service Outcome verifiers', proof: 'Verifier Registry PDA', url: 'https://solana.fm/address/BvxYnYTinfUEdfAiJtWeaAQd9cFnzaT5zeW8ZZy4JP7s?cluster=devnet' },
+                    { claim: 'Real USDC devnet payments verified on-chain', proof: 'x402 demo endpoint', url: 'https://pactyra-ui.vercel.app/api/x402/demo' },
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-center gap-3 py-2 px-3 rounded-md bg-background/30 border border-border/30 hover:border-emerald-500/30 transition-colors">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-mono font-bold">
+                        {i + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-medium text-foreground">{item.claim}</div>
+                        <div className="text-[10px] text-muted-foreground font-mono">{item.proof}</div>
+                      </div>
+                      {item.url && (
+                        <a href={item.url} target="_blank" rel="noreferrer"
+                          className="text-emerald-400 hover:text-emerald-300 shrink-0 inline-flex items-center gap-1 text-[10px] font-mono"
+                          title="Verify on Solana.fm">
+                          Verify
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Machine-verifiable API endpoint */}
+                <div className="mt-4 p-3 rounded-lg bg-sky-500/5 border border-sky-500/20">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Activity className="h-3.5 w-3.5 text-sky-400" />
+                    <span className="text-xs font-semibold text-sky-400">Machine-Verifiable API</span>
+                  </div>
+                  <code className="text-[10px] text-muted-foreground font-mono break-all">
+                    GET /api/proof
+                  </code>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Returns complete proof trail as JSON with Solana.fm links for every claim.
+                  </p>
+                  <a href="https://pactyra-ui.vercel.app/api/proof" target="_blank" rel="noreferrer"
+                    className="inline-flex items-center gap-1 mt-2 text-sky-400 hover:text-sky-300 text-[10px] font-mono">
+                    Open proof API
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+
           {/* FOOTER */}
           <footer className="pt-4 pb-8 border-t border-border/40">
             <div className="flex flex-col gap-4">
