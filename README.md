@@ -442,6 +442,64 @@ See [`docs/architecture.md`](docs/architecture.md) for:
 | [Pitch Script](docs/pitch-script.md) | 2-3 minute pitch video script with timestamps and key points |
 | [Demo Storyboard](docs/demo-storyboard.md) | ≤3 minute demo video storyboard with recording checklist |
 
+## Business Model
+
+### Who buys this
+
+The first customers are not individual AI users. They are **protocols that need to safely let autonomous software control economic value**.
+
+**Target customers:**
+- autonomous agent platforms (agent orchestration frameworks that need bounded economic authority)
+- AI treasury systems (autonomous treasury managers controlling protocol funds)
+- agent payment infrastructure (x402 service networks, payment rails for agents)
+- DeFi execution systems (autonomous trading/liquidity systems with controlled financial permissions)
+- enterprise AI systems (organizations deploying autonomous software with financial guardrails)
+
+### How it monetizes
+
+**Open-source core** (free and composable):
+The protocol, SDK, and reference programs are MIT-licensed. Any developer can integrate PACTYRA at no cost.
+
+**Hosted infrastructure** (paid SaaS):
+Managed verifier registry, monitoring dashboards, policy management, and enterprise controls for organizations that don't want to self-host.
+
+**Protocol/service layer** (transaction fees):
+Organizations pay for managed authority infrastructure — hosted verifiers, custom policy engines, compliance reporting, and risk monitoring for autonomous agents controlling real capital.
+
+**Enterprise** (custom integrations):
+Custom verifier integrations (domain-specific evidence sources), enterprise policy/governance modules, compliance controls, and SLA-backed infrastructure.
+
+### The long-term opportunity
+
+The long-term opportunity is not simply safer payments. It is a **standardized authority layer for autonomous economic actors** — the primitive that determines how much economic power an agent has earned, why it earned it, and what happens when it fails.
+
+## Distribution
+
+### Entry point
+
+SDK + x402 adapter. Developers integrate PACTYRA into their agent infrastructure via the TypeScript SDK. The x402 adapter provides an immediate use case: gating HTTP payments with earned authority.
+
+### First integrations
+
+- payment services (x402-compatible endpoints that require PACTYRA authority before accepting payment)
+- autonomous treasuries (protocol treasuries that use PACTYRA to bound agent spending)
+- agent frameworks (orchestration platforms that need deterministic economic guardrails)
+- DeFi execution systems (autonomous trading systems with bounded capital control)
+
+### Expansion
+
+```text
+one agent
+   ↓
+one application
+   ↓
+multiple applications
+   ↓
+shared authority infrastructure
+```
+
+Because the enforcement primitive lives at the program boundary, downstream applications can adopt PACTYRA without rebuilding their entire wallet or payment stack.
+
 ## Security model
 
 - **Exact-action binding**: Every capability commits to agent, action type, target program, target account, amount limit, expiry, and authority epoch.
