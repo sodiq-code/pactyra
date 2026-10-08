@@ -43,9 +43,16 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* ============================================================
+   PACTYRA — Premium Design Tokens
+   Warm near-black canvas + layered surfaces + metals for earned authority.
+   No indigo. No blue gradients. No neon.
+   ============================================================ */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
+  --radius: 0.75rem;
+
+  /* Light mode (kept for completeness — app defaults to dark) */
+  --background: oklch(0.98 0.002 240);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
@@ -76,40 +83,57 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* PACTYRA authority + metals */
+  --authority-400: #34D399;
+  --authority-500: #10B981;
+  --authority-600: #059669;
+  --authority-glow: rgba(16, 185, 129, 0.25);
+  --gold-300: #F0D094;
+  --gold-400: #E8B96B;
+  --gold-500: #D4A24E;
+  --gold-glow: rgba(232, 185, 107, 0.18);
+
+  /* Surface layers */
+  --canvas: #0A0B0D;
+  --surface-1: #101216;
+  --surface-2: #161A20;
+  --surface-3: #1C2128;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Canvas + layered surfaces — the depth system */
+  --background: #0A0B0D;
+  --foreground: #E8EAED;
+  --card: #101216;
+  --card-foreground: #E8EAED;
+  --popover: #161A20;
+  --popover-foreground: #E8EAED;
+  --primary: #10B981;
+  --primary-foreground: #0A0B0D;
+  --secondary: #161A20;
+  --secondary-foreground: #E8EAED;
+  --muted: #161A20;
+  --muted-foreground: #8A8F98;
+  --accent: #1C2128;
+  --accent-foreground: #E8EAED;
+  --destructive: #F87171;
+  --border: rgba(255, 255, 255, 0.06);
+  --input: #1C2128;
+  --ring: #10B981;
+  --chart-1: #10B981;
+  --chart-2: #E8B96B;
+  --chart-3: #60A5FA;
+  --chart-4: #F87171;
+  --chart-5: #34D399;
+  --sidebar: #101216;
+  --sidebar-foreground: #E8EAED;
+  --sidebar-primary: #10B981;
+  --sidebar-primary-foreground: #0A0B0D;
+  --sidebar-accent: #1C2128;
+  --sidebar-accent-foreground: #E8EAED;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --sidebar-ring: #10B981;
 }
 
 @layer base {
@@ -118,46 +142,152 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "cv11", "ss01";
+    font-variation-settings: "opsz" 32;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  /* Tabular numerals everywhere by default — financial app feel */
+  .tabular-nums, code, .font-mono {
+    font-variant-numeric: tabular-nums;
   }
 }
 
-/* PACTYRA custom keyframes */
+/* ============================================================
+   PACTYRA custom keyframes — subtle, purposeful motion
+   ============================================================ */
 @keyframes pactyra-gradient {
   0%   { background-position: 0% 50%; }
   50%  { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
 
+@keyframes pactyra-pulse-live {
+  0%, 100% { opacity: 0.4; transform: scale(0.9); }
+  50%      { opacity: 1;   transform: scale(1.1); }
+}
+
+@keyframes pactyra-pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  70%  { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+@keyframes pactyra-wire-travel {
+  0%   { stroke-dashoffset: 24; opacity: 0; }
+  20%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
+}
+
+@keyframes pactyra-flash-slash {
+  0%, 100% { background-color: transparent; }
+  50%      { background-color: rgba(248, 113, 113, 0.12); }
+}
+
+@keyframes pactyra-glow-gold {
+  0%, 100% { text-shadow: 0 0 12px rgba(232, 185, 107, 0.15); }
+  50%      { text-shadow: 0 0 24px rgba(232, 185, 107, 0.35); }
+}
+
+@keyframes pactyra-shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
 @layer utilities {
   .animate-pactyra-gradient {
     animation: pactyra-gradient 8s ease-in-out infinite;
+  }
+  .animate-pactyra-pulse-live {
+    animation: pactyra-pulse-live 2s ease-in-out infinite;
+  }
+  .animate-pactyra-pulse-ring {
+    animation: pactyra-pulse-ring 2s ease-out infinite;
+  }
+  .animate-pactyra-wire-travel {
+    animation: pactyra-wire-travel 1.5s ease-in-out infinite;
+  }
+  .animate-pactyra-flash-slash {
+    animation: pactyra-flash-slash 1.2s ease-out;
+  }
+  .animate-pactyra-glow-gold {
+    animation: pactyra-glow-gold 3s ease-in-out infinite;
+  }
+
+  /* Premium card surface — layered shadows instead of hard borders */
+  .pactyra-surface {
+    background-color: var(--card);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.04),
+      0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+  .pactyra-surface-elevated {
+    background-color: var(--surface-2, #161A20);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 12px 32px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Gold glow for hero numbers */
+  .pactyra-gold-glow {
+    text-shadow: 0 0 24px rgba(232, 185, 107, 0.35);
+  }
+  .pactyra-authority-glow {
+    text-shadow: 0 0 24px rgba(16, 185, 129, 0.35);
+  }
+
+  /* Shimmer effect for loading / premium accents */
+  .pactyra-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .pactyra-shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.04), transparent);
+    animation: pactyra-shimmer 2s ease-in-out infinite;
+  }
+
+  /* Glass blur for sticky bars */
+  .pactyra-glass {
+    background-color: rgba(16, 18, 22, 0.72);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+  }
+  .pactyra-glass-light {
+    background-color: rgba(255, 255, 255, 0.02);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
   }
 }
 
 /* ============================================================
    Phantom WalletMultiButton — restyle to match PACTYRA design.
-   The adapter's Button hardcodes `.wallet-adapter-button-trigger`
-   as the className, so we override here rather than via Tailwind.
    ============================================================ */
 .wallet-adapter-button.wallet-adapter-button-trigger {
-  background-color: color-mix(in oklch, var(--card) 50%, transparent) !important;
-  border: 1px solid var(--border) !important;
+  background-color: rgba(28, 33, 40, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
   color: var(--foreground) !important;
   font-family: var(--font-geist-mono), ui-monospace, monospace !important;
   font-size: 12px !important;
   font-weight: 500 !important;
-  height: 2rem !important;
+  height: 2.25rem !important;
   line-height: 1 !important;
-  padding: 0 12px !important;
+  padding: 0 14px !important;
   border-radius: calc(var(--radius) - 2px) !important;
-  backdrop-filter: blur(8px);
-  box-shadow: none !important;
+  backdrop-filter: blur(12px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+  transition: all 0.15s ease !important;
 }
 .wallet-adapter-button.wallet-adapter-button-trigger:not([disabled]):hover {
-  background-color: var(--accent) !important;
+  background-color: rgba(28, 33, 40, 0.9) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  transform: translateY(-1px);
 }
 .wallet-adapter-button.wallet-adapter-button-trigger[disabled] {
-  background-color: color-mix(in oklch, var(--card) 50%, transparent) !important;
+  background-color: rgba(28, 33, 40, 0.4) !important;
   color: var(--muted-foreground) !important;
 }
 .wallet-adapter-button.wallet-adapter-button-trigger
@@ -173,7 +303,7 @@
   background: var(--card) !important;
   border: 1px solid var(--border) !important;
   border-radius: calc(var(--radius) - 2px) !important;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45) !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5) !important;
   font-family: var(--font-geist-mono), ui-monospace, monospace !important;
 }
 .wallet-adapter-dropdown-list-item {
@@ -195,21 +325,44 @@
   }
 }
 
-/* Custom scrollbar for transaction history and other scrollable areas */
+/* Custom scrollbar — thin, subtle, premium */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 3px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: var(--muted-foreground);
+  background: rgba(255, 255, 255, 0.15);
 }
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+
+/* Hide scrollbar for horizontal filmstrips (keep scroll behavior) */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Selection color */
+::selection {
+  background-color: rgba(16, 185, 129, 0.25);
+  color: #E8EAED;
+}
+
+/* Focus visible — premium ring */
+:focus-visible {
+  outline: 2px solid var(--authority-500, #10B981);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
