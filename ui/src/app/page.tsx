@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { BaseWalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import {
-  Shield, Activity, DollarSign, Lock, Zap, Copy, Check, RefreshCw,
+  Shield, ShieldCheck, Activity, DollarSign, Lock, Zap, Copy, Check, RefreshCw,
   Plus, AlertTriangle, Users, Clock, ExternalLink, Sun, Moon, ChevronRight,
   Layers, Boxes, PlayCircle, ArrowRight, Terminal, Gauge, GitBranch,
   Network, Cpu, Database, KeyRound, TrendingUp, TrendingDown, Sparkles,
@@ -159,6 +159,7 @@ const NAV_SECTIONS = [
   { id: 'x402', label: 'x402', icon: DollarSign },
   { id: 'business', label: 'Pricing', icon: TrendingUp },
   { id: 'deployment', label: 'Devnet', icon: Database },
+  { id: 'authority-proof', label: 'Proof', icon: ShieldCheck },
 ] as const
 
 const shortHash = (h: string, head = 4, tail = 4): string =>
@@ -439,6 +440,7 @@ export default function Page() {
   const [verifierCatalogLoading, setVerifierCatalogLoading] = useState(false)
   const [businessModel, setBusinessModel] = useState<any>(null)
   const [demoNarrative, setDemoNarrative] = useState<any>(null)
+  const [authorityProof, setAuthorityProof] = useState<any>(null)
   const [activeScene, setActiveScene] = useState<number>(1)
   const [activeSection, setActiveSection] = useState('hero')
   const [gaugeSize, setGaugeSize] = useState(280)
@@ -528,6 +530,16 @@ export default function Page() {
     }
   }, [])
 
+  const fetchAuthorityProof = useCallback(async (id: string) => {
+    try {
+      const res = await fetch(`/api/authority-proof?id=${id}`, { cache: 'no-store' })
+      const data = await res.json()
+      setAuthorityProof(data)
+    } catch {
+      // silent
+    }
+  }, [])
+
   useEffect(() => {
     fetchAgent(PERMANENT_AGENT_ID)
     fetchDeployment()
@@ -535,7 +547,8 @@ export default function Page() {
     fetchVerifierCatalog()
     fetchBusinessModel()
     fetchDemoNarrative()
-  }, [fetchAgent, fetchDeployment, fetchTxHistory, fetchVerifierCatalog, fetchBusinessModel, fetchDemoNarrative])
+    fetchAuthorityProof(PERMANENT_AGENT_ID)
+  }, [fetchAgent, fetchDeployment, fetchTxHistory, fetchVerifierCatalog, fetchBusinessModel, fetchDemoNarrative, fetchAuthorityProof])
 
   useEffect(() => {
     const t = setInterval(() => fetchAgent(activeAgentId, true), 60000)
@@ -1762,8 +1775,173 @@ export default function Page() {
             </PremiumCard>
           </SectionShell>
 
+          {/* ===== AUTHORITY PROOF — compressed lifecycle ===== */}
+          <SectionShell id="authority-proof" index={15}>
+            <SectionTitle icon={ShieldCheck} title="Authority Proof" hint={authorityProof?.found ? 'verified on-chain' : 'loading'} accent="emerald" />
+            <PremiumCard accent="emerald" className="p-6">
+              <p className="text-xs text-muted-foreground leading-relaxed mb-5">
+                One screen. Every claim verifiable. The agent earned its authority through verified outcomes — not trust.
+              </p>
+
+              {authorityProof?.found ? (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.4 }}
+                  className="space-y-5"
+                >
+                  {/* Header: agent + tier */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl bg-gradient-to-r from-emerald-500/[0.06] to-transparent border border-emerald-500/10">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/15 border border-emerald-500/30">
+                        <ShieldCheck className="h-5 w-5 text-emerald-400" />
+                      </div>
+                      <div>
+                        <div className="text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Agent</div>
+                        <code className="font-mono text-sm text-foreground">{authorityProof.agent.short_id}</code>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <div className="text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Tier</div>
+                        <div className={cn('text-lg font-bold font-mono',
+                          authorityProof.agent.tier === 'T3' ? 'text-emerald-400'
+                          : authorityProof.agent.tier === 'T2' ? 'text-[#E8B96B]'
+                          : 'text-rose-400')}>
+                          {authorityProof.agent.tier_name}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-[9px] uppercase tracking-[0.15em] text-muted-foreground">Authority</div>
+                        <div className="text-lg font-bold font-mono text-foreground">{authorityProof.agent.authority}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Core stats grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="p-3 rounded-lg bg-[#101216] border border-white/[0.04]">
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">Epoch</div>
+                      <div className="font-mono text-sm text-foreground">#{authorityProof.agent.epoch}</div>
+                    </div>
+                    <div className="p-3 rounded-lg bg-[#101216] border border-white/[0.04]">
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">Bond</div>
+                      <div className="font-mono text-sm text-foreground">{authorityProof.agent.bond}</div>
+                    </div>
+                    <div className="p-3 rounded-lg bg-[#101216] border border-white/[0.04]">
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">Verified Outcomes</div>
+                      <div className="font-mono text-sm text-foreground">{authorityProof.agent.verified_outcomes}</div>
+                    </div>
+                    <div className="p-3 rounded-lg bg-[#101216] border border-white/[0.04]">
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">Success Rate</div>
+                      <div className={cn('font-mono text-sm',
+                        parseFloat(authorityProof.agent.success_rate) >= 90 ? 'text-emerald-400'
+                        : parseFloat(authorityProof.agent.success_rate) >= 70 ? 'text-[#E8B96B]'
+                        : 'text-rose-400')}>
+                        {authorityProof.agent.success_rate}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Latest evidence + transition */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="p-3 rounded-lg bg-[#101216] border border-white/[0.04]">
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground mb-2">Latest Evidence</div>
+                      <div className="flex items-center gap-2">
+                        {authorityProof.latest_evidence.result === 'pass' ? (
+                          <><Check className="h-4 w-4 text-emerald-400" /><span className="text-sm font-mono text-emerald-400">PASS</span></>
+                        ) : authorityProof.latest_evidence.result === 'fail' ? (
+                          <><AlertTriangle className="h-4 w-4 text-rose-400" /><span className="text-sm font-mono text-rose-400">CRITICAL FAIL</span></>
+                        ) : (
+                          <><Clock className="h-4 w-4 text-muted-foreground" /><span className="text-sm font-mono text-muted-foreground">NONE</span></>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground mt-1">{authorityProof.latest_evidence.description}</div>
+                    </div>
+                    <div className="p-3 rounded-lg bg-[#101216] border border-white/[0.04]">
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground mb-2">Latest Transition</div>
+                      <div className="font-mono text-xs text-foreground">{authorityProof.latest_transition}</div>
+                    </div>
+                  </div>
+
+                  {/* Registered verifiers */}
+                  <div className="p-3 rounded-lg bg-[#101216] border border-white/[0.04]">
+                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground mb-2">Registered Verifiers</div>
+                    <div className="flex flex-wrap gap-2">
+                      {authorityProof.registered_verifiers?.map((v: any) => (
+                        <div key={v.id} className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20">
+                          <LiveDot color="#34D399" size={4} />
+                          <span className="text-[10px] font-mono text-foreground/90">{v.name}</span>
+                          <span className="text-[9px] text-muted-foreground">{v.type}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* On-chain links */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <a href={authorityProof.authority_root.explorerUrl} target="_blank" rel="noreferrer"
+                      className="flex items-center gap-2 p-2.5 rounded-lg bg-[#101216] border border-white/[0.04] hover:border-emerald-500/20 transition-colors group">
+                      <KeyRound className="h-3.5 w-3.5 text-muted-foreground group-hover:text-emerald-400" />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Authority Root</div>
+                        <code className="text-[10px] font-mono text-foreground/80">{authorityProof.authority_root.short}</code>
+                      </div>
+                      <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                    </a>
+                    <a href={authorityProof.agent_pda.explorerUrl} target="_blank" rel="noreferrer"
+                      className="flex items-center gap-2 p-2.5 rounded-lg bg-[#101216] border border-white/[0.04] hover:border-emerald-500/20 transition-colors group">
+                      <Activity className="h-3.5 w-3.5 text-muted-foreground group-hover:text-emerald-400" />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Agent PDA</div>
+                        <code className="text-[10px] font-mono text-foreground/80">{authorityProof.agent_pda.short}</code>
+                      </div>
+                      <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                    </a>
+                    <a href={authorityProof.bond_pda.explorerUrl} target="_blank" rel="noreferrer"
+                      className="flex items-center gap-2 p-2.5 rounded-lg bg-[#101216] border border-white/[0.04] hover:border-emerald-500/20 transition-colors group">
+                      <Lock className="h-3.5 w-3.5 text-muted-foreground group-hover:text-emerald-400" />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Bond PDA</div>
+                        <code className="text-[10px] font-mono text-foreground/80">{authorityProof.bond_pda.short}</code>
+                      </div>
+                      <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                    </a>
+                  </div>
+
+                  {/* Proof transactions */}
+                  <div>
+                    <div className="text-[9px] uppercase tracking-wider text-muted-foreground mb-2">Proof Transactions</div>
+                    <div className="space-y-1.5">
+                      {authorityProof.proof_transactions?.map((tx: any) => (
+                        <a key={tx.signature} href={tx.explorerUrl} target="_blank" rel="noreferrer"
+                          className="flex items-center justify-between gap-2 p-2 rounded-lg bg-[#101216] border border-white/[0.04] hover:border-emerald-500/20 transition-colors">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-[9px] font-mono text-muted-foreground uppercase">{tx.label}</span>
+                            <span className={cn('h-1.5 w-1.5 rounded-full', tx.status === 'success' ? 'bg-emerald-400' : 'bg-rose-400')} />
+                            <code className="text-[10px] font-mono text-foreground/70 truncate">{tx.signature.slice(0, 16)}...{tx.signature.slice(-6)}</code>
+                          </div>
+                          <ExternalLink className="h-3 w-3 text-muted-foreground shrink-0" />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Thesis line */}
+                  <div className="p-3 rounded-xl bg-emerald-500/[0.04] border border-emerald-500/10">
+                    <p className="text-xs text-emerald-300/90 italic leading-relaxed">{authorityProof.thesis}</p>
+                  </div>
+                </motion.div>
+              ) : (
+                <div className="flex items-center justify-center py-8">
+                  <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
+                </div>
+              )}
+            </PremiumCard>
+          </SectionShell>
+
           {/* ===== TRANSACTION HISTORY ===== */}
-          <SectionShell id="history" index={15}>
+          <SectionShell id="history" index={16}>
             <SectionTitle icon={Clock} title="Transaction History" hint={txHistory ? `${txHistory.count} txs` : '—'} accent="sky" />
             <PremiumCard className="p-6">
               <div className="flex items-center justify-between mb-3">

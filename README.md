@@ -273,8 +273,9 @@ Deployed to Vercel at [https://pactyra-ui.vercel.app](https://pactyra-ui.vercel.
 - Protocol health gauge
 - Security check tooltips
 - Copy-to-clipboard on all addresses
+- Authority Proof screen — compressed lifecycle view (tier, authority, epoch, bond, verified outcomes, latest evidence, registered verifiers, 3 proof transactions with explorer links)
 
-### API Routes (14)
+### API Routes (15)
 
 | Route | Method | Description |
 |---|---|---|
@@ -292,6 +293,7 @@ Deployed to Vercel at [https://pactyra-ui.vercel.app](https://pactyra-ui.vercel.
 | `/api/proof` | GET | Machine-verifiable proof trail (agent state + transactions + claims) |
 | `/api/business-model` | GET | Three-tier business model (open-source core, hosted, enterprise) |
 | `/api/demo-narrative` | GET | 8-scene demo narrative with live agent state |
+| `/api/authority-proof?id=<hex>` | GET | Compressed authority proof — agent state, latest evidence, registered verifiers, and 3 recent proof transactions with explorer links |
 
 ## Demo orchestration
 
