@@ -6,15 +6,18 @@ import { cn } from '@/lib/utils'
 
 // ============================================================
 // SectionShell — consistent premium section wrapper with reveal-on-scroll
+// Supports staggered reveals via the `index` prop (50ms per section)
 // ============================================================
 export function SectionShell({
   id,
   children,
   className,
+  index = 0,
 }: {
   id?: string
   children: ReactNode
   className?: string
+  index?: number
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const inView = useInView(ref, { once: true, margin: '-60px 0px -60px 0px' })
@@ -24,7 +27,11 @@ export function SectionShell({
       ref={ref}
       initial={{ opacity: 0, y: 12 }}
       animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
-      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      transition={{
+        duration: 0.5,
+        delay: Math.min(index * 0.05, 0.5),
+        ease: [0.22, 1, 0.36, 1],
+      }}
       className={cn('scroll-mt-24', className)}
     >
       {children}
@@ -87,15 +94,17 @@ export function PremiumCard({
     : accent === 'amber' ? 'border-amber-500/20'
     : 'border-white/[0.06]'
   return (
-    <div
+    <motion.div
+      whileHover={{ y: -2 }}
+      transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        'pactyra-surface rounded-2xl border transition-all duration-300',
+        'pactyra-surface rounded-2xl border transition-all duration-300 hover:shadow-[0_12px_36px_rgba(0,0,0,0.45)]',
         accentBorder,
         className
       )}
     >
       {children}
-    </div>
+    </motion.div>
   )
 }
 
@@ -203,7 +212,7 @@ export function AuthorityGauge({
         <div className="flex items-baseline gap-0.5">
           <span className="text-2xl font-light text-muted-foreground">$</span>
           <span
-            className="font-mono text-6xl font-bold tabular-nums pactyra-gold-glow"
+            className="font-mono text-7xl font-bold tabular-nums pactyra-gold-glow leading-none"
             style={{ color: tierColor }}
           >
             {displayAmount}
@@ -478,9 +487,18 @@ export function WireDiagram({
           <animate attributeName="stroke-dashoffset" from="8" to="0" dur="1.5s" repeatCount="indefinite" />
         </line>
         <line x1={400} y1={140} x2={400} y2={170} stroke={targetColor} strokeWidth="1.5" strokeDasharray="4 4" strokeOpacity="0.4" />
-        {/* record_outcome */}
+        {/* record_outcome — with pulsing glow */}
         <g>
-          <rect x={300} y={170} width={200} height={36} rx={8} fill={targetColor} fillOpacity="0.1" stroke={targetColor} strokeWidth="1" strokeOpacity="0.4" />
+          {/* Pulsing glow ring */}
+          <rect x={300} y={170} width={200} height={36} rx={8} fill="none" stroke={targetColor} strokeWidth="1" strokeOpacity="0.4">
+            <animate attributeName="stroke-opacity" values="0.4;0.1;0.4" dur="2s" repeatCount="indefinite" />
+            <animate attributeName="width" values="200;208;200" dur="2s" repeatCount="indefinite" />
+            <animate attributeName="height" values="36;44;36" dur="2s" repeatCount="indefinite" />
+            <animate attributeName="x" values="300;296;300" dur="2s" repeatCount="indefinite" />
+            <animate attributeName="y" values="170;166;170" dur="2s" repeatCount="indefinite" />
+          </rect>
+          {/* Solid rect */}
+          <rect x={300} y={170} width={200} height={36} rx={8} fill={targetColor} fillOpacity="0.1" stroke={targetColor} strokeWidth="1" strokeOpacity="0.5" />
           <text x={400} y={193} textAnchor="middle" fill={targetColor} fontSize="11" fontWeight="700" fontFamily="ui-monospace, monospace">
             pactyra_core::record_outcome
           </text>
@@ -540,6 +558,20 @@ export function Filmstrip({
     }
   }, [activeId])
 
+  // Arrow key navigation: left/right to move between scenes
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        onSelect(Math.max(1, activeId - 1))
+      } else if (e.key === 'ArrowRight') {
+        const maxId = frames.length
+        onSelect(Math.min(maxId, activeId + 1))
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [activeId, frames.length, onSelect])
+
   const colorMap = {
     emerald: { border: 'border-emerald-500/30', bg: 'bg-emerald-500/5', text: 'text-emerald-400', dot: '#34D399' },
     sky: { border: 'border-sky-500/30', bg: 'bg-sky-500/5', text: 'text-sky-400', dot: '#60A5FA' },
@@ -552,7 +584,7 @@ export function Filmstrip({
 
   return (
     <div ref={scrollRef} className="overflow-x-auto hide-scrollbar pb-2">
-      <div className="flex gap-3 px-1 min-w-min">
+      <div className="flex gap-3 px-1 min-w-min items-center">
         {frames.map((frame) => {
           const c = colorMap[frame.color]
           const isActive = frame.id === activeId
@@ -563,10 +595,13 @@ export function Filmstrip({
               onClick={() => onSelect(frame.id)}
               whileHover={{ y: -2 }}
               whileTap={{ scale: 0.98 }}
+              animate={{ scale: isActive ? 1.15 : 1 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
               className={cn(
-                'relative shrink-0 w-[200px] p-3 rounded-xl border text-left transition-all',
-                isActive ? cn(c.bg, c.border, 'ring-1 ring-offset-0 scale-[1.02]') : 'bg-white/[0.02] border-white/[0.06] opacity-60 hover:opacity-100'
+                'relative shrink-0 w-[240px] p-3 rounded-xl border text-left transition-colors',
+                isActive ? cn(c.bg, c.border) : 'bg-white/[0.02] border-white/[0.06] opacity-60 hover:opacity-100'
               )}
+              style={isActive ? { boxShadow: `0 0 24px ${c.dot}30` } : {}}
             >
               {/* Scene number */}
               <div className="flex items-center gap-2 mb-2">
@@ -693,5 +728,205 @@ export function StatTile({
       </div>
       {sub && <div className="text-[10px] text-muted-foreground font-mono">{sub}</div>}
     </div>
+  )
+}
+
+// ============================================================
+// AuthorityLoopDiagram — circular flow diagram with animated traveling arrow
+// Renders $5 → $50 → $500 → $5 as a circular arc with a moving dot
+// ============================================================
+export function AuthorityLoopDiagram({
+  currentTier,
+  size = 320,
+}: {
+  currentTier: 'Probation' | 'Proven' | 'Trusted'
+  size?: number
+}) {
+  const tiers = [
+    { label: 'T1', amount: '$5',   name: 'Probation', color: '#F87171', angle: 0 },
+    { label: 'T2', amount: '$50',  name: 'Proven',    color: '#E8B96B', angle: 120 },
+    { label: 'T3', amount: '$500', name: 'Trusted',   color: '#34D399', angle: 240 },
+  ]
+  const radius = size * 0.36
+  const cx = size / 2
+  const cy = size / 2
+
+  // Position nodes on a circle
+  const nodePos = (angle: number) => ({
+    x: cx + radius * Math.cos((angle - 90) * Math.PI / 180),
+    y: cy + radius * Math.sin((angle - 90) * Math.PI / 180),
+  })
+
+  return (
+    <div className="flex items-center justify-center py-4">
+      <svg width={size} height={size} className="overflow-visible">
+        <defs>
+          <linearGradient id="loop-arc-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#F87171" stopOpacity="0.4" />
+            <stop offset="50%" stopColor="#E8B96B" stopOpacity="0.4" />
+            <stop offset="100%" stopColor="#34D399" stopOpacity="0.4" />
+          </linearGradient>
+        </defs>
+        {/* Circular track */}
+        <circle cx={cx} cy={cy} r={radius} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="2" strokeDasharray="4 6" />
+        {/* Gradient arc overlay */}
+        <circle cx={cx} cy={cy} r={radius} fill="none" stroke="url(#loop-arc-grad)" strokeWidth="2" strokeDasharray="4 6" />
+        {/* Animated traveling dot along the circle */}
+        <circle r="4" fill="#E8B96B">
+          <animateMotion dur="4s" repeatCount="indefinite" path={`M ${cx} ${cy - radius} A ${radius} ${radius} 0 1 1 ${cx - 0.01} ${cy - radius} Z`} />
+        </circle>
+        {/* Tier nodes */}
+        {tiers.map((t) => {
+          const pos = nodePos(t.angle)
+          const isCurrent =
+            (currentTier === 'Probation' && t.label === 'T1') ||
+            (currentTier === 'Proven' && t.label === 'T2') ||
+            (currentTier === 'Trusted' && t.label === 'T3')
+          return (
+            <g key={t.label}>
+              {/* Node circle */}
+              <circle
+                cx={pos.x}
+                cy={pos.y}
+                r={isCurrent ? 22 : 16}
+                fill={t.color}
+                fillOpacity={isCurrent ? 0.15 : 0.05}
+                stroke={t.color}
+                strokeWidth={isCurrent ? 2 : 1}
+                strokeOpacity={isCurrent ? 0.8 : 0.3}
+              />
+              {isCurrent && (
+                <circle cx={pos.x} cy={pos.y} r={22} fill="none" stroke={t.color} strokeWidth="1" strokeOpacity="0.4">
+                  <animate attributeName="r" from="22" to="32" dur="2s" repeatCount="indefinite" />
+                  <animate attributeName="stroke-opacity" from="0.4" to="0" dur="2s" repeatCount="indefinite" />
+                </circle>
+              )}
+              {/* Amount label */}
+              <text x={pos.x} y={pos.y - 2} textAnchor="middle" fill={t.color} fontSize="13" fontWeight="700" fontFamily="ui-monospace, monospace">
+                {t.amount}
+              </text>
+              <text x={pos.x} y={pos.y + 12} textAnchor="middle" fill="rgba(255,255,255,0.4)" fontSize="8" fontFamily="ui-monospace, monospace" letterSpacing="0.1em">
+                {t.label}
+              </text>
+            </g>
+          )
+        })}
+        {/* Center label */}
+        <text x={cx} y={cy - 4} textAnchor="middle" fill="#8A8F98" fontSize="9" fontFamily="ui-monospace, monospace" letterSpacing="0.15em" textTransform="uppercase">
+          AUTHORITY
+        </text>
+        <text x={cx} y={cy + 10} textAnchor="middle" fill="#E8EAED" fontSize="11" fontWeight="600" fontFamily="ui-monospace, monospace">
+          LOOP
+        </text>
+      </svg>
+    </div>
+  )
+}
+
+// ============================================================
+// SlashFlash — wraps children and flashes red when triggered
+// ============================================================
+export function SlashFlash({ triggered, children }: { triggered: boolean; children: ReactNode }) {
+  const [flash, setFlash] = useState(false)
+  useEffect(() => {
+    if (triggered) {
+      setFlash(true)
+      const t = setTimeout(() => setFlash(false), 1200)
+      return () => clearTimeout(t)
+    }
+  }, [triggered])
+  return (
+    <div className={cn('transition-colors', flash && 'animate-pactyra-flash-slash')}>
+      {children}
+    </div>
+  )
+}
+
+// ============================================================
+// MiniAuthorityBadge — for sticky sub-header on scroll
+// ============================================================
+export function MiniAuthorityBadge({
+  tier,
+  amount,
+  epoch,
+}: {
+  tier: 'Probation' | 'Proven' | 'Trusted'
+  amount: number
+  epoch: number
+}) {
+  const color = tier === 'Trusted' ? '#34D399' : tier === 'Proven' ? '#E8B96B' : '#F87171'
+  return (
+    <div className="flex items-center gap-2.5 px-3 py-1 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+      <LiveDot color={color} size={5} />
+      <span className="text-[11px] font-mono text-muted-foreground">tier</span>
+      <span className="text-[11px] font-mono font-semibold" style={{ color }}>{tier[0]}</span>
+      <span className="h-3 w-px bg-white/[0.08]" />
+      <span className="text-[11px] font-mono text-[#E8B96B] font-semibold">${amount}</span>
+      <span className="h-3 w-px bg-white/[0.08]" />
+      <span className="text-[11px] font-mono text-muted-foreground">e#{epoch}</span>
+    </div>
+  )
+}
+
+// ============================================================
+// PressableButton — button with active:scale press feedback
+// ============================================================
+export function PressableButton({
+  children,
+  className,
+  onClick,
+  disabled,
+  variant = 'default',
+  size = 'md',
+  as = 'button',
+  href,
+  target,
+  rel,
+}: {
+  children: ReactNode
+  className?: string
+  onClick?: () => void
+  disabled?: boolean
+  variant?: 'default' | 'outline' | 'ghost'
+  size?: 'sm' | 'md' | 'lg'
+  as?: 'button' | 'a'
+  href?: string
+  target?: string
+  rel?: string
+}) {
+  const base = 'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none'
+  const sizes = {
+    sm: 'h-8 px-3 text-xs',
+    md: 'h-9 px-4 text-xs',
+    lg: 'h-10 px-5 text-sm',
+  }
+  const variants = {
+    default: 'bg-emerald-600 hover:bg-emerald-500 text-white',
+    outline: 'bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] text-foreground',
+    ghost: 'hover:bg-white/[0.04] text-foreground',
+  }
+  const classes = cn(base, sizes[size], variants[variant], className)
+  if (as === 'a') {
+    return (
+      <motion.a
+        href={href}
+        target={target}
+        rel={rel}
+        whileTap={{ scale: 0.98 }}
+        className={classes}
+      >
+        {children}
+      </motion.a>
+    )
+  }
+  return (
+    <motion.button
+      onClick={onClick}
+      disabled={disabled}
+      whileTap={{ scale: 0.98 }}
+      className={classes}
+    >
+      {children}
+    </motion.button>
   )
 }

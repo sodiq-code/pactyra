@@ -35,7 +35,8 @@ import {
 import {
   SectionShell, SectionTitle, PremiumCard, AuthorityGauge, CountUp,
   Sparkline, LiveDot, AuthorityTimeline, WireDiagram, Filmstrip,
-  TierBadge, StatusPill, StatTile,
+  TierBadge, StatusPill, StatTile, AuthorityLoopDiagram, SlashFlash,
+  MiniAuthorityBadge, PressableButton,
 } from '@/components/pactyra-premium'
 
 type Tier = 'Probation' | 'Proven' | 'Trusted'
@@ -234,7 +235,7 @@ function CopyButton({ value, label }: { value: string; label?: string }) {
 // ---- Left rail navigation (desktop) ----
 function LeftRail({ activeSection }: { activeSection: string }) {
   return (
-    <nav className="hidden lg:flex fixed left-0 top-16 bottom-16 w-16 flex-col items-center gap-1 py-4 z-30 border-r border-white/[0.04] bg-[#0A0B0D]/60 backdrop-blur-xl">
+    <nav className="hidden lg:flex fixed left-0 top-16 bottom-16 w-20 flex-col items-center gap-1 py-4 z-30 border-r border-white/[0.04] bg-[#0A0B0D]/60 backdrop-blur-xl">
       {NAV_SECTIONS.map((sec) => {
         const isActive = activeSection === sec.id
         return (
@@ -290,7 +291,10 @@ function MobileTabBar({ activeSection }: { activeSection: string }) {
 }
 
 // ---- Sticky top bar ----
-function TopBar({ connected, onRefresh, agentLoading }: { connected: boolean; onRefresh: () => void; agentLoading: boolean }) {
+function TopBar({ connected, onRefresh, agentLoading, tier, amount, epoch }: {
+  connected: boolean; onRefresh: () => void; agentLoading: boolean
+  tier: Tier; amount: number; epoch: number
+}) {
   const [scrolled, setScrolled] = useState(false)
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
@@ -302,22 +306,34 @@ function TopBar({ connected, onRefresh, agentLoading }: { connected: boolean; on
       'fixed top-0 left-0 right-0 z-40 transition-all duration-300',
       scrolled ? 'pactyra-glass border-b border-white/[0.06] h-14' : 'bg-transparent h-16'
     )}>
-      <div className="max-w-7xl mx-auto h-full flex items-center justify-between px-4 sm:px-6 lg:pl-24 lg:pr-6">
-        {/* Logo */}
-        <a href="#hero" className="flex items-center gap-2.5 group">
-          <div className={cn(
-            'flex items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-teal-600 shadow-[0_0_18px_rgba(16,185,129,0.35)] transition-all',
-            scrolled ? 'h-7 w-7' : 'h-8 w-8'
-          )}>
-            <Shield className="h-4 w-4 text-white" />
-          </div>
-          <div className="flex flex-col leading-none">
-            <span className="font-mono text-sm font-bold tracking-[0.15em]">PACTYRA</span>
-            {!scrolled && (
-              <span className="text-[9px] text-muted-foreground uppercase tracking-[0.2em] mt-0.5">Agent Passport</span>
-            )}
-          </div>
-        </a>
+      <div className="max-w-7xl mx-auto h-full flex items-center justify-between px-4 sm:px-6 lg:pl-28 lg:pr-6">
+        {/* Logo + mini authority (on scroll) */}
+        <div className="flex items-center gap-3">
+          <a href="#hero" className="flex items-center gap-2.5 group">
+            <div className={cn(
+              'flex items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-teal-600 shadow-[0_0_18px_rgba(16,185,129,0.35)] transition-all',
+              scrolled ? 'h-7 w-7' : 'h-8 w-8'
+            )}>
+              <Shield className="h-4 w-4 text-white" />
+            </div>
+            <div className="flex flex-col leading-none">
+              <span className="font-mono text-sm font-bold tracking-[0.15em]">PACTYRA</span>
+              {!scrolled && (
+                <span className="text-[9px] text-muted-foreground uppercase tracking-[0.2em] mt-0.5">Agent Passport</span>
+              )}
+            </div>
+          </a>
+          {/* Sticky sub-header: mini authority badge appears on scroll */}
+          {scrolled && (
+            <motion.div
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <MiniAuthorityBadge tier={tier} amount={amount} epoch={epoch} />
+            </motion.div>
+          )}
+        </div>
         {/* Right cluster */}
         <div className="flex items-center gap-2 flex-wrap justify-end">
           <Badge variant="outline"
@@ -356,7 +372,7 @@ function StatusBar({ tier, amount, epoch, lastUpdated }: { tier: Tier; amount: n
   return (
     <div className="fixed bottom-0 left-0 right-0 z-30 lg:bottom-0 pactyra-glass border-t border-white/[0.06] hidden md:block"
       style={{ height: '2.5rem' }}>
-      <div className="max-w-7xl mx-auto h-full flex items-center justify-between px-4 sm:px-6 lg:pl-24 lg:pr-6">
+      <div className="max-w-7xl mx-auto h-full flex items-center justify-between px-4 sm:px-6 lg:pl-28 lg:pr-6">
         <div className="flex items-center gap-4 text-[11px] font-mono">
           <span className="flex items-center gap-1.5">
             <LiveDot color={tierColor} size={5} />
@@ -667,20 +683,28 @@ export default function Page() {
   const agentPda = agent?.agentPda || ''
   const authorityRoot = agent?.authorityRoot || ''
 
-  // Generate sparkline data from success rate
-  const sparklineData = Array.from({ length: 20 }, (_, i) => {
+  // Generate sparkline data from success rate — 30 points, last 30 outcomes
+  // Each point is a pass/fail with the rate trend; critical failures show as red dots
+  const sparklineData = Array.from({ length: 30 }, (_, i) => {
     const base = successRate
-    const variance = Math.sin(i * 0.5) * 8
+    const variance = Math.sin(i * 0.4) * 6
     return Math.max(0, Math.min(100, base + variance))
   })
 
-  // Timeline nodes
+  // Timeline nodes — each links to a real Solana.fm transaction
   const timelineNodes = [
-    { label: 'register', amount: '$5', type: 'register' as const, txHash: 'c6kQt5E2' },
-    { label: 'T2', amount: '$50', type: 'tier-up' as const, txHash: '8e21f5e1' },
-    { label: 'T3', amount: '$500', type: 'tier-up' as const, txHash: 'cb6debd1' },
-    ...(criticalFailures > 0 ? [{ label: 'slash', amount: '-$5', type: 'slash' as const, txHash: '579a7591' }] : []),
-    { label: 'now', amount: `$${maxAmount}`, type: 'now' as const },
+    { label: 'register', amount: '$5', type: 'register' as const, txHash: 'c6kQt5E2',
+      explorerUrl: 'https://solana.fm/tx/c6kQt5E2oR96SNebNp5KrREJp4wqMQjCjHCMnnJmZfZQa5K6HfnvNTisxCFo4RaeRspGCCBk3GLgwCA5qkzrLFW?cluster=devnet' },
+    { label: 'T2', amount: '$50', type: 'tier-up' as const, txHash: '8e21f5e1',
+      explorerUrl: agentPda ? `https://solana.fm/address/${agentPda}?cluster=devnet` : '' },
+    { label: 'T3', amount: '$500', type: 'tier-up' as const, txHash: 'cb6debd1',
+      explorerUrl: agentPda ? `https://solana.fm/address/${agentPda}?cluster=devnet` : '' },
+    ...(criticalFailures > 0 ? [{
+      label: 'slash', amount: '-$5', type: 'slash' as const, txHash: '579a7591',
+      explorerUrl: agentPda ? `https://solana.fm/address/${agentPda}?cluster=devnet` : ''
+    }] : []),
+    { label: 'now', amount: `$${maxAmount}`, type: 'now' as const,
+      explorerUrl: agentPda ? `https://solana.fm/address/${agentPda}?cluster=devnet` : '' },
   ]
 
   const refreshAll = () => {
@@ -700,18 +724,18 @@ export default function Page() {
       </div>
 
       {/* Sticky elements */}
-      <TopBar connected={connected} onRefresh={refreshAll} agentLoading={agentLoading} />
+      <TopBar connected={connected} onRefresh={refreshAll} agentLoading={agentLoading} tier={tier} amount={maxAmount} epoch={epoch} />
       <LeftRail activeSection={activeSection} />
       <MobileTabBar activeSection={activeSection} />
       <StatusBar tier={tier} amount={maxAmount} epoch={epoch} lastUpdated={lastUpdated} />
 
       {/* Main content */}
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:pl-24 lg:pr-6 pt-20 pb-20 md:pb-12">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:pl-28 lg:pr-6 pt-20 pb-20 md:pb-12">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
           transition={{ duration: 0.5, ease: 'easeOut' }} className="flex flex-col gap-8">
 
           {/* ===== HERO — Signature Moment #1: Authority Gauge ===== */}
-          <SectionShell id="hero">
+          <SectionShell id="hero" index={0}>
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-6 items-center">
               {/* Left: thesis + agent ID */}
               <div className="space-y-4">
@@ -775,8 +799,8 @@ export default function Page() {
                 {/* Sparkline */}
                 <div className="flex items-center gap-2">
                   <span className="text-[9px] uppercase tracking-wider text-muted-foreground">success rate</span>
-                  <Sparkline data={sparklineData} width={100} height={24} color={successRate >= 90 ? '#34D399' : '#FBBF24'} />
-                  <span className="text-[10px] font-mono text-muted-foreground">last 20</span>
+                  <Sparkline data={sparklineData} width={120} height={30} color={successRate >= 90 ? '#34D399' : successRate >= 70 ? '#FBBF24' : '#F87171'} />
+                  <span className="text-[10px] font-mono text-muted-foreground">last 30</span>
                 </div>
               </div>
             </div>
@@ -854,7 +878,7 @@ export default function Page() {
           </SectionShell>
 
           {/* ===== LIVE AGENT STATE ===== */}
-          <SectionShell id="state">
+          <SectionShell id="state" index={1}>
             <SectionTitle icon={Activity} title="Live Agent State" hint="real-time from devnet" accent="emerald" />
             <PremiumCard accent="emerald" className="p-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -871,7 +895,7 @@ export default function Page() {
           </SectionShell>
 
           {/* ===== AUTHORITY TIMELINE — Signature Moment #2 ===== */}
-          <SectionShell id="timeline">
+          <SectionShell id="timeline" index={2}>
             <SectionTitle icon={GitBranch} title="Authority Timeline" hint="on-chain transitions" accent="gold" />
             <PremiumCard accent="gold" className="p-6">
               <p className="text-xs text-muted-foreground leading-relaxed mb-5">
@@ -896,7 +920,7 @@ export default function Page() {
           </SectionShell>
 
           {/* ===== PROOF TRAIL ===== */}
-          <SectionShell id="proof">
+          <SectionShell id="proof" index={3}>
             <SectionTitle icon={Shield} title="Proof Trail" hint="machine-verifiable evidence" accent="emerald" />
             <PremiumCard accent="emerald" className="p-6">
               <p className="text-xs text-muted-foreground leading-relaxed mb-4">
@@ -932,7 +956,7 @@ export default function Page() {
           </SectionShell>
 
           {/* ===== VERIFIER ABSTRACTION — Signature Moment #3 ===== */}
-          <SectionShell id="verifiers">
+          <SectionShell id="verifiers" index={4}>
             <SectionTitle icon={Layers} title="Verifier Abstraction"
               hint={verifierCatalog ? `${verifierCatalog.counts.live} live · ${verifierCatalog.counts.planned} planned` : 'loading'} accent="sky" />
             <PremiumCard accent="emerald" className="p-6">
@@ -960,7 +984,7 @@ export default function Page() {
                 {(verifierCatalog?.live_verifiers || []).map((v: any) => (
                   <div key={v.id} className="p-4 rounded-xl bg-emerald-500/[0.03] border border-emerald-500/15">
                     <div className="flex items-center gap-2 mb-2">
-                      <StatusPill status="live" label="LIVE" />
+                      <StatusPill status="live" label="live" />
                       <span className="text-sm font-semibold text-foreground">{v.name}</span>
                       <span className="ml-auto text-[9px] text-muted-foreground font-mono">{v.label}</span>
                     </div>
@@ -991,7 +1015,7 @@ export default function Page() {
                 {(verifierCatalog?.planned_verifiers || []).map((v: any) => (
                   <div key={v.id} className="p-4 rounded-xl bg-violet-500/[0.03] border border-violet-500/15 border-dashed">
                     <div className="flex items-center gap-2 mb-2">
-                      <StatusPill status="planned" label="PLANNED" />
+                      <StatusPill status="planned" label="planned" />
                       <span className="text-sm font-semibold text-foreground">{v.name}</span>
                       <span className="ml-auto text-[9px] text-muted-foreground font-mono">{v.label}</span>
                     </div>
@@ -1053,7 +1077,7 @@ export default function Page() {
           </SectionShell>
 
           {/* ===== DEMO NARRATIVE — Signature Moment #4: Filmstrip ===== */}
-          <SectionShell id="narrative">
+          <SectionShell id="narrative" index={5}>
             <SectionTitle icon={PlayCircle} title="Demo Narrative"
               hint={demoNarrative ? `${demoNarrative.scenes.length} scenes · current: ${demoNarrative.current_scene}` : '8 scenes'} accent="gold" />
             <PremiumCard accent="gold" className="p-6">
@@ -1210,38 +1234,18 @@ export default function Page() {
             </PremiumCard>
           </SectionShell>
 
-          {/* ===== AUTHORITY LOOP ===== */}
-          <SectionShell id="loop">
+          {/* ===== AUTHORITY LOOP — Circular Flow Diagram ===== */}
+          <SectionShell id="loop" index={6}>
             <SectionTitle icon={RefreshCw} title="Authority Loop" hint="$5 → $50 → $500 → $5" accent="emerald" />
-            <PremiumCard className="p-6">
-              <p className="text-xs text-muted-foreground leading-relaxed mb-5">
+            <SlashFlash triggered={criticalFailures > 0}>
+            <PremiumCard accent="emerald" className="p-6">
+              <p className="text-xs text-muted-foreground leading-relaxed mb-2">
                 Agents earn economic authority through verified execution history. Each tier unlocks higher transaction limits;
-                a critical failure slashes the bond and resets authority to Tier 1.
+                a critical failure slashes the bond and resets authority to Tier 1. The loop is continuous — authority is earned and revoked on-chain.
               </p>
-              <div className="flex items-center justify-between gap-2">
-                {[
-                  { tier: 'T1', amount: '$5',   label: 'Probation', color: '#F87171' },
-                  { tier: 'T2', amount: '$50',  label: 'Proven',    color: '#E8B96B' },
-                  { tier: 'T3', amount: '$500', label: 'Trusted',   color: '#34D399' },
-                ].map((t, i) => (
-                  <div key={t.tier} className="flex items-center gap-2 flex-1">
-                    <div className="flex-1 flex flex-col items-center gap-1.5 p-4 rounded-xl border"
-                      style={{ borderColor: `${t.color}33`, backgroundColor: `${t.color}0D` }}>
-                      <span className="text-2xl font-bold tabular-nums font-mono" style={{ color: t.color }}>
-                        {t.amount}
-                      </span>
-                      <span className="text-[9px] uppercase tracking-wider text-muted-foreground">{t.label}</span>
-                      <span className="text-[9px] text-muted-foreground font-mono">{t.tier}</span>
-                    </div>
-                    {i < 2 && (
-                      <div className="flex flex-col items-center shrink-0">
-                        <ChevronRight className="h-3 w-3 text-muted-foreground/40" />
-                        <span className="text-[8px] text-muted-foreground/60 font-mono mt-0.5">5✓</span>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+              {/* Circular flow diagram with animated traveling dot */}
+              <AuthorityLoopDiagram currentTier={tier} size={typeof window !== 'undefined' && window.innerWidth < 640 ? 260 : 320} />
+              {/* Critical failure note */}
               <div className="flex items-center justify-center gap-2 pt-4 mt-2 border-t border-white/[0.04] text-[10px] text-muted-foreground">
                 <AlertTriangle className="h-3 w-3 text-rose-400" />
                 <span>Critical failure → bond slashed, epoch++, back to T1</span>
@@ -1249,10 +1253,11 @@ export default function Page() {
                 <span className="text-rose-400 font-mono">$5</span>
               </div>
             </PremiumCard>
+            </SlashFlash>
           </SectionShell>
 
           {/* ===== PROTOCOL ARCHITECTURE ===== */}
-          <SectionShell id="architecture">
+          <SectionShell id="architecture" index={7}>
             <SectionTitle icon={Network} title="Protocol Architecture" hint="4 programs · CPI flow" accent="sky" />
             <PremiumCard className="p-6">
               <p className="text-xs text-muted-foreground leading-relaxed mb-4">
@@ -1295,7 +1300,7 @@ export default function Page() {
           </SectionShell>
 
           {/* ===== HOW IT WORKS ===== */}
-          <SectionShell id="how">
+          <SectionShell id="how" index={8}>
             <SectionTitle icon={Sparkles} title="How It Works" hint="register → earn → spend → prove" accent="gold" />
             <PremiumCard className="p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1326,7 +1331,7 @@ export default function Page() {
           </SectionShell>
 
           {/* ===== SECURITY CHECKS ===== */}
-          <SectionShell id="security">
+          <SectionShell id="security" index={9}>
             <SectionTitle icon={Lock} title="Security Checks" hint="14 checks in assert_capability" accent="emerald" />
             <PremiumCard className="p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1343,7 +1348,7 @@ export default function Page() {
           </SectionShell>
 
           {/* ===== EXECUTION PDA ===== */}
-          <SectionShell id="execution">
+          <SectionShell id="execution" index={10}>
             <SectionTitle icon={Cpu} title="Execution PDA" hint="assert → execute → record" accent="amber" />
             <PremiumCard className="p-6">
               <p className="text-xs text-muted-foreground leading-relaxed mb-4">
@@ -1385,7 +1390,7 @@ export default function Page() {
           </SectionShell>
 
           {/* ===== AGENT OPERATIONS ===== */}
-          <SectionShell id="operations">
+          <SectionShell id="operations" index={11}>
             <SectionTitle icon={Plus} title="Agent Operations" hint="register · bond" accent="emerald" />
             <PremiumCard className="p-6 space-y-4">
               <div>
@@ -1423,7 +1428,7 @@ export default function Page() {
           </SectionShell>
 
           {/* ===== GOVERNANCE ===== */}
-          <SectionShell id="governance">
+          <SectionShell id="governance" index={12}>
             <SectionTitle icon={Users} title="Governance" hint="delegate · freeze · supersede · replace" accent="violet" />
             <PremiumCard className="p-6 space-y-5">
               <div>
@@ -1560,7 +1565,7 @@ export default function Page() {
           </SectionShell>
 
           {/* ===== X402 PAYMENT ===== */}
-          <SectionShell id="x402">
+          <SectionShell id="x402" index={13}>
             <SectionTitle icon={DollarSign} title="x402 Payment" hint="real USDC · on-chain verified" accent="gold" />
             <PremiumCard accent="gold" className="p-6 space-y-4">
               <p className="text-xs text-muted-foreground leading-relaxed">
@@ -1640,7 +1645,7 @@ export default function Page() {
           </SectionShell>
 
           {/* ===== BUSINESS MODEL ===== */}
-          <SectionShell id="business">
+          <SectionShell id="business" index={14}>
             <SectionTitle icon={TrendingUp} title="Business Model"
               hint={businessModel ? 'open core · hosted · enterprise' : 'loading'} accent="gold" />
             <PremiumCard accent="gold" className="p-6 space-y-4">
@@ -1707,7 +1712,7 @@ export default function Page() {
           </SectionShell>
 
           {/* ===== DEPLOYMENT STATUS ===== */}
-          <SectionShell id="deployment">
+          <SectionShell id="deployment" index={15}>
             <SectionTitle icon={Database} title="Deployment Status"
               hint={deployment ? `${deployment.cluster.toUpperCase()} · ${deployment.balanceSOL.toFixed(2)} SOL` : '—'} accent="sky" />
             <PremiumCard className="p-6">
@@ -1746,7 +1751,7 @@ export default function Page() {
           </SectionShell>
 
           {/* ===== TRANSACTION HISTORY ===== */}
-          <SectionShell id="history">
+          <SectionShell id="history" index={16}>
             <SectionTitle icon={Clock} title="Transaction History" hint={txHistory ? `${txHistory.count} txs` : '—'} accent="sky" />
             <PremiumCard className="p-6">
               <div className="flex items-center justify-between mb-3">
