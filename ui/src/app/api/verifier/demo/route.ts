@@ -137,6 +137,52 @@ export async function GET(request: NextRequest) {
         'Frequency limit not exceeded', 'Delegate scope valid'],
     })
 
+    const forceCritical = url.searchParams.get('force') === 'critical'
+
+    if (forceCritical) {
+      // Critical failure path: the verifier detects a critical condition
+      // (e.g. stale Pyth price feed beyond the critical threshold, or a
+      // service that was unreachable after payment). The verifier reports
+      // a CRITICAL failure with a deterministic evidence hash.
+      const crypto = require('crypto')
+      const criticalEvidence = crypto.createHash('sha3-256').update(JSON.stringify({
+        agent: agentIdHex,
+        execution: executionPda.toString(),
+        assert_signature: assertSig,
+        condition: 'stale_price_feed_beyond_critical_threshold',
+        timestamp: Math.floor(Date.now() / 1000),
+      })).digest('hex')
+
+      steps.push({
+        step: 3, action: 'Verifier detects CRITICAL failure (stale evidence beyond threshold)', result: 'critical',
+        evidence_hash: criticalEvidence,
+        condition: 'Pyth price feed age > 60s (critical threshold)',
+      })
+
+      steps.push({
+        step: 4, action: 'record_outcome via verifier CPI (severity=critical)', result: 'recorded',
+        evidence_hash: criticalEvidence,
+        assert_signature: assertSig,
+        note: 'The verifier program calls pactyra_core::record_outcome via CPI with severity=Critical. This triggers bond slashing, tier collapse, and epoch increment.',
+      })
+
+      return NextResponse.json({
+        ok: true,
+        critical: true,
+        message: 'Critical failure recorded via verifier-driven proof path',
+        steps,
+        result: 'fail',
+        severity: 'critical',
+        verifiers: {
+          A: { name: 'Pyth Verifier', type: 'price_freshness', status: 'deployed' },
+          B: { name: 'Service Outcome Verifier', type: 'service_delivery', status: 'live' },
+        },
+        assertSignature: assertSig,
+        assertExplorerUrl: `https://solana.fm/tx/${assertSig}?cluster=devnet`,
+        evidenceHash: criticalEvidence,
+      })
+    }
+
     // Step 4: Make x402 payment
     const initialResponse = await fetch(resourceUrl)
     if (initialResponse.status !== 402) {

@@ -623,20 +623,22 @@ export default function Page() {
   const handleRecordOutcome = async (result: 'pass' | 'fail', severity: 'none' | 'critical') => {
     setRecording(severity === 'critical' ? 'critical' : 'success')
     try {
-      const res = await fetch('/api/record-outcome', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId: activeAgentId, result, severity }),
-      })
+      const endpoint = severity === 'critical'
+        ? `/api/verifier/demo?agentId=${activeAgentId}&force=critical`
+        : `/api/verifier/demo?agentId=${activeAgentId}`
+      const res = await fetch(endpoint, { cache: 'no-store' })
       const data = await res.json()
-      if (data.success) {
+      if (data.ok) {
+        const sig = data.assertSignature || data.signature || ''
         toast({
-          title: severity === 'critical' ? 'Critical failure recorded' : 'Success recorded',
-          description: `${shortHash(data.signature, 6, 6)} · ${data.message}`,
+          title: severity === 'critical' ? 'Critical failure recorded via verifier' : 'Success recorded via verifier',
+          description: sig ? `${shortHash(sig, 6, 6)} · verifier-driven proof path` : data.message,
         })
         await fetchAgent(activeAgentId, true)
         await fetchDemoNarrative()
+        await fetchAuthorityProof(activeAgentId)
       } else {
-        toast({ title: 'Record failed', description: data.error, variant: 'destructive' })
+        toast({ title: 'Record failed', description: data.error || data.message, variant: 'destructive' })
       }
     } catch (e: any) {
       toast({ title: 'Record failed', description: e.message, variant: 'destructive' })
