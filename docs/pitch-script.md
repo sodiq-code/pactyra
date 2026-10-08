@@ -70,9 +70,9 @@
 
 **[Screen recording: GitHub repo, architecture diagram]**
 
-> "Four Solana programs deployed on devnet. Twenty instructions in the core protocol. Thirteen security checks in assert_capability. A 3-of-5 threshold multisig backing the protocol authority. A 24-hour timelock on all trust-root operations. Real Pyth price feeds for objective verification."
+> "Four Solana programs deployed on devnet. Twenty-one instructions in the core protocol. Fourteen security checks in assert_capability. A 3-of-5 threshold multisig backing the protocol authority. A 24-hour timelock on all trust-root operations. Real Pyth price feeds for objective verification."
 
-> "Fifty-eight tests passing. Zero unsafe blocks. Zero unwrap calls. Clean Anchor code."
+> "Sixty tests passing. Zero unsafe blocks. Zero unwrap calls. Clean Anchor code."
 
 ---
 

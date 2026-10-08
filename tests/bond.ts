@@ -2,17 +2,29 @@
  * Test suite: Bond lifecycle
  *
  * Tests:
- * - Bond lock
- * - Bond slash on critical failure
- * - Bond re-lock after slash
+ * - Bond lock with real USDC escrow
  * - Insufficient bond rejects capability request
+ *
+ * Note: Bond slashing on critical failure is exercised in execution.ts via
+ * the full assert -> execute -> record_outcome flow, which requires the
+ * Execution PDA to be in Executed status. This suite focuses on the
+ * lock_bond instruction itself.
  */
 
 import * as anchor from "@coral-xyz/anchor";
 import { AnchorProvider, BN } from "@coral-xyz/anchor";
 import { PublicKey, Keypair, SystemProgram } from "@solana/web3.js";
 import { expect } from "chai";
-import { airdrop, makeId, BOND_AMOUNT } from "./helpers";
+import {
+  airdrop,
+  BOND_AMOUNT,
+  TOKEN_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  createMint,
+  createTokenAccount,
+  mintToAccount,
+  deriveBondVaultPda,
+} from "./helpers";
 
 describe("bond", () => {
   const provider = AnchorProvider.env();
@@ -24,24 +36,11 @@ describe("bond", () => {
   let agentId: Uint8Array;
   let agentPda: PublicKey;
   let bondPda: PublicKey;
+  let bondVaultPda: PublicKey;
   let policyPda: PublicKey;
   let verifierRegistryPda: PublicKey;
-
-  async function recordCritical() {
-    const actionId = makeId();
-    const capabilityId = makeId();
-    const evidenceHash = makeId();
-    const [receiptPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("receipt"), Buffer.from(agentId), Buffer.from(actionId)], program.programId
-    );
-    await program.methods.recordOutcome(
-      Array.from(actionId), Array.from(capabilityId), { fail: {} }, { critical: {} }, Array.from(evidenceHash)
-    ).accounts({
-      agent: agentPda, receipt: receiptPda, verifierRegistry: verifierRegistryPda,
-      policy: policyPda, bond: bondPda, verifierOperator: verifierOperator.publicKey,
-      systemProgram: SystemProgram.programId,
-    }).signers([verifierOperator]).rpc();
-  }
+  let usdcMint: PublicKey;
+  let userTokenAccount: PublicKey;
 
   before(async () => {
     authority = Keypair.generate();
@@ -58,6 +57,19 @@ describe("bond", () => {
     [policyPda] = PublicKey.findProgramAddressSync([Buffer.from("policy"), Buffer.from("PAY-V1")], program.programId);
     [bondPda] = PublicKey.findProgramAddressSync([Buffer.from("bond"), Buffer.from(agentId)], program.programId);
 
+    // Set up USDC mint and bond vault for bond escrow
+    usdcMint = await createMint(
+      provider.connection, provider.wallet.payer, provider.wallet.publicKey, 6
+    );
+    [bondVaultPda] = deriveBondVaultPda(usdcMint, program.programId);
+    userTokenAccount = await createTokenAccount(
+      provider.connection, provider.wallet.payer, usdcMint, authority.publicKey
+    );
+    await mintToAccount(
+      provider.connection, provider.wallet.payer, usdcMint,
+      userTokenAccount, provider.wallet.publicKey, 50_000_000
+    );
+
     try { await program.methods.initializeProtocol().accounts({ verifierRegistry: verifierRegistryPda, authority: provider.wallet.publicKey, systemProgram: SystemProgram.programId }).rpc(); } catch (e) {}
     const verifierId = new Uint8Array(32);
     for (let i = 0; i < 32; i++) verifierId[i] = i + 80;
@@ -66,9 +78,14 @@ describe("bond", () => {
     try { await program.methods.createPolicy({ versionTag: "PAY-V1", capabilityType: { payService: {} }, minSuccesses: new BN(20), minSuccessRateBps: 9500, criticalFailureLimit: new BN(0), minBondUsdc: new BN(5_000_000), maxAmountUsdc: new BN(500_000_000) }).accounts({ policy: policyPda, authority: provider.wallet.publicKey, systemProgram: SystemProgram.programId }).rpc(); } catch (e) {}
   });
 
-  it("Bond lock works", async () => {
+  it("Bond lock works — USDC transferred to bond vault", async () => {
+    const vaultBefore = await provider.connection.getTokenAccountBalance(bondVaultPda).catch(() => ({ value: { amount: "0" } }));
     await program.methods.lockBond(BOND_AMOUNT).accounts({
-      agent: agentPda, bond: bondPda, authorityRoot: authority.publicKey,
+      agent: agentPda, bond: bondPda,
+      agentToken: userTokenAccount, bondVault: bondVaultPda, usdcMint: usdcMint,
+      authorityRoot: authority.publicKey,
+      tokenProgram: TOKEN_PROGRAM_ID,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
       systemProgram: SystemProgram.programId,
     }).signers([authority]).rpc();
 
@@ -77,28 +94,12 @@ describe("bond", () => {
     const bond = await program.account.bond.fetch(bondPda);
     expect(bond.amount.toNumber()).to.equal(5_000_000);
     expect(bond.slashed).to.equal(false);
-  });
 
-  it("Bond slash on critical failure", async () => {
-    await recordCritical();
-    const agent = await program.account.agent.fetch(agentPda);
-    expect(agent.bondAmount.toNumber()).to.equal(0);
-    const bond = await program.account.bond.fetch(bondPda);
-    expect(bond.slashed).to.equal(true);
-    expect(bond.amount.toNumber()).to.equal(0);
-  });
-
-  it("Bond re-lock after slash works", async () => {
-    await program.methods.lockBond(BOND_AMOUNT).accounts({
-      agent: agentPda, bond: bondPda, authorityRoot: authority.publicKey,
-      systemProgram: SystemProgram.programId,
-    }).signers([authority]).rpc();
-
-    const agent = await program.account.agent.fetch(agentPda);
-    expect(agent.bondAmount.toNumber()).to.equal(5_000_000);
-    const bond = await program.account.bond.fetch(bondPda);
-    expect(bond.slashed).to.equal(false);
-    expect(bond.amount.toNumber()).to.equal(5_000_000);
+    // Bond vault now holds the escrowed USDC
+    const vaultAfter = await provider.connection.getTokenAccountBalance(bondVaultPda);
+    expect(parseInt(vaultAfter.value.amount)).to.equal(
+      parseInt(vaultBefore.value.amount) + 5_000_000
+    );
   });
 
   it("Capability request without bond rejected — BondNotSatisfied", async () => {

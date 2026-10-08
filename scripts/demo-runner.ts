@@ -171,9 +171,8 @@ describe("Demo: $5 → $50 → $500 → $5", () => {
     await airdrop(verifierOperator.publicKey, 10);
     await airdrop(provider.wallet.publicKey, 50);
 
-    // Use a unique agent ID for this demo run
-    const agentKeypair = Keypair.generate();
-    agentId = agentKeypair.publicKey.toBytes();
+    // Use a deterministic agent ID for reproducibility
+    agentId = Buffer.from('deadbeefcafebabedeadbeefcafebabedeadbeefcafebabedeadbeefcafebabe', 'hex');
     actionNonce = 5000;
   });
 

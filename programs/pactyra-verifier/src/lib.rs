@@ -1,3 +1,6 @@
+#![allow(deprecated)]
+#![allow(unexpected_cfgs)]
+
 use anchor_lang::prelude::*;
 
 declare_id!("5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN");
@@ -92,10 +95,7 @@ fn feed_id_offset(data: &[u8]) -> Result<usize> {
 /// Read the feed_id from a PriceUpdateV2 account's raw data.
 fn read_feed_id(data: &[u8]) -> Result<[u8; 32]> {
     let offset = feed_id_offset(data)?;
-    require!(
-        data.len() >= offset + 32,
-        VerifierError::InsufficientData
-    );
+    require!(data.len() >= offset + 32, VerifierError::InsufficientData);
     let mut feed_id = [0u8; 32];
     feed_id.copy_from_slice(&data[offset..offset + 32]);
     Ok(feed_id)
@@ -159,9 +159,7 @@ pub mod pactyra_verifier {
     /// 1. Account owner must be the Pyth Pull Oracle program (prevents forged accounts)
     /// 2. Feed ID must match the configuration (prevents wrong-feed attacks)
     /// 3. Price age must be within the maximum allowed (prevents stale price usage)
-    pub fn verify_freshness(
-        ctx: Context<VerifyFreshness>,
-    ) -> Result<VerificationResult> {
+    pub fn verify_freshness(ctx: Context<VerifyFreshness>) -> Result<VerificationResult> {
         let config = &ctx.accounts.config;
         let price_update = &ctx.accounts.price_update;
         let clock = Clock::get()?;
@@ -173,10 +171,7 @@ pub mod pactyra_verifier {
 
         // Check 2: Verify feed ID matches
         let feed_id = read_feed_id(&data)?;
-        require!(
-            feed_id == config.feed_id,
-            VerifierError::WrongFeed
-        );
+        require!(feed_id == config.feed_id, VerifierError::WrongFeed);
 
         // Check 3: Verify freshness
         let publish_time = read_publish_time(&data)?;
@@ -221,10 +216,7 @@ pub mod pactyra_verifier {
 
         // Verify feed ID
         let feed_id = read_feed_id(&data)?;
-        require!(
-            feed_id == config.feed_id,
-            VerifierError::WrongFeed
-        );
+        require!(feed_id == config.feed_id, VerifierError::WrongFeed);
 
         // Check freshness
         let publish_time = read_publish_time(&data)?;
@@ -232,13 +224,22 @@ pub mod pactyra_verifier {
 
         let (result, severity) = if age <= config.max_age_seconds as i64 {
             // Fresh: PASS
-            (pactyra_core::OutcomeResult::Pass, pactyra_core::Severity::None)
+            (
+                pactyra_core::OutcomeResult::Pass,
+                pactyra_core::Severity::None,
+            )
         } else if age > config.critical_threshold_seconds as i64 {
             // Very stale: critical failure
-            (pactyra_core::OutcomeResult::Fail, pactyra_core::Severity::Critical)
+            (
+                pactyra_core::OutcomeResult::Fail,
+                pactyra_core::Severity::Critical,
+            )
         } else {
             // Stale but not critical: ordinary failure
-            (pactyra_core::OutcomeResult::Fail, pactyra_core::Severity::Ordinary)
+            (
+                pactyra_core::OutcomeResult::Fail,
+                pactyra_core::Severity::Ordinary,
+            )
         };
 
         emit!(VerificationCompleted {
@@ -257,14 +258,24 @@ pub mod pactyra_verifier {
         let evidence_hash = anchor_lang::solana_program::keccak::hash(&data).to_bytes();
 
         // CPI into pactyra_core::record_outcome
+        // The verifier_program account is the pactyra_verifier program itself.
+        // In a CPI call, the calling program's ID is automatically a signer,
+        // so pactyra_core can verify that the call came through the registered
+        // verifier program — the operator cannot bypass the verifier.
         let pactyra_core_program = ctx.accounts.pactyra_core_program.to_account_info();
         let cpi_accounts = pactyra_core::cpi::accounts::RecordOutcome {
             agent: ctx.accounts.agent.to_account_info(),
             receipt: ctx.accounts.receipt.to_account_info(),
             verifier_registry: ctx.accounts.verifier_registry.to_account_info(),
             policy: ctx.accounts.policy.to_account_info(),
-            bond: Some(ctx.accounts.bond.to_account_info()),
+            execution: ctx.accounts.execution.to_account_info(),
+            bond: ctx.accounts.bond.to_account_info(),
+            bond_vault: ctx.accounts.bond_vault.to_account_info(),
+            slash_destination: ctx.accounts.slash_destination.to_account_info(),
+            verifier_program: ctx.accounts.verifier_program_self.to_account_info(),
+            usdc_mint: ctx.accounts.usdc_mint.to_account_info(),
             verifier_operator: ctx.accounts.verifier_operator.to_account_info(),
+            token_program: ctx.accounts.token_program.to_account_info(),
             system_program: ctx.accounts.system_program.to_account_info(),
         };
         let cpi_ctx = CpiContext::new(pactyra_core_program, cpi_accounts);
@@ -342,9 +353,37 @@ pub struct VerifyAndRecord<'info> {
     #[account(mut)]
     pub bond: UncheckedAccount<'info>,
 
+    /// Bond vault token account — mandatory for real USDC slash on critical failure.
+    /// CHECK: Verified in pactyra_core via seeds and token constraints.
+    #[account(mut)]
+    pub bond_vault: UncheckedAccount<'info>,
+
+    /// Slash destination token account — receives slashed USDC.
+    /// CHECK: Verified in pactyra_core via mint constraint.
+    #[account(mut)]
+    pub slash_destination: UncheckedAccount<'info>,
+
+    /// Execution PDA — required by record_outcome to verify the action was
+    /// actually executed on-chain. Must be in Executed status.
+    /// Seeds: [b"execution", agent.agent_id, action_nonce]
+    /// CHECK: Owned by pactyra-core; verified in CPI.
+    #[account(mut)]
+    pub execution: UncheckedAccount<'info>,
+
+    /// The pactyra_verifier program itself. When CPI'd into pactyra_core,
+    /// the Solana runtime marks this account as a signer, proving the call
+    /// came through the registered verifier program.
+    /// CHECK: Constrained to the verifier program ID.
+    #[account(address = crate::ID)]
+    pub verifier_program_self: UncheckedAccount<'info>,
+
+    /// USDC mint — needed for record_outcome CPI (bond_vault/slash_destination are None)
+    pub usdc_mint: Account<'info, anchor_spl::token::Mint>,
+
     #[account(mut)]
     pub verifier_operator: Signer<'info>,
 
+    pub token_program: Program<'info, anchor_spl::token::Token>,
     pub system_program: Program<'info, System>,
 }
 

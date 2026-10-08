@@ -61,6 +61,42 @@
           }
         },
         {
+          "name": "execution",
+          "docs": [
+            "Execution PDA — binds this capability assertion to the actual on-chain",
+            "action. Seeds: [b\"execution\", agent_id, action_nonce]. The action_nonce",
+            "ties the Execution to the same nonce used for replay protection."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  120,
+                  101,
+                  99,
+                  117,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "agent.agent_id",
+                "account": "Agent"
+              },
+              {
+                "kind": "arg",
+                "path": "action.action_nonce"
+              }
+            ]
+          }
+        },
+        {
           "name": "delegate_scope",
           "docs": [
             "Optional: if a delegate (session key) is signing instead of the authority root,",
@@ -501,8 +537,8 @@
     {
       "name": "lock_bond",
       "docs": [
-        "Lock a bond for an agent.",
-        "Tracks the bond amount in the Agent and Bond accounts.",
+        "Lock a bond by transferring real USDC to the protocol vault.",
+        "The bond is escrowed in a PDA-owned token account.",
         "Can be called again to re-lock after a slash."
       ],
       "discriminator": [
@@ -543,12 +579,54 @@
           }
         },
         {
+          "name": "agent_token",
+          "writable": true
+        },
+        {
+          "name": "bond_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  110,
+                  100,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "usdc_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "usdc_mint"
+        },
+        {
           "name": "authority_root",
           "writable": true,
           "signer": true,
           "relations": [
             "agent"
           ]
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
           "name": "system_program",
@@ -561,6 +639,82 @@
           "type": "u64"
         }
       ]
+    },
+    {
+      "name": "mark_executed",
+      "docs": [
+        "Mark an asserted Execution as executed.",
+        "",
+        "Called via CPI by the target program (the program stored in",
+        "`execution.target_program`) immediately after it applies the",
+        "action's on-chain effects — for example, after the reference-treasury",
+        "transfers USDC to the recipient.",
+        "",
+        "Security: The `executor` signer must equal `execution.target_program`.",
+        "In a CPI call the calling program's ID is automatically a signer, so",
+        "only the intended target program can advance an Execution from",
+        "`Asserted` to `Executed`. This is the cryptographic binding between",
+        "a capability assertion and the actual on-chain action."
+      ],
+      "discriminator": [
+        48,
+        99,
+        75,
+        230,
+        190,
+        61,
+        49,
+        134
+      ],
+      "accounts": [
+        {
+          "name": "execution",
+          "docs": [
+            "The Execution PDA to advance from Asserted -> Executed.",
+            "Seeds: [b\"execution\", agent_id, action_nonce]"
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  120,
+                  101,
+                  99,
+                  117,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "execution.agent_id",
+                "account": "Execution"
+              },
+              {
+                "kind": "account",
+                "path": "execution.action_nonce",
+                "account": "Execution"
+              }
+            ]
+          }
+        },
+        {
+          "name": "executor",
+          "docs": [
+            "The target program that is authorized to mark this Execution as executed.",
+            "In a CPI call the calling program's ID is automatically a signer, so",
+            "only the intended target program can satisfy this check. The address",
+            "constraint verifies it matches execution.target_program."
+          ],
+          "signer": true
+        }
+      ],
+      "args": []
     },
     {
       "name": "propose_operation",
@@ -606,9 +760,16 @@
         "Record a performance outcome from a registered verifier.",
         "Updates agent counters and triggers authority transitions.",
         "",
-        "Security: The verifier cannot fabricate the outcome because the",
+        "Security:",
+        "1. The verifier cannot fabricate the outcome because the",
         "evidence_hash must match the keccak256 of the Pyth price update",
-        "account data. An independent observer can re-verify the hash."
+        "account data. An independent observer can re-verify the hash.",
+        "2. The verifier cannot fabricate outcomes for actions that never",
+        "happened — the Execution PDA must exist, be in `Executed` status,",
+        "and its stored action_id must equal the action_id argument.",
+        "This cryptographically binds the receipt to an on-chain action",
+        "that was authorized via `assert_capability` and subsequently",
+        "marked executed by the target program via `mark_executed`."
       ],
       "discriminator": [
         130,
@@ -706,6 +867,43 @@
           "name": "policy"
         },
         {
+          "name": "execution",
+          "docs": [
+            "The Execution PDA that binds this receipt to an actual on-chain action.",
+            "Seeds: [b\"execution\", agent_id, action_nonce]. The action_id argument",
+            "is verified against execution.action_id in the instruction body."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  120,
+                  101,
+                  99,
+                  117,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "agent.agent_id",
+                "account": "Agent"
+              },
+              {
+                "kind": "account",
+                "path": "execution.action_nonce",
+                "account": "Execution"
+              }
+            ]
+          }
+        },
+        {
           "name": "bond",
           "writable": true,
           "optional": true,
@@ -729,9 +927,55 @@
           }
         },
         {
+          "name": "bond_vault",
+          "docs": [
+            "Optional: bond vault token account (for real USDC slash transfer)"
+          ],
+          "writable": true,
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  110,
+                  100,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "usdc_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "slash_destination",
+          "docs": [
+            "Optional: slash destination token account (receives slashed USDC)"
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "usdc_mint"
+        },
+        {
           "name": "verifier_operator",
           "writable": true,
           "signer": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
           "name": "system_program",
@@ -1298,6 +1542,19 @@
       ]
     },
     {
+      "name": "Execution",
+      "discriminator": [
+        50,
+        148,
+        225,
+        163,
+        129,
+        33,
+        229,
+        40
+      ]
+    },
+    {
       "name": "Policy",
       "discriminator": [
         222,
@@ -1505,6 +1762,45 @@
         207,
         193,
         124
+      ]
+    },
+    {
+      "name": "ExecutionAsserted",
+      "discriminator": [
+        161,
+        51,
+        131,
+        198,
+        116,
+        195,
+        236,
+        201
+      ]
+    },
+    {
+      "name": "ExecutionMarked",
+      "discriminator": [
+        107,
+        191,
+        142,
+        30,
+        67,
+        56,
+        192,
+        64
+      ]
+    },
+    {
+      "name": "ExecutionRecorded",
+      "discriminator": [
+        231,
+        133,
+        106,
+        58,
+        31,
+        56,
+        123,
+        10
       ]
     },
     {
@@ -1816,6 +2112,31 @@
       "code": 6032,
       "name": "ReceiptFromCurrentEpoch",
       "msg": "Cannot close a receipt from the current authority epoch"
+    },
+    {
+      "code": 6033,
+      "name": "ExecutionNotFound",
+      "msg": "The execution PDA was not found for this action"
+    },
+    {
+      "code": 6034,
+      "name": "ExecutionActionMismatch",
+      "msg": "The execution PDA action_id does not match the recorded action"
+    },
+    {
+      "code": 6035,
+      "name": "ExecutionNotExecuted",
+      "msg": "The execution PDA is still asserted — the action has not been marked executed"
+    },
+    {
+      "code": 6036,
+      "name": "ExecutionAlreadyRecorded",
+      "msg": "The execution PDA has already been recorded — cannot record twice"
+    },
+    {
+      "code": 6037,
+      "name": "UnauthorizedExecutionMarker",
+      "msg": "Only the target program can mark an execution as executed"
     }
   ],
   "types": [
@@ -2628,6 +2949,252 @@
           {
             "name": "bump",
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Execution",
+      "docs": [
+        "An Execution PDA — binds a capability assertion to the actual on-chain",
+        "action it authorized. Created in assert_capability, advanced to Executed",
+        "by the target program via mark_executed, and finalized to Recorded in",
+        "record_outcome."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "action_id",
+            "docs": [
+              "Deterministic hash of (agent_id, capability_id, action_type, target_program,",
+              "target_account, amount, action_nonce). Computed identically in",
+              "assert_capability and record_outcome so the receipt is bound to the",
+              "exact action that was asserted and executed."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "capability_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "action_type",
+            "type": {
+              "defined": {
+                "name": "CapabilityType"
+              }
+            }
+          },
+          {
+            "name": "target_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "target_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "action_nonce",
+            "type": "u64"
+          },
+          {
+            "name": "authority_epoch",
+            "type": "u64"
+          },
+          {
+            "name": "asserted_at",
+            "type": "i64"
+          },
+          {
+            "name": "executed_at",
+            "type": "i64"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "ExecutionStatus"
+              }
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ExecutionAsserted",
+      "docs": [
+        "Emitted when assert_capability initializes an Execution PDA with status=Asserted."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "action_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "capability_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "target_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "action_nonce",
+            "type": "u64"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ExecutionMarked",
+      "docs": [
+        "Emitted when the target program marks an Execution as Executed via mark_executed."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "action_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "executor",
+            "type": "pubkey"
+          },
+          {
+            "name": "executed_at",
+            "type": "i64"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ExecutionRecorded",
+      "docs": [
+        "Emitted when record_outcome finalizes an Execution to Recorded status."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "action_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "agent_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "receipt",
+            "type": "pubkey"
+          },
+          {
+            "name": "slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ExecutionStatus",
+      "docs": [
+        "Lifecycle status of an Execution PDA.",
+        "An Execution PDA binds an asserted capability to the actual on-chain",
+        "effects it authorized, so that record_outcome cannot be fabricated for",
+        "actions that never happened."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Asserted"
+          },
+          {
+            "name": "Executed"
+          },
+          {
+            "name": "Recorded"
           }
         ]
       }

@@ -188,7 +188,7 @@ PACTYRA does not compete with:
 
 ## Team
 
-Built by a solo founder with deep protocol design expertise. The entire protocol — 4 Solana programs, 34 instructions, 23/23 threats mitigated, 58 tests, TypeScript SDK, web UI, and demo orchestration — was implemented end-to-end.
+Built by a solo founder with deep protocol design expertise. The entire protocol — 4 Solana programs, 35 instructions, 23/23 threats mitigated, 60 tests, TypeScript SDK, web UI, and demo orchestration — was implemented end-to-end.
 
 Seeking: Solana Rust engineer (protocol), frontend engineer (UI/UX), and business development lead (enterprise partnerships) for the accelerator cohort.
 

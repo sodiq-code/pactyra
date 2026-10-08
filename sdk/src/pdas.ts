@@ -64,6 +64,26 @@ export function deriveConsumedNoncePda(
   );
 }
 
+/**
+ * Derive the Execution PDA for a given agent and action nonce.
+ * Seeds: [b"execution", agent_id, action_nonce]
+ * The Execution PDA binds a capability assertion to the actual on-chain
+ * action it authorized. Lifecycle: Asserted -> Executed -> Recorded.
+ */
+export function deriveExecutionPda(
+  agentId: Uint8Array,
+  actionNonce: BN
+): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [
+      Buffer.from("execution"),
+      Buffer.from(agentId),
+      actionNonce.toArrayLike(Buffer, "le", 8),
+    ],
+    PACTYRA_CORE_PROGRAM_ID
+  );
+}
+
 export function deriveReceiptPda(
   agentId: Uint8Array,
   actionId: Uint8Array

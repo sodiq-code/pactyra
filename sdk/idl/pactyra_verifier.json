@@ -146,9 +146,28 @@
           "writable": true
         },
         {
+          "name": "execution",
+          "docs": [
+            "Execution PDA — required by record_outcome to verify the action was",
+            "actually executed on-chain. Must be in Executed status.",
+            "Seeds: [b\"execution\", agent.agent_id, action_nonce]"
+          ],
+          "writable": true
+        },
+        {
+          "name": "usdc_mint",
+          "docs": [
+            "USDC mint — needed for record_outcome CPI (bond_vault/slash_destination are None)"
+          ]
+        },
+        {
           "name": "verifier_operator",
           "writable": true,
           "signer": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
           "name": "system_program",

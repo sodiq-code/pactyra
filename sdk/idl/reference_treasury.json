@@ -17,8 +17,15 @@
         "(insufficient authority, wrong target, expired, stale epoch, etc.),",
         "the entire transaction reverts and no USDC is moved.",
         "",
+        "After the USDC transfer succeeds, it CPIs into",
+        "pactyra_core::mark_executed to advance the Execution PDA from",
+        "Asserted -> Executed. This is the cryptographic binding that",
+        "proves the action's on-chain effects were applied — without it,",
+        "record_outcome will refuse to record an outcome for this action.",
+        "",
         "This is the architectural security boundary: the treasury cannot",
-        "move funds without a valid PACTYRA capability."
+        "move funds without a valid PACTYRA capability, and outcomes cannot",
+        "be recorded for actions the treasury never performed."
       ],
       "discriminator": [
         136,
@@ -81,6 +88,15 @@
           "name": "consumed_nonce",
           "docs": [
             "Seeds: [b\"nonce\", agent.agent_id, action_nonce]"
+          ],
+          "writable": true
+        },
+        {
+          "name": "execution",
+          "docs": [
+            "Execution PDA, initialized by the CPI into assert_capability and",
+            "advanced to Executed by the CPI into mark_executed.",
+            "Seeds: [b\"execution\", agent.agent_id, action_nonce]"
           ],
           "writable": true
         },

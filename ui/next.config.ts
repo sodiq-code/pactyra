@@ -8,7 +8,6 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   reactStrictMode: false,
-  serverExternalPackages: ["@coral-xyz/anchor", "@solana/web3.js"],
   experimental: {
     serverActions: {
       bodySizeLimit: "2mb",

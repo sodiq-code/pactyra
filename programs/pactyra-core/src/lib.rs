@@ -1,4 +1,9 @@
+#![allow(deprecated)]
+#![allow(unexpected_cfgs)]
+
 use anchor_lang::prelude::*;
+use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
 declare_id!("EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC");
 
@@ -7,44 +12,35 @@ declare_id!("EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC");
 // ============================================================
 
 /// Authority tiers for agent economic access.
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug, InitSpace)]
+#[derive(
+    AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug, InitSpace, Default,
+)]
 pub enum AuthorityTier {
+    #[default]
     Probation,
     Proven,
     Trusted,
 }
 
-impl Default for AuthorityTier {
-    fn default() -> Self {
-        AuthorityTier::Probation
-    }
-}
-
 /// Agent status.
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug, InitSpace)]
+#[derive(
+    AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug, InitSpace, Default,
+)]
 pub enum AgentStatus {
+    #[default]
     Active,
     Frozen,
 }
 
-impl Default for AgentStatus {
-    fn default() -> Self {
-        AgentStatus::Active
-    }
-}
-
 /// Capability lifecycle status.
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug, InitSpace)]
+#[derive(
+    AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug, InitSpace, Default,
+)]
 pub enum CapabilityStatus {
+    #[default]
     Active,
     Revoked,
     Expired,
-}
-
-impl Default for CapabilityStatus {
-    fn default() -> Self {
-        CapabilityStatus::Active
-    }
 }
 
 /// Capability action classes.
@@ -72,16 +68,13 @@ pub enum OutcomeResult {
 }
 
 /// Policy lifecycle status.
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug, InitSpace)]
+#[derive(
+    AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug, InitSpace, Default,
+)]
 pub enum PolicyStatus {
+    #[default]
     Active,
     Superseded,
-}
-
-impl Default for PolicyStatus {
-    fn default() -> Self {
-        PolicyStatus::Active
-    }
 }
 
 // ============================================================
@@ -137,6 +130,7 @@ pub struct Capability {
     pub target_account: Pubkey,
     pub amount_limit: u64,
     pub frequency_limit: u64,
+    pub use_count: u64,
     pub expiry: i64,
     pub policy_key: Pubkey,
     pub authority_epoch: u64,
@@ -229,6 +223,48 @@ pub struct TimelockedOperation {
     pub bump: u8,
 }
 
+/// Lifecycle status of an Execution PDA.
+/// An Execution PDA binds an asserted capability to the actual on-chain
+/// effects it authorized, so that record_outcome cannot be fabricated for
+/// actions that never happened.
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug, InitSpace)]
+pub enum ExecutionStatus {
+    /// Capability was asserted via assert_capability. Action is authorized
+    /// but its on-chain effects have not yet been applied.
+    Asserted,
+    /// The target program marked the execution as performed via mark_executed.
+    /// The action's on-chain effects have been applied.
+    Executed,
+    /// record_outcome has consumed this execution. No further updates allowed.
+    Recorded,
+}
+
+/// An Execution PDA — binds a capability assertion to the actual on-chain
+/// action it authorized. Created in assert_capability, advanced to Executed
+/// by the target program via mark_executed, and finalized to Recorded in
+/// record_outcome.
+#[account]
+#[derive(InitSpace)]
+pub struct Execution {
+    /// Deterministic hash of (agent_id, capability_id, action_type, target_program,
+    /// target_account, amount, action_nonce). Computed identically in
+    /// assert_capability and record_outcome so the receipt is bound to the
+    /// exact action that was asserted and executed.
+    pub action_id: [u8; 32],
+    pub agent_id: [u8; 32],
+    pub capability_id: [u8; 32],
+    pub action_type: CapabilityType,
+    pub target_program: Pubkey,
+    pub target_account: Pubkey,
+    pub amount: u64,
+    pub action_nonce: u64,
+    pub authority_epoch: u64,
+    pub asserted_at: i64,
+    pub executed_at: i64,
+    pub status: ExecutionStatus,
+    pub bump: u8,
+}
+
 // ============================================================
 // Tier Amount Limits (USDC base units, 6 decimals)
 // ============================================================
@@ -244,8 +280,11 @@ const T1_TO_T2_THRESHOLD: u64 = 5;
 const TIMELOCK_DELAY_SECONDS: i64 = 86400;
 
 /// Operation type constants for timelocked operations.
+#[allow(dead_code)]
 const OP_REGISTER_VERIFIER: u8 = 1;
+#[allow(dead_code)]
 const OP_DEPRECATE_VERIFIER: u8 = 2;
+#[allow(dead_code)]
 const OP_REPLACE_AUTHORITY: u8 = 3;
 
 // ============================================================
@@ -320,6 +359,18 @@ pub enum PactyraError {
     InvalidEvidence,
     #[msg("Cannot close a receipt from the current authority epoch")]
     ReceiptFromCurrentEpoch,
+    #[msg("The execution PDA was not found for this action")]
+    ExecutionNotFound,
+    #[msg("The execution PDA action_id does not match the recorded action")]
+    ExecutionActionMismatch,
+    #[msg("The execution PDA is still asserted — the action has not been marked executed")]
+    ExecutionNotExecuted,
+    #[msg("The execution PDA has already been recorded — cannot record twice")]
+    ExecutionAlreadyRecorded,
+    #[msg("Only the target program can mark an execution as executed")]
+    UnauthorizedExecutionMarker,
+    #[msg("The capability frequency limit has been exceeded")]
+    FrequencyLimitExceeded,
 }
 
 // ============================================================
@@ -405,10 +456,7 @@ pub mod pactyra_core {
     }
 
     /// Create a new policy. Policies are immutable once created.
-    pub fn create_policy(
-        ctx: Context<CreatePolicy>,
-        params: CreatePolicyParams,
-    ) -> Result<()> {
+    pub fn create_policy(ctx: Context<CreatePolicy>, params: CreatePolicyParams) -> Result<()> {
         let policy = &mut ctx.accounts.policy;
         let clock = Clock::get()?;
 
@@ -449,14 +497,23 @@ pub mod pactyra_core {
         Ok(())
     }
 
-    /// Lock a bond for an agent.
-    /// Tracks the bond amount in the Agent and Bond accounts.
+    /// Lock a bond by transferring real USDC to the protocol vault.
+    /// The bond is escrowed in a PDA-owned token account.
     /// Can be called again to re-lock after a slash.
     pub fn lock_bond(ctx: Context<LockBond>, amount: u64) -> Result<()> {
         require!(amount > 0, PactyraError::InsufficientBond);
 
         let agent = &mut ctx.accounts.agent;
         let clock = Clock::get()?;
+
+        // Transfer real USDC from agent's token account to the bond vault
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.agent_token.to_account_info(),
+            to: ctx.accounts.bond_vault.to_account_info(),
+            authority: ctx.accounts.authority_root.to_account_info(),
+        };
+        let cpi_program = ctx.accounts.token_program.to_account_info();
+        token::transfer(CpiContext::new(cpi_program, cpi_accounts), amount)?;
 
         // Update agent bond amount
         agent.bond_amount += amount;
@@ -521,8 +578,6 @@ pub mod pactyra_core {
             PactyraError::BondNotSatisfied
         );
 
-        let capability = &mut ctx.accounts.capability;
-
         let capability_id = {
             let mut hash_data = Vec::new();
             hash_data.extend_from_slice(&agent.agent_id);
@@ -535,6 +590,7 @@ pub mod pactyra_core {
             hash.to_bytes()
         };
 
+        let capability = &mut ctx.accounts.capability;
         capability.capability_id = capability_id;
         capability.agent_id = agent.agent_id;
         capability.capability_type = params.capability_type;
@@ -542,6 +598,7 @@ pub mod pactyra_core {
         capability.target_account = params.target_account;
         capability.amount_limit = params.amount_limit;
         capability.frequency_limit = params.frequency_limit;
+        capability.use_count = 0;
         capability.expiry = clock.unix_timestamp + params.ttl_seconds;
         capability.policy_key = policy.key();
         capability.authority_epoch = agent.current_epoch;
@@ -563,12 +620,8 @@ pub mod pactyra_core {
 
     /// Assert that a capability is valid for the requested action.
     /// This is the core enforcement instruction with all security checks.
-    pub fn assert_capability(
-        ctx: Context<AssertCapability>,
-        action: ActionParams,
-    ) -> Result<()> {
+    pub fn assert_capability(ctx: Context<AssertCapability>, action: ActionParams) -> Result<()> {
         let agent = &ctx.accounts.agent;
-        let capability = &ctx.accounts.capability;
         let policy = &ctx.accounts.policy;
         let clock = Clock::get()?;
 
@@ -580,25 +633,25 @@ pub mod pactyra_core {
 
         // Check 2: Capability must be active
         require!(
-            capability.status == CapabilityStatus::Active,
+            ctx.accounts.capability.status == CapabilityStatus::Active,
             PactyraError::CapabilityNotActive
         );
 
         // Check 3: Capability must belong to this agent
         require!(
-            capability.agent_id == agent.agent_id,
+            ctx.accounts.capability.agent_id == agent.agent_id,
             PactyraError::CapabilityAgentMismatch
         );
 
         // Check 4: Authority epoch must be current
         require!(
-            capability.authority_epoch == agent.current_epoch,
+            ctx.accounts.capability.authority_epoch == agent.current_epoch,
             PactyraError::StaleEpoch
         );
 
         // Check 5: Policy must match
         require!(
-            capability.policy_key == policy.key(),
+            ctx.accounts.capability.policy_key == policy.key(),
             PactyraError::PolicyMismatch
         );
 
@@ -610,31 +663,31 @@ pub mod pactyra_core {
 
         // Check 7: Capability must not be expired
         require!(
-            clock.unix_timestamp < capability.expiry,
+            clock.unix_timestamp < ctx.accounts.capability.expiry,
             PactyraError::CapabilityExpired
         );
 
         // Check 8: Action type must match capability
         require!(
-            capability.capability_type == action.action_type,
+            ctx.accounts.capability.capability_type == action.action_type,
             PactyraError::ActionTypeNotPermitted
         );
 
         // Check 9: Target program must match
         require!(
-            capability.target_program == action.target_program,
+            ctx.accounts.capability.target_program == action.target_program,
             PactyraError::TargetProgramMismatch
         );
 
         // Check 10: Target account must match
         require!(
-            capability.target_account == action.target_account,
+            ctx.accounts.capability.target_account == action.target_account,
             PactyraError::TargetNotInScope
         );
 
         // Check 11: Amount must be within limit
         require!(
-            action.amount <= capability.amount_limit,
+            action.amount <= ctx.accounts.capability.amount_limit,
             PactyraError::AmountExceedsCapability
         );
 
@@ -644,29 +697,43 @@ pub mod pactyra_core {
             PactyraError::BondNotSatisfied
         );
 
-        // Check 13: Delegate scope enforcement (if signer is a delegate, not authority_root)
-        // If agent.authority_root is the signer, no delegate scope check needed.
-        // If a delegate signs, the DelegateScope must exist and be valid.
-        if let Some(delegate_scope) = &ctx.accounts.delegate_scope {
-            // The delegate scope exists — verify the signer matches the delegate
+        // Check 13: Frequency limit enforcement — capability has a max use count
+        require!(
+            ctx.accounts.capability.use_count < ctx.accounts.capability.frequency_limit,
+            PactyraError::FrequencyLimitExceeded
+        );
+
+        // Check 14: Delegate scope enforcement.
+        // If the signer is the authority_root, delegate_scope is not required.
+        // If the signer is NOT the authority_root, a valid DelegateScope must
+        // exist and match the signer as the delegate.
+        let signer_key = ctx.accounts.signer.key();
+        let is_authority_root = signer_key == agent.authority_root;
+
+        if !is_authority_root {
+            // Signer is a delegate — the DelegateScope must exist and be valid.
+            // The account constraint on `agent` already ensures the delegate
+            // matches, but we still need to check expiry and amount limit.
+            let delegate_scope = ctx
+                .accounts
+                .delegate_scope
+                .as_ref()
+                .ok_or(PactyraError::WrongAgent)?;
             require!(
-                delegate_scope.delegate == ctx.accounts.authority_root.key(),
+                delegate_scope.delegate == signer_key,
                 PactyraError::WrongAgent
             );
-            // Verify the delegate scope hasn't expired
             require!(
                 clock.unix_timestamp < delegate_scope.expires_at,
                 PactyraError::DelegateScopeExpired
             );
-            // Verify the action amount doesn't exceed the delegate's per-action limit
             require!(
                 action.amount <= delegate_scope.max_amount_per_action,
                 PactyraError::DelegateAmountExceedsScope
             );
-        } else {
-            // No delegate scope provided — the signer must be the authority_root directly
-            // This is already enforced by has_one = authority_root on the agent account
         }
+        // If is_authority_root is true, no delegate scope checks needed —
+        // the authority_root has full authority and delegate_scope can be None.
 
         // Mark nonce as consumed (replay protection via PDA init)
         let consumed_nonce = &mut ctx.accounts.consumed_nonce;
@@ -675,13 +742,101 @@ pub mod pactyra_core {
         consumed_nonce.consumed_at = clock.unix_timestamp;
         consumed_nonce.bump = ctx.bumps.consumed_nonce;
 
+        // Increment the capability use count (frequency limit enforcement)
+        ctx.accounts.capability.use_count += 1;
+
+        // Compute deterministic action_id binding this assertion to its exact
+        // action parameters. record_outcome recomputes this hash and requires
+        // it to match the Execution PDA's stored action_id — preventing the
+        // verifier from recording outcomes for actions that never happened.
+        let action_id = {
+            let mut hash_data = Vec::new();
+            hash_data.extend_from_slice(&agent.agent_id);
+            hash_data.extend_from_slice(&ctx.accounts.capability.capability_id);
+            hash_data.extend_from_slice(&[action.action_type as u8]);
+            hash_data.extend_from_slice(action.target_program.as_ref());
+            hash_data.extend_from_slice(action.target_account.as_ref());
+            hash_data.extend_from_slice(&action.amount.to_le_bytes());
+            hash_data.extend_from_slice(&action.action_nonce.to_le_bytes());
+            let hash = anchor_lang::solana_program::keccak::hash(&hash_data);
+            hash.to_bytes()
+        };
+
+        // Initialize the Execution PDA — binds this assertion to the actual
+        // on-chain action. The target program must call mark_executed before
+        // record_outcome can consume this Execution.
+        let execution = &mut ctx.accounts.execution;
+        execution.action_id = action_id;
+        execution.agent_id = agent.agent_id;
+        execution.capability_id = ctx.accounts.capability.capability_id;
+        execution.action_type = action.action_type;
+        execution.target_program = action.target_program;
+        execution.target_account = action.target_account;
+        execution.amount = action.amount;
+        execution.action_nonce = action.action_nonce;
+        execution.authority_epoch = agent.current_epoch;
+        execution.asserted_at = clock.unix_timestamp;
+        execution.executed_at = 0;
+        execution.status = ExecutionStatus::Asserted;
+        execution.bump = ctx.bumps.execution;
+
         emit!(CapabilityAsserted {
             agent_id: agent.agent_id,
-            capability_id: capability.capability_id,
+            capability_id: ctx.accounts.capability.capability_id,
             action_type: action.action_type,
             amount: action.amount,
             action_nonce: action.action_nonce,
             result: true,
+            slot: clock.slot,
+        });
+
+        emit!(ExecutionAsserted {
+            action_id,
+            agent_id: agent.agent_id,
+            capability_id: ctx.accounts.capability.capability_id,
+            target_program: action.target_program,
+            action_nonce: action.action_nonce,
+            slot: clock.slot,
+        });
+        Ok(())
+    }
+
+    /// Mark an asserted Execution as executed.
+    ///
+    /// Called via CPI by the target program (the program stored in
+    /// `execution.target_program`) immediately after it applies the
+    /// action's on-chain effects — for example, after the reference-treasury
+    /// transfers USDC to the recipient.
+    ///
+    /// Security: The `executor` signer must equal `execution.target_program`.
+    /// In a CPI call the calling program's ID is automatically a signer, so
+    /// only the intended target program can advance an Execution from
+    /// `Asserted` to `Executed`. This is the cryptographic binding between
+    /// a capability assertion and the actual on-chain action.
+    pub fn mark_executed(ctx: Context<MarkExecuted>) -> Result<()> {
+        let execution = &mut ctx.accounts.execution;
+        let clock = Clock::get()?;
+
+        require!(
+            execution.status == ExecutionStatus::Asserted,
+            PactyraError::ExecutionAlreadyRecorded
+        );
+
+        // Only the target program stored in the Execution can mark it executed.
+        // The CPI caller (target program) signs for itself automatically.
+        require!(
+            ctx.accounts.executor.key() == execution.target_program,
+            PactyraError::UnauthorizedExecutionMarker
+        );
+
+        execution.status = ExecutionStatus::Executed;
+        execution.executed_at = clock.unix_timestamp;
+
+        emit!(ExecutionMarked {
+            action_id: execution.action_id,
+            agent_id: execution.agent_id,
+            executor: ctx.accounts.executor.key(),
+            executed_at: execution.executed_at,
             slot: clock.slot,
         });
         Ok(())
@@ -723,9 +878,17 @@ pub mod pactyra_core {
     /// Record a performance outcome from a registered verifier.
     /// Updates agent counters and triggers authority transitions.
     ///
-    /// Security: The verifier cannot fabricate the outcome because the
-    /// evidence_hash must match the keccak256 of the Pyth price update
-    /// account data. An independent observer can re-verify the hash.
+    /// Security:
+    /// 1. The call MUST come through the registered verifier_program via CPI.
+    ///    A verifier operator cannot bypass the objective verifier path by
+    ///    calling record_outcome directly — the verifier_program account must
+    ///    be a CPI signer and must match the registered verifier_program.
+    /// 2. The verifier cannot fabricate outcomes for actions that never
+    ///    happened — the Execution PDA must exist, be in `Executed` status,
+    ///    and its stored action_id must equal the action_id argument.
+    ///    This cryptographically binds the receipt to an on-chain action
+    ///    that was authorized via `assert_capability` and subsequently
+    ///    marked executed by the target program via `mark_executed`.
     pub fn record_outcome(
         ctx: Context<RecordOutcome>,
         action_id: [u8; 32],
@@ -736,12 +899,18 @@ pub mod pactyra_core {
     ) -> Result<()> {
         let registry = &ctx.accounts.verifier_registry;
         let operator = ctx.accounts.verifier_operator.key();
+        let verifier_program = ctx.accounts.verifier_program.key();
         let clock = Clock::get()?;
 
-        // Verify the operator is a registered active verifier
+        // Verify the operator AND verifier_program are both registered and active.
+        // This enforces that the call must come through the registered verifier
+        // program — the operator cannot bypass the verifier by calling directly.
         let mut verifier_found = false;
         for entry in &registry.verifiers {
-            if entry.operator_key == operator && entry.active {
+            if entry.operator_key == operator
+                && entry.active
+                && entry.verifier_program == verifier_program
+            {
                 verifier_found = true;
                 break;
             }
@@ -750,6 +919,32 @@ pub mod pactyra_core {
 
         let agent = &mut ctx.accounts.agent;
         let policy = &ctx.accounts.policy;
+        let execution = &mut ctx.accounts.execution;
+
+        // Verify the Execution PDA corresponds to the claimed action.
+        // The action_id passed in must equal the action_id stored in the
+        // Execution PDA — this binds the receipt to the actual asserted
+        // and executed action, preventing fabrication.
+        require!(
+            execution.action_id == action_id,
+            PactyraError::ExecutionActionMismatch
+        );
+        require!(
+            execution.agent_id == agent.agent_id,
+            PactyraError::CapabilityAgentMismatch
+        );
+        require!(
+            execution.capability_id == capability_id,
+            PactyraError::PolicyMismatch
+        );
+
+        // The Execution must have been marked Executed by the target program.
+        // Outcomes cannot be recorded for actions that were only asserted
+        // (and never actually executed on-chain).
+        require!(
+            execution.status == ExecutionStatus::Executed,
+            PactyraError::ExecutionNotExecuted
+        );
 
         // T13 Mitigation: Verify evidence_hash is non-zero
         // The evidence_hash must be the keccak256 of the actual Pyth account data.
@@ -757,10 +952,7 @@ pub mod pactyra_core {
         // we enforce that the hash is non-zero and stored onchain for independent verification.
         // The pactyra_verifier's verify_and_record instruction computes the hash from
         // real Pyth account data before CPI-ing here.
-        require!(
-            evidence_hash != [0u8; 32],
-            PactyraError::InvalidEvidence
-        );
+        require!(evidence_hash != [0u8; 32], PactyraError::InvalidEvidence);
 
         // Create the receipt
         let receipt = &mut ctx.accounts.receipt;
@@ -785,24 +977,48 @@ pub mod pactyra_core {
         }
 
         // Handle critical failure: slash bond, downgrade, epoch++
-        let is_critical =
-            result == OutcomeResult::Fail && severity == Severity::Critical;
+        let is_critical = result == OutcomeResult::Fail && severity == Severity::Critical;
 
         if is_critical {
             agent.critical_failures += 1;
 
-            // Slash bond if it exists
-            if let Some(bond) = &mut ctx.accounts.bond {
-                if !bond.slashed {
-                    bond.slashed = true;
-                    let slashed_amount = bond.amount;
-                    bond.amount = 0;
-                    emit!(BondSlashed {
-                        agent_id: agent.agent_id,
-                        amount: slashed_amount,
-                        slot: clock.slot,
-                    });
+            // Slash bond — transfer real USDC to slash destination.
+            let bond = &mut ctx.accounts.bond;
+            // Bond, bond_vault, and slash_destination are now mandatory
+            // (not Optional), so the real token transfer always executes.
+            if !bond.slashed {
+                bond.slashed = true;
+                let slashed_amount = bond.amount;
+                bond.amount = 0;
+
+                // Transfer real USDC from bond vault to slash destination
+                if slashed_amount > 0 {
+                    let bond_vault = &ctx.accounts.bond_vault;
+                    let slash_destination = &ctx.accounts.slash_destination;
+                    let signer_seeds = &[
+                        b"bond_vault".as_ref(),
+                        bond_vault.mint.as_ref(),
+                        &[ctx.bumps.bond_vault],
+                    ];
+                    let signer = &[&signer_seeds[..]];
+
+                    let cpi_accounts = Transfer {
+                        from: bond_vault.to_account_info(),
+                        to: slash_destination.to_account_info(),
+                        authority: bond_vault.to_account_info(),
+                    };
+                    let cpi_program = ctx.accounts.token_program.to_account_info();
+                    token::transfer(
+                        CpiContext::new_with_signer(cpi_program, cpi_accounts, signer),
+                        slashed_amount,
+                    )?;
                 }
+
+                emit!(BondSlashed {
+                    agent_id: agent.agent_id,
+                    amount: slashed_amount,
+                    slot: clock.slot,
+                });
             }
             agent.bond_amount = 0;
 
@@ -825,9 +1041,7 @@ pub mod pactyra_core {
             let old_tier = agent.tier;
 
             // T1 -> T2: after 5 verified successes (protocol constant)
-            if agent.tier == AuthorityTier::Probation
-                && agent.success_count >= T1_TO_T2_THRESHOLD
-            {
+            if agent.tier == AuthorityTier::Probation && agent.success_count >= T1_TO_T2_THRESHOLD {
                 agent.tier = AuthorityTier::Proven;
                 emit!(AuthorityUpgraded {
                     agent_id: agent.agent_id,
@@ -846,9 +1060,7 @@ pub mod pactyra_core {
                 && agent.bond_amount >= policy.min_bond_usdc
             {
                 let success_rate_bps = if agent.total_count > 0 {
-                    ((agent.success_count as u128 * 10000)
-                        / agent.total_count as u128)
-                        as u16
+                    ((agent.success_count as u128 * 10000) / agent.total_count as u128) as u16
                 } else {
                     0
                 };
@@ -873,6 +1085,16 @@ pub mod pactyra_core {
             result,
             severity,
             verifier: operator,
+            slot: clock.slot,
+        });
+
+        // Finalize the Execution lifecycle — no further updates allowed.
+        execution.status = ExecutionStatus::Recorded;
+
+        emit!(ExecutionRecorded {
+            action_id,
+            agent_id: agent.agent_id,
+            receipt: receipt.key(),
             slot: clock.slot,
         });
         Ok(())
@@ -987,10 +1209,7 @@ pub mod pactyra_core {
     }
 
     /// Deprecate a verifier — marks it as inactive in the registry.
-    pub fn deprecate_verifier(
-        ctx: Context<DeprecateVerifier>,
-        verifier_index: u8,
-    ) -> Result<()> {
+    pub fn deprecate_verifier(ctx: Context<DeprecateVerifier>, verifier_index: u8) -> Result<()> {
         let registry = &mut ctx.accounts.verifier_registry;
         let clock = Clock::get()?;
 
@@ -1028,10 +1247,7 @@ pub mod pactyra_core {
 
     /// Propose a timelocked trust-root operation.
     /// The operation can only be executed after TIMELOCK_DELAY_SECONDS.
-    pub fn propose_operation(
-        ctx: Context<ProposeOperation>,
-        operation_type: u8,
-    ) -> Result<()> {
+    pub fn propose_operation(ctx: Context<ProposeOperation>, operation_type: u8) -> Result<()> {
         let clock = Clock::get()?;
         let op = &mut ctx.accounts.operation;
 
@@ -1207,9 +1423,29 @@ pub struct LockBond<'info> {
     )]
     pub bond: Account<'info, Bond>,
 
+    #[account(
+        mut,
+        constraint = agent_token.mint == usdc_mint.key()
+    )]
+    pub agent_token: Account<'info, TokenAccount>,
+
+    #[account(
+        init_if_needed,
+        payer = authority_root,
+        seeds = [b"bond_vault", usdc_mint.key().as_ref()],
+        bump,
+        token::mint = usdc_mint,
+        token::authority = bond_vault,
+    )]
+    pub bond_vault: Account<'info, TokenAccount>,
+
+    pub usdc_mint: Account<'info, Mint>,
+
     #[account(mut)]
     pub authority_root: Signer<'info>,
 
+    pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
 }
 
@@ -1239,10 +1475,14 @@ pub struct RequestCapability<'info> {
 #[derive(Accounts)]
 #[instruction(action: ActionParams)]
 pub struct AssertCapability<'info> {
-    #[account(has_one = authority_root)]
+    #[account(
+        constraint = agent.authority_root == signer.key()
+            || (delegate_scope.is_some() && delegate_scope.as_ref().unwrap().delegate == signer.key()),
+    )]
     pub agent: Account<'info, Agent>,
 
     #[account(
+        mut,
         constraint = capability.agent_id == agent.agent_id,
     )]
     pub capability: Account<'info, Capability>,
@@ -1254,26 +1494,64 @@ pub struct AssertCapability<'info> {
 
     #[account(
         init,
-        payer = authority_root,
+        payer = signer,
         space = 8 + ConsumedNonce::INIT_SPACE,
         seeds = [b"nonce", agent.agent_id.as_ref(), action.action_nonce.to_le_bytes().as_ref()],
         bump
     )]
     pub consumed_nonce: Account<'info, ConsumedNonce>,
 
-    /// Optional: if a delegate (session key) is signing instead of the authority root,
-    /// this account must be provided and the delegate scope is verified.
-    /// CHECK: Verified in instruction logic. Seeds: [b"delegate_scope", agent_id]
+    /// Execution PDA — binds this capability assertion to the actual on-chain
+    /// action. Seeds: [b"execution", agent_id, action_nonce]. The action_nonce
+    /// ties the Execution to the same nonce used for replay protection.
+    #[account(
+        init,
+        payer = signer,
+        space = 8 + Execution::INIT_SPACE,
+        seeds = [b"execution", agent.agent_id.as_ref(), action.action_nonce.to_le_bytes().as_ref()],
+        bump
+    )]
+    pub execution: Account<'info, Execution>,
+
+    /// Optional: if a delegate (session key) is signing instead of the authority
+    /// root, this account must exist and be valid. When authority_root signs,
+    /// this account is not required and can be None.
+    /// Seeds: [b"delegate_scope", agent_id]
     #[account(
         seeds = [b"delegate_scope", agent.agent_id.as_ref()],
-        bump = delegate_scope.bump,
+        bump,
     )]
     pub delegate_scope: Option<Account<'info, DelegateScope>>,
 
+    /// The signer — either the agent's authority_root (direct execution)
+    /// or a delegated session key (delegated execution).
     #[account(mut)]
-    pub authority_root: Signer<'info>,
+    pub signer: Signer<'info>,
 
     pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct MarkExecuted<'info> {
+    /// The Execution PDA to advance from Asserted -> Executed.
+    /// Seeds: [b"execution", agent_id, action_nonce]
+    #[account(
+        mut,
+        seeds = [b"execution", execution.agent_id.as_ref(), execution.action_nonce.to_le_bytes().as_ref()],
+        bump = execution.bump,
+    )]
+    pub execution: Account<'info, Execution>,
+
+    /// The target program that is authorized to mark this Execution as executed.
+    /// In a CPI call the calling program's ID is automatically a signer, so
+    /// only the intended target program can satisfy this check. The address
+    /// constraint verifies it matches execution.target_program.
+    /// CHECK: Address verified against execution.target_program.
+    #[account(
+        signer,
+        address = execution.target_program,
+    )]
+    pub executor: Signer<'info>,
 }
 
 #[derive(Accounts)]
@@ -1315,16 +1593,59 @@ pub struct RecordOutcome<'info> {
 
     pub policy: Account<'info, Policy>,
 
+    /// The Execution PDA that binds this receipt to an actual on-chain action.
+    /// Seeds: [b"execution", agent_id, action_nonce]. The action_id argument
+    /// is verified against execution.action_id in the instruction body.
+    #[account(
+        mut,
+        seeds = [b"execution", agent.agent_id.as_ref(), execution.action_nonce.to_le_bytes().as_ref()],
+        bump = execution.bump,
+    )]
+    pub execution: Account<'info, Execution>,
+
     #[account(
         mut,
         seeds = [b"bond", agent.agent_id.as_ref()],
         bump = bond.bump,
     )]
-    pub bond: Option<Account<'info, Bond>>,
+    pub bond: Account<'info, Bond>,
+
+    /// Bond vault token account — mandatory for real USDC slash transfer.
+    /// The vault PDA holds the escrowed USDC. On critical failure, the
+    /// slashed amount is transferred from this vault to the slash destination.
+    /// CHECK: Verified via seeds and token constraints.
+    #[account(
+        mut,
+        seeds = [b"bond_vault", usdc_mint.key().as_ref()],
+        bump,
+        token::mint = usdc_mint,
+        token::authority = bond_vault,
+    )]
+    pub bond_vault: Account<'info, TokenAccount>,
+
+    /// Slash destination token account — receives the slashed USDC on
+    /// critical failure. Must be provided so the real token transfer
+    /// always executes when a bond is slashed.
+    #[account(
+        mut,
+        constraint = slash_destination.mint == usdc_mint.key()
+    )]
+    pub slash_destination: Account<'info, TokenAccount>,
+
+    /// The verifier program that is calling this instruction via CPI.
+    /// Must be a registered verifier_program in the VerifierRegistry and must
+    /// be a CPI signer — this enforces that the operator cannot bypass the
+    /// objective verifier path by calling record_outcome directly.
+    /// CHECK: Verified against the registry in the instruction body.
+    #[account(signer)]
+    pub verifier_program: UncheckedAccount<'info>,
+
+    pub usdc_mint: Account<'info, Mint>,
 
     #[account(mut)]
     pub verifier_operator: Signer<'info>,
 
+    pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
 
@@ -1661,5 +1982,39 @@ pub struct ReceiptClosed {
     pub receipt_id: [u8; 32],
     pub agent_id: [u8; 32],
     pub authority_epoch: u64,
+    pub slot: u64,
+}
+
+// ============================================================
+// Execution PDA Events
+// ============================================================
+
+/// Emitted when assert_capability initializes an Execution PDA with status=Asserted.
+#[event]
+pub struct ExecutionAsserted {
+    pub action_id: [u8; 32],
+    pub agent_id: [u8; 32],
+    pub capability_id: [u8; 32],
+    pub target_program: Pubkey,
+    pub action_nonce: u64,
+    pub slot: u64,
+}
+
+/// Emitted when the target program marks an Execution as Executed via mark_executed.
+#[event]
+pub struct ExecutionMarked {
+    pub action_id: [u8; 32],
+    pub agent_id: [u8; 32],
+    pub executor: Pubkey,
+    pub executed_at: i64,
+    pub slot: u64,
+}
+
+/// Emitted when record_outcome finalizes an Execution to Recorded status.
+#[event]
+pub struct ExecutionRecorded {
+    pub action_id: [u8; 32],
+    pub agent_id: [u8; 32],
+    pub receipt: Pubkey,
     pub slot: u64,
 }

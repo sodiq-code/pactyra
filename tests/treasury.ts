@@ -16,6 +16,7 @@ import {
   airdrop, makeId, TIER_1_MAX, BOND_AMOUNT,
   TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID,
   createMint, createTokenAccount, mintToAccount, getTokenBalance,
+  deriveExecutionPda, deriveBondVaultPda,
 } from "./helpers";
 
 describe("treasury", () => {
@@ -28,6 +29,7 @@ describe("treasury", () => {
   let agentId: Uint8Array;
   let agentPda: PublicKey;
   let bondPda: PublicKey;
+  let bondVaultPda: PublicKey;
   let policyPda: PublicKey;
   let verifierRegistryPda: PublicKey;
   let treasuryPda: PublicKey;
@@ -53,6 +55,7 @@ describe("treasury", () => {
     [bondPda] = PublicKey.findProgramAddressSync([Buffer.from("bond"), Buffer.from(agentId)], coreProgram.programId);
 
     usdcMint = await createMint(provider.connection, provider.wallet.payer, provider.wallet.publicKey, 6);
+    [bondVaultPda] = deriveBondVaultPda(usdcMint, coreProgram.programId);
     [treasuryPda] = PublicKey.findProgramAddressSync([Buffer.from("treasury"), authority.publicKey.toBuffer()], treasuryProgram.programId);
     [vault] = PublicKey.findProgramAddressSync([Buffer.from("vault"), treasuryPda.toBuffer()], treasuryProgram.programId);
     userTokenAccount = await createTokenAccount(provider.connection, provider.wallet.payer, usdcMint, authority.publicKey);
@@ -65,7 +68,7 @@ describe("treasury", () => {
     try { await coreProgram.methods.registerVerifier(Array.from(verifierId), coreProgram.programId, provider.wallet.publicKey).accounts({ verifierRegistry: verifierRegistryPda, authority: provider.wallet.publicKey, systemProgram: SystemProgram.programId }).rpc(); } catch (e) {}
     try { await coreProgram.methods.registerAgent(Array.from(agentId)).accounts({ agent: agentPda, authority: authority.publicKey, systemProgram: SystemProgram.programId }).signers([authority]).rpc(); } catch (e) {}
     try { await coreProgram.methods.createPolicy({ versionTag: "PAY-V1", capabilityType: { payService: {} }, minSuccesses: new BN(20), minSuccessRateBps: 9500, criticalFailureLimit: new BN(0), minBondUsdc: new BN(5_000_000), maxAmountUsdc: new BN(500_000_000) }).accounts({ policy: policyPda, authority: provider.wallet.publicKey, systemProgram: SystemProgram.programId }).rpc(); } catch (e) {}
-    try { await coreProgram.methods.lockBond(BOND_AMOUNT).accounts({ agent: agentPda, bond: bondPda, authorityRoot: authority.publicKey, systemProgram: SystemProgram.programId }).signers([authority]).rpc(); } catch (e) {}
+    try { await coreProgram.methods.lockBond(BOND_AMOUNT).accounts({ agent: agentPda, bond: bondPda, agentToken: userTokenAccount, bondVault: bondVaultPda, usdcMint: usdcMint, authorityRoot: authority.publicKey, tokenProgram: TOKEN_PROGRAM_ID, associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID, systemProgram: SystemProgram.programId }).signers([authority]).rpc(); } catch (e) {}
   });
 
   it("Initializes treasury and deposits USDC", async () => {
@@ -105,12 +108,13 @@ describe("treasury", () => {
     const [consumedNoncePda] = PublicKey.findProgramAddressSync(
       [Buffer.from("nonce"), Buffer.from(agentId), nonce.toArrayLike(Buffer, "le", 8)], coreProgram.programId
     );
+    const [executionPda] = deriveExecutionPda(agentId, nonce, coreProgram.programId);
     const vaultBefore = await getTokenBalance(provider.connection, vault);
     const recipBefore = await getTokenBalance(provider.connection, recipientTokenAccount);
 
     await treasuryProgram.methods.authorizedTransfer(TIER_1_MAX, nonce).accounts({
       treasury: treasuryPda, agent: agentPda, capability: capabilityPda, policy: policyPda,
-      consumedNonce: consumedNoncePda, pactyraCoreProgram: coreProgram.programId,
+      consumedNonce: consumedNoncePda, execution: executionPda, pactyraCoreProgram: coreProgram.programId,
       vault, recipientToken: recipientTokenAccount, authorityRoot: authority.publicKey,
       tokenProgram: TOKEN_PROGRAM_ID, systemProgram: SystemProgram.programId,
     }).signers([authority]).rpc();
@@ -126,11 +130,12 @@ describe("treasury", () => {
     const [consumedNoncePda] = PublicKey.findProgramAddressSync(
       [Buffer.from("nonce"), Buffer.from(agentId), nonce.toArrayLike(Buffer, "le", 8)], coreProgram.programId
     );
+    const [executionPda] = deriveExecutionPda(agentId, nonce, coreProgram.programId);
     const vaultBefore = await getTokenBalance(provider.connection, vault);
     try {
       await treasuryProgram.methods.authorizedTransfer(new BN(6_000_000), nonce).accounts({
         treasury: treasuryPda, agent: agentPda, capability: capabilityPda, policy: policyPda,
-        consumedNonce: consumedNoncePda, pactyraCoreProgram: coreProgram.programId,
+        consumedNonce: consumedNoncePda, execution: executionPda, pactyraCoreProgram: coreProgram.programId,
         vault, recipientToken: recipientTokenAccount, authorityRoot: authority.publicKey,
         tokenProgram: TOKEN_PROGRAM_ID, systemProgram: SystemProgram.programId,
       }).signers([authority]).rpc();
@@ -148,11 +153,12 @@ describe("treasury", () => {
     const [consumedNoncePda] = PublicKey.findProgramAddressSync(
       [Buffer.from("nonce"), Buffer.from(agentId), nonce.toArrayLike(Buffer, "le", 8)], coreProgram.programId
     );
+    const [executionPda] = deriveExecutionPda(agentId, nonce, coreProgram.programId);
     const vaultBefore = await getTokenBalance(provider.connection, vault);
     try {
       await treasuryProgram.methods.authorizedTransfer(new BN(1_000_000), nonce).accounts({
         treasury: treasuryPda, agent: agentPda, capability: capabilityPda, policy: policyPda,
-        consumedNonce: consumedNoncePda, pactyraCoreProgram: coreProgram.programId,
+        consumedNonce: consumedNoncePda, execution: executionPda, pactyraCoreProgram: coreProgram.programId,
         vault, recipientToken: wrongRecipient, authorityRoot: authority.publicKey,
         tokenProgram: TOKEN_PROGRAM_ID, systemProgram: SystemProgram.programId,
       }).signers([authority]).rpc();

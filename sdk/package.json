@@ -14,7 +14,8 @@
     "@coral-xyz/anchor": "^0.31.0",
     "@solana/web3.js": "1.95.4",
     "@solana/spl-token": "0.4.8",
-    "bn.js": "^5.2.1"
+    "bn.js": "^5.2.1",
+    "js-sha3": "^0.9.3"
   },
   "devDependencies": {
     "typescript": "^5.5.0",
