@@ -114,7 +114,7 @@
   --secondary: #161A20;
   --secondary-foreground: #E8EAED;
   --muted: #161A20;
-  --muted-foreground: #8A8F98;
+  --muted-foreground: #6B7280;
   --accent: #1C2128;
   --accent-foreground: #E8EAED;
   --destructive: #F87171;
@@ -365,4 +365,46 @@
   outline: 2px solid var(--authority-500, #10B981);
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* Input focus: border-authority-500/50 + ring-2 ring-authority-glow */
+input:focus, textarea:focus, select:focus {
+  border-color: rgba(16, 185, 129, 0.5) !important;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25) !important;
+  outline: none !important;
+}
+input::placeholder {
+  color: rgba(107, 114, 128, 0.5);
+}
+
+/* Table/list styles: divide-y instead of borders */
+.pactyra-divide > * + * {
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+/* Row active state: bg-authority-500/5 + left border 2px authority */
+.pactyra-row-active {
+  background-color: rgba(16, 185, 129, 0.05);
+  border-left: 2px solid #10B981;
+}
+
+/* Typography utilities per design brief */
+.pactyra-h2 {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.pactyra-caption {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.pactyra-body {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
 }

@@ -969,7 +969,7 @@ export default function Page() {
               <p className="text-xs text-muted-foreground leading-relaxed mb-4">
                 Every claim links to a real Solana transaction or account. Judges can independently verify on Solana.fm.
               </p>
-              <div className="space-y-2">
+              <div className="pactyra-divide space-y-2">
                 {JUDGE_CLAIMS.map((c, i) => (
                   <div key={i} className="flex items-center gap-3 py-2.5 px-3 rounded-lg bg-white/[0.02] border border-white/[0.04] hover:border-emerald-500/20 hover:bg-emerald-500/[0.02] transition-all group">
                     <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-mono font-bold border border-emerald-500/20">

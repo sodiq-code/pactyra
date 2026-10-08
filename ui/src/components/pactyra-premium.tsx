@@ -134,17 +134,16 @@ export function AuthorityGauge({
     : tier === 'Proven' ? 0.66
     : 0.33
 
-  // Animate the ring fill
+  // Animate the ring fill using spring physics (per brief)
   const progressRef = useRef(0)
   const [animatedProgress, setAnimatedProgress] = useState(0)
+  const springValue = useSpring(0, { stiffness: 120, damping: 20, restDelta: 0.001 })
   useEffect(() => {
-    const controls = animate(progressRef.current, tierProgress, {
-      duration: 0.6,
-      ease: [0.22, 1, 0.36, 1],
-      onUpdate: (v) => setAnimatedProgress(v),
-    })
-    return () => controls.stop()
-  }, [tierProgress])
+    springValue.set(tierProgress)
+  }, [tierProgress, springValue])
+  useEffect(() => {
+    return springValue.on('change', (v) => setAnimatedProgress(v))
+  }, [springValue])
 
   const dashOffset = circumference * (1 - animatedProgress)
 
@@ -652,13 +651,19 @@ export function TierBadge({
   const sizeClass = size === 'lg' ? 'px-4 py-1.5 text-sm' : size === 'sm' ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1 text-xs'
 
   return (
-    <span className={cn(
-      'inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r font-mono font-semibold border border-white/10',
-      config.gradient, config.text, config.glow, sizeClass
-    )}>
+    <motion.span
+      key={tier}
+      initial={{ scale: 1.1 }}
+      animate={{ scale: 1 }}
+      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r font-mono font-semibold border border-white/10',
+        config.gradient, config.text, config.glow, sizeClass
+      )}
+    >
       <span className="h-1.5 w-1.5 rounded-full bg-current" />
       {tier}
-    </span>
+    </motion.span>
   )
 }
 
