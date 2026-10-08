@@ -516,17 +516,85 @@ The first customers are not individual AI users. They are **protocols that need 
 
 ### How it monetizes
 
-**Open-source core** (free and composable):
-The protocol, SDK, and reference programs are MIT-licensed. Any developer can integrate PACTYRA at no cost.
+The protocol is open-source infrastructure (free forever). The business is the operated layer around it.
 
-**Hosted infrastructure** (paid SaaS):
-Managed verifier registry, monitoring dashboards, policy management, and enterprise controls for organizations that don't want to self-host.
+#### Tier 1 — Open-Source Core (free, forever, MIT-licensed)
 
-**Protocol/service layer** (transaction fees):
-Organizations pay for managed authority infrastructure — hosted verifiers, custom policy engines, compliance reporting, and risk monitoring for autonomous agents controlling real capital.
+| Included | Detail |
+|---|---|
+| All 4 Solana programs | pactyra-core, pactyra-verifier, reference-treasury, threshold-multisig |
+| TypeScript SDK | Client, IDLs, x402 adapter |
+| Verifier interface specification | The contract any verifier must implement |
+| Self-hosted VerifierRegistry | Run your own registry on Solana |
+| Reference treasury integration | Pattern for any downstream program |
+| Community GitHub support | Issues + discussions |
 
-**Enterprise** (custom integrations):
-Custom verifier integrations (domain-specific evidence sources), enterprise policy/governance modules, compliance controls, and SLA-backed infrastructure.
+**Limits:** unlimited agents, unlimited self-hosted verifiers, unlimited API calls.
+
+#### Tier 2 — Hosted Infrastructure ($99–$999/month per organization)
+
+| Included | Detail |
+|---|---|
+| Everything in Open-Source Core | — |
+| Hosted VerifierRegistry | Operated by PACTYRA, no self-hosting |
+| Hosted Pyth freshness verifier | Operated verifier instances |
+| Hosted Service Outcome verifier | Operated x402 delivery verifier |
+| Monitoring dashboards | Agent authority, success rates, slashes |
+| Policy management UI | Create, version, supersede policies |
+| Authority analytics | Per-agent timelines, risk metrics |
+| Email + Slack alerts | Critical failure notifications |
+| Receipt indexing | Historical authority queries |
+
+**Limits:** up to 1,000 agents, up to 10 hosted verifiers, 1M API calls/month, email support with 48h response.
+
+#### Tier 3 — Enterprise (custom, annual contract)
+
+| Included | Detail |
+|---|---|
+| Everything in Hosted Infrastructure | — |
+| Custom verifier integrations | TEE Attestation, ZK Proof, Multi-Sig Committee |
+| Custom policy / governance modules | Domain-specific policy engines |
+| Compliance evidence export | SOC2-style audit trail |
+| Dedicated verifier infrastructure | Single-tenant deployment |
+| Multi-agent fleet governance | Organization-wide controls |
+| On-premise / VPC deployment | For regulated environments |
+| SLA backing | 99.9% uptime, 1h critical response |
+| Named solutions engineer | Dedicated support |
+| Security review + audit support | Pre-deployment review |
+
+**Limits:** unlimited agents, unlimited dedicated verifiers, unlimited API calls, 24/7 SLA-backed support.
+
+### Revenue streams
+
+| Stream | Model | Role |
+|---|---|---|
+| SaaS subscriptions | Monthly / annual recurring | Primary (Hosted + Enterprise tiers) |
+| Verifier operation fees | Usage-based | Secondary (per-verifier operational fee) |
+| Enterprise integrations | Project + retainer | Secondary (one-time + ongoing support) |
+| Compliance reporting | Per-report or annual | Secondary (audit-trail export) |
+
+### Open-source commitment
+
+The following are MIT-licensed and guaranteed free forever:
+
+- `pactyra-core` program
+- `pactyra-verifier` program
+- `reference-treasury` program
+- `threshold-multisig` program
+- TypeScript SDK + x402 adapter
+- VerifierRegistry interface specification
+
+The enforcement primitive is open-source forever. Paid tiers only add operated infrastructure and integrations around it. No token. No DAO. Pure infrastructure.
+
+### Business model API
+
+The full tier matrix, revenue streams, and target customers are exposed as a machine-readable API:
+
+```text
+GET https://pactyra-ui.vercel.app/api/business-model
+```
+
+Returns: thesis, three tiers with explicit feature lists + pricing, revenue streams, target customers, and the open-source commitment.
 
 ### The long-term opportunity
 

@@ -61,28 +61,59 @@ The agent economy is emerging as a multi-billion dollar category. Solana process
 
 ## Business Model
 
-### Open (free, forever)
+The protocol is open-source infrastructure (free forever). The business is the operated layer around it: hosted verifier registry, monitoring, policy management, and enterprise integrations.
 
-- Core protocol programs (pactyra-core, pactyra-verifier, reference-treasury, threshold-multisig)
-- Capability schema and IDLs
+### Tier 1 — Open-Source Core (free, forever, MIT-licensed)
+
+- All 4 Solana programs (pactyra-core, pactyra-verifier, reference-treasury, threshold-multisig)
+- TypeScript SDK with x402 adapter
 - Verifier interface specification
-- TypeScript SDK
+- Self-hosted VerifierRegistry
 - Reference treasury integration
-- Documentation and examples
+- Community GitHub support
+- **Limits:** unlimited agents, unlimited self-hosted verifiers, unlimited API calls
 
-### Paid (SaaS / infrastructure)
+### Tier 2 — Hosted Infrastructure ($99–$999/month per organization)
 
-1. **Hosted Evidence Indexing** — indexed receipt storage, fast querying, historical authority timelines
-2. **Policy Management** — hosted policy creation, versioning, and supersession tracking
-3. **Authority Analytics** — dashboards showing agent performance, authority progression, risk metrics
-4. **Enterprise Controls** — organization-wide agent governance, multi-agent fleet management, compliance evidence export
-5. **Managed Verifier Infrastructure** — operated Pyth freshness verifier instances, future multi-verifier quorum
+Everything in Open-Source Core, plus:
 
-### Revenue model
+1. **Hosted VerifierRegistry** — operated by PACTYRA, no self-hosting
+2. **Hosted Pyth freshness verifier** — operated verifier instances
+3. **Hosted Service Outcome verifier** — operated x402 delivery verifier
+4. **Monitoring dashboards** — agent authority, success rates, slashes
+5. **Policy management UI** — create, version, supersede policies
+6. **Authority analytics** — per-agent timelines, risk metrics
+7. **Email + Slack alerts** — critical failure notifications
+8. **Receipt indexing** — historical authority queries
+- **Limits:** up to 1,000 agents, up to 10 hosted verifiers, 1M API calls/month, email support with 48h response
 
-- **Self-serve**: $0–99/month (hosted indexing + analytics for individual developers)
-- **Team**: $99–999/month (policy management + team controls)
-- **Enterprise**: Custom pricing (compliance, SLA, managed verifiers, dedicated support)
+### Tier 3 — Enterprise (custom, annual contract)
+
+Everything in Hosted Infrastructure, plus:
+
+1. **Custom verifier integrations** — TEE Attestation, ZK Proof, Multi-Sig Committee
+2. **Custom policy / governance modules** — domain-specific policy engines
+3. **Compliance evidence export** — SOC2-style audit trail
+4. **Dedicated verifier infrastructure** — single-tenant deployment
+5. **Multi-agent fleet governance** — organization-wide controls
+6. **On-premise / VPC deployment** — for regulated environments
+7. **SLA backing** — 99.9% uptime, 1h critical response
+8. **Named solutions engineer** — dedicated support
+9. **Security review + audit support** — pre-deployment review
+- **Limits:** unlimited agents, unlimited dedicated verifiers, unlimited API calls, 24/7 SLA-backed support
+
+### Revenue streams
+
+| Stream | Model | Role |
+|---|---|---|
+| SaaS subscriptions | Monthly / annual recurring | Primary (Hosted + Enterprise tiers) |
+| Verifier operation fees | Usage-based | Secondary (per-verifier operational fee) |
+| Enterprise integrations | Project + retainer | Secondary (one-time + ongoing support) |
+| Compliance reporting | Per-report or annual | Secondary (audit-trail export) |
+
+### Open-source commitment
+
+The enforcement primitive (the 4 programs + SDK + verifier interface spec) is MIT-licensed and guaranteed free forever. Paid tiers only add operated infrastructure and integrations around it.
 
 No token. No speculative protocol tokenomics. No DAO. The product is infrastructure.
 

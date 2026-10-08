@@ -286,6 +286,7 @@ export default function Page() {
   const [x402DemoResult, setX402DemoResult] = useState<any>(null)
   const [verifierCatalog, setVerifierCatalog] = useState<any>(null)
   const [verifierCatalogLoading, setVerifierCatalogLoading] = useState(false)
+  const [businessModel, setBusinessModel] = useState<any>(null)
 
   const fetchAgent = useCallback(async (id: string, silent = false) => {
     if (!silent) setAgentLoading(true)
@@ -340,12 +341,23 @@ export default function Page() {
     }
   }, [])
 
+  const fetchBusinessModel = useCallback(async () => {
+    try {
+      const res = await fetch('/api/business-model', { cache: 'no-store' })
+      const data = await res.json()
+      setBusinessModel(data)
+    } catch {
+      // silent
+    }
+  }, [])
+
   useEffect(() => {
     fetchAgent(PERMANENT_AGENT_ID)
     fetchDeployment()
     fetchTxHistory(PERMANENT_AGENT_ID)
     fetchVerifierCatalog()
-  }, [fetchAgent, fetchDeployment, fetchTxHistory, fetchVerifierCatalog])
+    fetchBusinessModel()
+  }, [fetchAgent, fetchDeployment, fetchTxHistory, fetchVerifierCatalog, fetchBusinessModel])
 
   useEffect(() => {
     const t = setInterval(() => fetchAgent(activeAgentId, true), 60000)
@@ -1774,6 +1786,153 @@ export default function Page() {
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 </div>
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* BUSINESS MODEL */}
+          <section>
+            <SectionHeader icon={DollarSign} title="Business Model"
+              hint={businessModel ? 'open core · hosted · enterprise' : 'loading'} />
+            <Card className="bg-card/50 backdrop-blur border-border/50">
+              <CardContent className="pt-6 space-y-4">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  The protocol is open-source infrastructure (free forever). The business is the
+                  operated layer around it: hosted verifier registry, monitoring, policy management,
+                  and enterprise integrations. No token. No DAO. Pure infrastructure.
+                </p>
+
+                {/* Tier cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {(businessModel?.tiers || []).map((tier: any) => (
+                    <div key={tier.id} className={cn('p-3 rounded-lg border flex flex-col',
+                      tier.color === 'emerald' ? 'bg-emerald-500/5 border-emerald-500/20'
+                      : tier.color === 'sky' ? 'bg-sky-500/5 border-sky-500/20'
+                      : 'bg-violet-500/5 border-violet-500/20')}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={cn('text-xs font-bold',
+                          tier.color === 'emerald' ? 'text-emerald-400'
+                          : tier.color === 'sky' ? 'text-sky-400'
+                          : 'text-violet-400')}>
+                          {tier.name}
+                        </span>
+                        <Badge variant="outline" className={cn('text-[8px] py-0 px-1 ml-auto',
+                          tier.status === 'available'
+                            ? 'border-emerald-500/30 text-emerald-400'
+                            : 'border-amber-500/30 text-amber-400')}>
+                          {tier.status}
+                        </Badge>
+                      </div>
+                      <div className="text-[10px] text-muted-foreground mb-2 leading-snug">{tier.tagline}</div>
+                      <div className="flex items-baseline gap-1 mb-2">
+                        <span className={cn('text-xl font-bold font-mono',
+                          tier.color === 'emerald' ? 'text-emerald-400'
+                          : tier.color === 'sky' ? 'text-sky-400'
+                          : 'text-violet-400')}>
+                          {tier.price}
+                        </span>
+                        <span className="text-[9px] text-muted-foreground">{tier.price_detail}</span>
+                      </div>
+                      <div className="text-[10px] text-muted-foreground mb-2 italic leading-snug">{tier.target}</div>
+                      {/* Feature list */}
+                      <div className="space-y-0.5 mb-2">
+                        {tier.features.map((f: any, i: number) => (
+                          <div key={i} className="flex items-start gap-1.5 text-[10px]">
+                            <span className={cn('flex h-3 w-3 shrink-0 items-center justify-center rounded-full mt-0.5',
+                              f.included ? 'bg-emerald-500/15 text-emerald-400' : 'bg-muted/30 text-muted-foreground/50')}>
+                              {f.included ? <Check className="h-2 w-2" /> : <span className="text-[8px]">—</span>}
+                            </span>
+                            <span className={f.included ? 'text-foreground/90' : 'text-muted-foreground/50 line-through'}>
+                              {f.label}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      {/* Limits */}
+                      <div className="mt-auto pt-2 border-t border-border/30 space-y-0.5">
+                        {Object.entries(tier.limits).map(([k, v]: any) => (
+                          <div key={k} className="flex items-center justify-between text-[9px] font-mono">
+                            <span className="text-muted-foreground uppercase tracking-wider">{k}</span>
+                            <span className="text-foreground/80">{v}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Open-source commitment */}
+                {businessModel?.open_source_commitment && (
+                  <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-semibold text-emerald-400">Open-Source Commitment</span>
+                      <Badge variant="outline" className="text-[9px] py-0 px-1.5 border-emerald-500/30 text-emerald-400">
+                        {businessModel.open_source_commitment.license}
+                      </Badge>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {businessModel.open_source_commitment.guaranteed_free.map((item: string, i: number) => (
+                        <span key={i} className="px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-mono">
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground italic">{businessModel.open_source_commitment.note}</div>
+                  </div>
+                )}
+
+                {/* Target customers */}
+                {businessModel?.target_customers && (
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Target Customers</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {businessModel.target_customers.map((c: any, i: number) => (
+                        <div key={i} className="p-2.5 rounded-md bg-background/30 border border-border/30">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[11px] font-semibold text-foreground">{c.segment}</span>
+                            <Badge variant="outline" className={cn('text-[8px] py-0 px-1 ml-auto',
+                              c.primary_tier === 'enterprise' ? 'border-violet-500/30 text-violet-400'
+                              : 'border-sky-500/30 text-sky-400')}>
+                              {c.primary_tier === 'enterprise' ? 'Enterprise' : 'Hosted'}
+                            </Badge>
+                          </div>
+                          <div className="text-[10px] text-muted-foreground leading-snug">{c.need}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Revenue streams */}
+                {businessModel?.revenue_streams && (
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Revenue Streams</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {businessModel.revenue_streams.map((r: any, i: number) => (
+                        <div key={i} className="p-2.5 rounded-md bg-background/30 border border-border/30">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[11px] font-semibold text-foreground">{r.name}</span>
+                            <Badge variant="outline" className={cn('text-[8px] py-0 px-1 ml-auto',
+                              r.share === 'primary' ? 'border-emerald-500/30 text-emerald-400'
+                              : 'border-muted-foreground/30 text-muted-foreground')}>
+                              {r.share}
+                            </Badge>
+                          </div>
+                          <div className="text-[10px] text-muted-foreground leading-snug mb-0.5">{r.description}</div>
+                          <div className="text-[9px] font-mono text-muted-foreground/70">{r.model}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* API endpoint */}
+                <a href="https://pactyra-ui.vercel.app/api/business-model" target="_blank" rel="noreferrer"
+                  className="inline-flex items-center gap-1 px-2 py-1.5 rounded-md bg-sky-500/10 border border-sky-500/20 text-sky-400 hover:bg-sky-500/20 transition-colors text-[10px] font-mono">
+                  <Activity className="h-3 w-3" />
+                  GET /api/business-model
+                  <ExternalLink className="h-3 w-3" />
+                </a>
               </CardContent>
             </Card>
           </section>
