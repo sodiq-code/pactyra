@@ -63,14 +63,24 @@ export async function GET(request: NextRequest) {
   }
 
   // Step 2: Check if the service resource is accessible
-  // This simulates the "objective success condition" — did the service respond?
+  // If we have a payment signature, retry the resource with the X-PAYMENT header
+  // This is the "objective success condition" — did the service deliver after payment?
   let serviceDelivered = false
   let serviceStatus = 0
   let serviceResponseTime = 0
 
   try {
     const startTime = Date.now()
+    const headers: Record<string, string> = {}
+    // If payment was verified, pass the X-PAYMENT header to access the resource
+    if (paymentVerified && paymentSig) {
+      headers['X-PAYMENT'] = Buffer.from(JSON.stringify({
+        signature: paymentSig,
+        network: 'solana-devnet',
+      })).toString('base64')
+    }
     const response = await fetch(resourceUrl, {
+      headers,
       signal: AbortSignal.timeout(10000),
     })
     serviceStatus = response.status
