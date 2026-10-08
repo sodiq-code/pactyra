@@ -274,7 +274,7 @@ Deployed to Vercel at [https://pactyra-ui.vercel.app](https://pactyra-ui.vercel.
 - Security check tooltips
 - Copy-to-clipboard on all addresses
 
-### API Routes (12)
+### API Routes (14)
 
 | Route | Method | Description |
 |---|---|---|
@@ -290,8 +290,35 @@ Deployed to Vercel at [https://pactyra-ui.vercel.app](https://pactyra-ui.vercel.
 | `/api/verifier/demo` | GET | Verifier-agnostic demo (assert → pay → verify → record) |
 | `/api/x402/demo` | GET | x402 V2 demo (assert → real USDC payment → resource delivery) |
 | `/api/proof` | GET | Machine-verifiable proof trail (agent state + transactions + claims) |
+| `/api/business-model` | GET | Three-tier business model (open-source core, hosted, enterprise) |
+| `/api/demo-narrative` | GET | 8-scene demo narrative with live agent state |
 
 ## Demo orchestration
+
+### 8-Scene Demo Narrative
+
+PACTYRA's full lifecycle is told as a single 8-scene narrative. Each scene is a real on-chain action a judge can independently verify.
+
+| # | Scene | What happens | On-chain instruction |
+|---|---|---|---|
+| 1 | T3 Start | Agent is at peak earned authority | register_agent + lock_bond + 27 verified successes |
+| 2 | Real Authorization | Capability issued, scoped and time-bounded | pactyra_core::request_capability |
+| 3 | Real Execution | Capability asserted, USDC actually moves | reference_treasury::authorized_transfer → CPI assert_capability |
+| 4 | Real Verifier | Objective verifier records the outcome | verifier → CPI pactyra_core::record_outcome |
+| 5 | Authority Increase | Verified outcome → higher authority | pactyra_core::record_outcome (Pass) |
+| 6 | Critical Failure | Verifier reports a critical failure | verifier → CPI pactyra_core::record_outcome (Critical) |
+| 7 | Authority Collapse | Bond slashed, tier dropped, epoch incremented | pactyra_core::record_outcome (auto-transitions) |
+| 8 | Stale Capability Rejected | Old-epoch capability fails the epoch check | pactyra_core::assert_capability → StaleEpoch error |
+
+The narrative arc: `$5 → $50 → $500 → $5` — earned through verified outcomes, revoked the moment verification fails.
+
+The full 8-scene script is exposed as a machine-readable API:
+
+```text
+GET https://pactyra-ui.vercel.app/api/demo-narrative
+```
+
+Returns: the 8 scenes with narrative, on-chain instruction, state transitions (before/after), evidence links, and the live agent state fetched from devnet.
 
 ### Protocol state-machine test harness
 

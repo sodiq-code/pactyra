@@ -29,7 +29,7 @@ import { BaseWalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import {
   Shield, Activity, DollarSign, Lock, Zap, Copy, Check, RefreshCw,
   Plus, AlertTriangle, Users, Clock, ExternalLink, Sun, Moon, ChevronRight,
-  Layers, Boxes,
+  Layers, Boxes, PlayCircle, ArrowRight,
 } from 'lucide-react'
 
 type Tier = 'Probation' | 'Proven' | 'Trusted'
@@ -287,6 +287,8 @@ export default function Page() {
   const [verifierCatalog, setVerifierCatalog] = useState<any>(null)
   const [verifierCatalogLoading, setVerifierCatalogLoading] = useState(false)
   const [businessModel, setBusinessModel] = useState<any>(null)
+  const [demoNarrative, setDemoNarrative] = useState<any>(null)
+  const [activeScene, setActiveScene] = useState<number>(1)
 
   const fetchAgent = useCallback(async (id: string, silent = false) => {
     if (!silent) setAgentLoading(true)
@@ -351,13 +353,25 @@ export default function Page() {
     }
   }, [])
 
+  const fetchDemoNarrative = useCallback(async () => {
+    try {
+      const res = await fetch('/api/demo-narrative', { cache: 'no-store' })
+      const data = await res.json()
+      setDemoNarrative(data)
+      if (data.current_scene) setActiveScene(data.current_scene)
+    } catch {
+      // silent
+    }
+  }, [])
+
   useEffect(() => {
     fetchAgent(PERMANENT_AGENT_ID)
     fetchDeployment()
     fetchTxHistory(PERMANENT_AGENT_ID)
     fetchVerifierCatalog()
     fetchBusinessModel()
-  }, [fetchAgent, fetchDeployment, fetchTxHistory, fetchVerifierCatalog, fetchBusinessModel])
+    fetchDemoNarrative()
+  }, [fetchAgent, fetchDeployment, fetchTxHistory, fetchVerifierCatalog, fetchBusinessModel, fetchDemoNarrative])
 
   useEffect(() => {
     const t = setInterval(() => fetchAgent(activeAgentId, true), 60000)
@@ -881,6 +895,232 @@ export default function Page() {
                     </div>
                   ))}
                 </div>
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* DEMO NARRATIVE — 8 scenes */}
+          <section>
+            <SectionHeader icon={PlayCircle} title="Demo Narrative"
+              hint={demoNarrative ? `${demoNarrative.scenes.length} scenes · current: ${demoNarrative.current_scene}` : '8 scenes'} />
+            <Card className="bg-card/50 backdrop-blur border-emerald-500/20">
+              <CardContent className="pt-6 space-y-4">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  PACTYRA's full lifecycle as a single narrative arc. Eight scenes walk through the
+                  complete authority loop: from peak earned authority, through real authorization,
+                  execution, and verification, to authority increase, critical failure, collapse,
+                  and stale-capability rejection. Each scene is a real on-chain action.
+                </p>
+
+                {/* Narrative arc bar */}
+                {demoNarrative?.narrative_arc && (
+                  <div className="p-3 rounded-lg bg-gradient-to-r from-emerald-500/10 via-amber-500/10 to-rose-500/10 border border-border/40">
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Narrative Arc</div>
+                    <div className="font-mono text-sm text-foreground text-center">
+                      {demoNarrative.narrative_arc}
+                    </div>
+                  </div>
+                )}
+
+                {/* Scene stepper */}
+                <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
+                  {(demoNarrative?.scenes || []).map((scene: any) => {
+                    const isActive = activeScene === scene.id
+                    const colorClass =
+                      scene.color === 'emerald' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                      : scene.color === 'sky' ? 'bg-sky-500/15 text-sky-400 border-sky-500/30'
+                      : scene.color === 'amber' ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                      : scene.color === 'teal' ? 'bg-teal-500/15 text-teal-400 border-teal-500/30'
+                      : 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                    return (
+                      <button
+                        key={scene.id}
+                        onClick={() => setActiveScene(scene.id)}
+                        className={cn(
+                          'flex flex-col items-center gap-1 p-2 rounded-md border transition-all text-center',
+                          isActive
+                            ? cn(colorClass, 'ring-2 ring-offset-0 scale-105')
+                            : 'bg-background/30 border-border/30 hover:border-border/50 opacity-70 hover:opacity-100'
+                        )}
+                        title={scene.title}
+                      >
+                        <span className={cn('font-mono text-sm font-bold',
+                          isActive ? '' : 'text-muted-foreground')}>
+                          {scene.id}
+                        </span>
+                        <span className={cn('text-[8px] uppercase tracking-wider leading-tight hidden sm:block',
+                          isActive ? '' : 'text-muted-foreground')}>
+                          {scene.title.split(' ')[0]}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Active scene detail */}
+                {demoNarrative?.scenes?.find((s: any) => s.id === activeScene) && (() => {
+                  const scene = demoNarrative.scenes.find((s: any) => s.id === activeScene)
+                  const colorClass =
+                    scene.color === 'emerald' ? 'emerald'
+                    : scene.color === 'sky' ? 'sky'
+                    : scene.color === 'amber' ? 'amber'
+                    : scene.color === 'teal' ? 'teal'
+                    : 'rose'
+                  return (
+                    <div className={cn('p-4 rounded-lg border',
+                      colorClass === 'emerald' ? 'bg-emerald-500/5 border-emerald-500/20'
+                      : colorClass === 'sky' ? 'bg-sky-500/5 border-sky-500/20'
+                      : colorClass === 'amber' ? 'bg-amber-500/5 border-amber-500/20'
+                      : colorClass === 'teal' ? 'bg-teal-500/5 border-teal-500/20'
+                      : 'bg-rose-500/5 border-rose-500/20')}>
+                      {/* Scene header */}
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-mono text-sm font-bold',
+                          colorClass === 'emerald' ? 'bg-emerald-500/15 text-emerald-400'
+                          : colorClass === 'sky' ? 'bg-sky-500/15 text-sky-400'
+                          : colorClass === 'amber' ? 'bg-amber-500/15 text-amber-400'
+                          : colorClass === 'teal' ? 'bg-teal-500/15 text-teal-400'
+                          : 'bg-rose-500/15 text-rose-400')}>
+                          {scene.id}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-sm font-semibold text-foreground">{scene.title}</h3>
+                            {scene.is_current && (
+                              <Badge variant="outline" className="text-[9px] py-0 px-1.5 border-emerald-500/40 text-emerald-400 bg-emerald-500/10">
+                                ● CURRENT
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground italic">{scene.subtitle}</div>
+                        </div>
+                      </div>
+
+                      {/* Narrative */}
+                      <p className="text-xs text-foreground/90 leading-relaxed mb-3">
+                        {scene.narrative}
+                      </p>
+
+                      {/* Instruction */}
+                      <div className="mb-3 p-2 rounded-md bg-background/40 border border-border/30">
+                        <div className="text-[9px] uppercase tracking-wider text-muted-foreground mb-0.5">On-Chain Instruction</div>
+                        <code className="text-[11px] text-foreground/90 font-mono break-all">{scene.instruction}</code>
+                      </div>
+
+                      {/* State transition */}
+                      <div className="grid grid-cols-2 gap-2 mb-3">
+                        <div className="p-2 rounded-md bg-background/30 border border-border/30">
+                          <div className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">Before</div>
+                          <div className="space-y-0.5 font-mono text-[10px]">
+                            <div className="text-muted-foreground">tier: <span className="text-foreground">{scene.state_before.tier}</span></div>
+                            <div className="text-muted-foreground">authority: <span className="text-foreground">{scene.state_before.authority}</span></div>
+                            <div className="text-muted-foreground">epoch: <span className="text-foreground">{scene.state_before.epoch}</span></div>
+                          </div>
+                        </div>
+                        <div className="p-2 rounded-md bg-background/30 border border-border/30">
+                          <div className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">After</div>
+                          <div className="space-y-0.5 font-mono text-[10px]">
+                            <div className="text-muted-foreground">tier: <span className="text-foreground">{scene.state_after.tier}</span></div>
+                            <div className="text-muted-foreground">authority: <span className="text-foreground">{scene.state_after.authority}</span></div>
+                            <div className="text-muted-foreground">epoch: <span className="text-foreground">{scene.state_after.epoch}</span></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Evidence + action */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {scene.evidence_url && (
+                          <a href={scene.evidence_url} target="_blank" rel="noreferrer"
+                            className={cn('inline-flex items-center gap-1 px-2 py-1.5 rounded-md border text-[10px] font-mono transition-colors',
+                              colorClass === 'emerald' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20'
+                              : colorClass === 'sky' ? 'bg-sky-500/10 border-sky-500/20 text-sky-400 hover:bg-sky-500/20'
+                              : colorClass === 'amber' ? 'bg-amber-500/10 border-amber-500/20 text-amber-400 hover:bg-amber-500/20'
+                              : colorClass === 'teal' ? 'bg-teal-500/10 border-teal-500/20 text-teal-400 hover:bg-teal-500/20'
+                              : 'bg-rose-500/10 border-rose-500/20 text-rose-400 hover:bg-rose-500/20')}>
+                            <ExternalLink className="h-3 w-3" />
+                            {scene.evidence_label}
+                          </a>
+                        )}
+                        {!scene.evidence_url && (
+                          <span className="text-[10px] text-muted-foreground font-mono">{scene.evidence_label}</span>
+                        )}
+                      </div>
+
+                      {/* API action */}
+                      <div className="mt-2 text-[9px] font-mono text-muted-foreground/70">
+                        API: {scene.api_action}
+                      </div>
+                    </div>
+                  )
+                })()}
+
+                {/* Live state badge */}
+                {demoNarrative?.live_state && (
+                  <div className="p-3 rounded-lg bg-background/30 border border-border/30">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Live Agent State (from devnet)</span>
+                      <span className="ml-auto flex items-center gap-1 text-[10px] text-emerald-400 font-mono">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        live
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-[10px] font-mono">
+                      {[
+                        { label: 'Tier', value: `${demoNarrative.live_state.tier} (${demoNarrative.live_state.tier_name})` },
+                        { label: 'Authority', value: demoNarrative.live_state.authority },
+                        { label: 'Epoch', value: `#${demoNarrative.live_state.epoch}` },
+                        { label: 'Successes', value: demoNarrative.live_state.success_count },
+                        { label: 'Critical', value: demoNarrative.live_state.critical_failures },
+                        { label: 'Bond', value: `${demoNarrative.live_state.bond_amount} USDC` },
+                      ].map((m) => (
+                        <div key={m.label} className="flex flex-col gap-0.5">
+                          <span className="text-[8px] uppercase tracking-wider text-muted-foreground">{m.label}</span>
+                          <span className="text-foreground font-semibold">{m.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-2 flex items-center gap-2 text-[10px]">
+                      <a href={demoNarrative.live_state.agent_pda_url} target="_blank" rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 font-mono">
+                        Agent PDA <ExternalLink className="h-2.5 w-2.5" />
+                      </a>
+                      <Separator orientation="vertical" className="h-3 bg-border/40" />
+                      <a href={demoNarrative.live_state.bond_pda_url} target="_blank" rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-amber-400 hover:text-amber-300 font-mono">
+                        Bond PDA <ExternalLink className="h-2.5 w-2.5" />
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {/* Navigation buttons */}
+                <div className="flex items-center justify-between gap-2">
+                  <Button variant="outline" size="sm"
+                    onClick={() => setActiveScene(Math.max(1, activeScene - 1))}
+                    disabled={activeScene === 1}
+                    className="gap-1 min-h-[44px] sm:min-h-8">
+                    <ChevronRight className="h-3 w-3 rotate-180" />
+                    Previous
+                  </Button>
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    Scene {activeScene} of {demoNarrative?.scenes?.length || 8}
+                  </span>
+                  <Button variant="outline" size="sm"
+                    onClick={() => setActiveScene(Math.min(demoNarrative?.scenes?.length || 8, activeScene + 1))}
+                    disabled={activeScene === (demoNarrative?.scenes?.length || 8)}
+                    className="gap-1 min-h-[44px] sm:min-h-8">
+                    Next
+                    <ArrowRight className="h-3 w-3" />
+                  </Button>
+                </div>
+
+                {/* API endpoint */}
+                <a href="https://pactyra-ui.vercel.app/api/demo-narrative" target="_blank" rel="noreferrer"
+                  className="inline-flex items-center gap-1 px-2 py-1.5 rounded-md bg-sky-500/10 border border-sky-500/20 text-sky-400 hover:bg-sky-500/20 transition-colors text-[10px] font-mono">
+                  <Activity className="h-3 w-3" />
+                  GET /api/demo-narrative
+                  <ExternalLink className="h-3 w-3" />
+                </a>
               </CardContent>
             </Card>
           </section>
