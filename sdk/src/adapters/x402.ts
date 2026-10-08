@@ -140,7 +140,8 @@ export class PactyraX402Adapter {
    * Make a paid HTTP request gated by PACTYRA capability.
    *
    * 1. Fetch the resource — if 402, extract payment requirements
-   * 2. Assert PACTYRA capability — verify the agent has earned the right to pay
+   * 2. Assert PACTYRA capability — verify the agent's verified outcomes have
+   *    earned the authority to exercise this payment
    * 3. Create and submit a real SPL token transfer on Solana
    * 4. Retry the request with the real transaction signature as X-PAYMENT
    * 5. Return the resource + payment receipt
@@ -197,7 +198,8 @@ export class PactyraX402Adapter {
     }
 
     // Step 3: Assert PACTYRA capability BEFORE paying
-    // This is the key integration: the agent must have earned the right to pay
+    // PACTYRA turns verified outcomes into enforceable economic authority —
+    // the agent may only pay what its verified outcomes have earned.
     try {
       const targetProgram = new PublicKey(requirement.resource || url)
       const targetAccount = new PublicKey(requirement.payTo)

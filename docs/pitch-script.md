@@ -13,11 +13,11 @@
 
 **[Camera on]**
 
-> "AI agents already have keys. They haven't earned the right to use them."
+> "AI agents already have keys. PACTYRA turns their verified outcomes into enforceable economic authority."
 
 **[Pause 2 seconds]**
 
-> "I'm building PACTYRA — the economic authority layer for autonomous agents on Solana."
+> "I'm building PACTYRA — the consequence layer that sits after objective verification on Solana."
 
 ---
 
@@ -27,9 +27,9 @@
 
 > "Autonomous software is becoming an economic actor. AI agents manage treasuries, execute trades, make payments. But the dominant authorization abstraction is still a private key."
 
-> "A key proves control. It doesn't prove earned competence. Spending limits set ceilings. Reputation describes history. Nothing connects verified performance to enforceable authority."
+> "A key proves control. It does not turn verified outcomes into enforceable authority. Spending limits set ceilings. Reputation describes history. Nothing converts a verified outcome into authority an agent is allowed to exercise — and revokes it the moment verification fails."
 
-> "The missing layer is: why did this agent earn the authority it currently has?"
+> "The missing layer: what converts a verified outcome into authority an agent is allowed to exercise — and revokes that authority the moment verification fails?"
 
 ---
 
@@ -37,7 +37,7 @@
 
 **[Screen recording: Agent Passport UI showing $5]**
 
-> "PACTYRA converts verified execution history into machine-enforceable economic authority. An agent starts at Tier 1 with $5. It earns Tier 2 at $50 after 5 verified successes. It earns Tier 3 at $500 after 20 successes at 95% rate with a 5 USDC bond."
+> "PACTYRA turns verified execution history into enforceable economic authority. An agent starts at Tier 1 with $5. It earns Tier 2 at $50 after 5 verified successes. It earns Tier 3 at $500 after 20 successes at 95% rate with a 5 USDC bond."
 
 **[Show the authority loop: $5 → $50 → $500]**
 
@@ -82,7 +82,7 @@
 
 > "The market is every autonomous system capable of causing an economic side effect. Treasury agents. Payment agents. DeFi automation. Machine-to-machine commerce."
 
-> "PACTYRA is open-source infrastructure. The business is hosted evidence indexing, enterprise controls, and managed verifier services. No token. No DAO. Pure infrastructure."
+> "PACTYRA is open-source infrastructure. The business is the hosted verifier registry, monitoring, policy management, and enterprise integrations around it. No token. No DAO. Pure infrastructure."
 
 ---
 
@@ -100,14 +100,14 @@
 
 **[Text: $5 → $50 → $500 → $5]**
 
-> "PACTYRA. Verified performance becomes executable economic authority."
+> "PACTYRA. Verified outcomes become enforceable economic authority."
 
 **[End]**
 
 ---
 
 ## Key Points to Emphasize
-1. The thesis: keys prove control, not earned competence
+1. The thesis: a key proves control — PACTYRA turns verified outcomes into enforceable economic authority
 2. The hero mechanic: $5 → $50 → $500 → $5
 3. It's real: live on devnet, not a mockup
 4. The kill line: "The agent didn't lose its key. It lost its authority."

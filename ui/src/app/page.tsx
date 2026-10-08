@@ -1,7 +1,7 @@
 'use client'
 
 // PACTYRA — Agent Passport UI
-// Evidence-bound economic authority for autonomous agents on Solana.
+// PACTYRA turns verified outcomes into enforceable economic authority.
 // Single-page dashboard: clean, dense, professional.
 
 import { useState, useEffect, useCallback } from 'react'
@@ -530,6 +530,22 @@ export default function Page() {
           {/* HERO */}
           <Card className="bg-card/50 backdrop-blur border-border/50 overflow-hidden">
             <CardContent className="pt-6">
+              {/* Tagline — refined thesis statement */}
+              <div className="mb-5 pb-5 border-b border-border/40">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mb-1.5">Protocol Thesis</div>
+                <h1 className="text-base sm:text-lg font-semibold leading-snug text-foreground">
+                  PACTYRA turns verified outcomes into{' '}
+                  <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+                    enforceable economic authority
+                  </span>
+                  .
+                </h1>
+                <p className="mt-1.5 text-[11px] text-muted-foreground leading-relaxed">
+                  The consequence layer that sits after objective verification —
+                  authority is earned through verified execution and revoked the moment performance fails.
+                </p>
+              </div>
+
               <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
                 <div className="min-w-0">
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Agent ID</div>
@@ -798,7 +814,7 @@ export default function Page() {
                   <div className="text-xs text-emerald-400 font-medium text-center">
                     {criticalFailures > 0
                       ? "The agent still has its key, but it no longer has the authority it had earned."
-                      : "Authority is earned through verified execution — not granted by trust."}
+                      : "PACTYRA turns verified outcomes into enforceable economic authority."}
                   </div>
                 </div>
               </CardContent>

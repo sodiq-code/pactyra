@@ -8,15 +8,17 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Rust](https://img.shields.io/badge/Rust-1.89-CE422B.svg?logo=rust&logoColor=white)](https://www.rust-lang.org)
 
-**Evidence-bound economic authority for autonomous agents.**
+**PACTYRA turns verified outcomes into enforceable economic authority.**
 
-AI agents already have keys. PACTYRA makes them earn the right to use them.
+AI agents already have keys. PACTYRA is the consequence layer that sits after objective verification — converting evidence of execution into authority an agent is allowed to exercise, and revoking that authority the moment verified performance fails.
 
 **Live Demo:** [https://pactyra-ui.vercel.app](https://pactyra-ui.vercel.app) · **GitHub:** [https://github.com/sodiq-code/pactyra](https://github.com/sodiq-code/pactyra)
 
 ## Overview
 
-PACTYRA is a protocol that converts verified execution history into machine-enforceable economic authority. It sits between autonomous agents and the economic programs they want to control — ensuring that authority is earned through verifiable outcomes, exercised within deterministic limits, and automatically revoked when verified performance fails.
+A private key proves control. It does not prove earned authority. Spending limits set ceilings. Reputation systems describe history. None of them connect verified performance to enforceable economic power.
+
+PACTYRA closes that gap. It is a protocol that turns verified outcomes into enforceable economic authority on Solana. It sits between autonomous agents and the economic programs they want to control — ensuring that authority is earned through verifiable outcomes, exercised within deterministic limits, and automatically revoked when verified performance fails.
 
 ### Core mechanic
 
@@ -471,7 +473,7 @@ Custom verifier integrations (domain-specific evidence sources), enterprise poli
 
 ### The long-term opportunity
 
-The long-term opportunity is not simply safer payments. It is a **standardized authority layer for autonomous economic actors** — the primitive that determines how much economic power an agent has earned, why it earned it, and what happens when it fails.
+The long-term opportunity is not simply safer payments. It is a **standardized authority layer for autonomous economic actors** — the primitive that turns verified outcomes into enforceable economic authority, records why that authority was earned, and automatically revokes it the moment verified performance fails.
 
 ## Distribution
 

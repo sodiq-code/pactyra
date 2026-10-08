@@ -15,24 +15,24 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PACTYRA — Economic Authority Layer for Autonomous Agents",
-  description: "AI agents already have keys. PACTYRA makes them earn the right to use them. Evidence-bound authority protocol on Solana.",
-  keywords: ["PACTYRA", "Solana", "AI Agents", "Authority", "Evidence-Bound", "Anchor", "Hackathon"],
+  title: "PACTYRA — Verified Outcomes Become Enforceable Economic Authority",
+  description: "PACTYRA turns verified outcomes into enforceable economic authority on Solana. The consequence layer that sits after objective verification — authority is earned and revoked on-chain.",
+  keywords: ["PACTYRA", "Solana", "AI Agents", "Authority", "Verified Outcomes", "Evidence-Bound", "Anchor", "Hackathon"],
   authors: [{ name: "PACTYRA" }],
   icons: {
     icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
   },
   openGraph: {
-    title: "PACTYRA — Economic Authority Layer for Autonomous Agents",
-    description: "Evidence-bound economic authority for AI agents on Solana. $5 → $50 → $500 → $5.",
+    title: "PACTYRA — Verified Outcomes Become Enforceable Economic Authority",
+    description: "The consequence layer that turns verified outcomes into enforceable economic authority. $5 → $50 → $500 → $5.",
     url: "https://chat.z.ai",
     siteName: "PACTYRA",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "PACTYRA — Economic Authority Layer for Autonomous Agents",
-    description: "Evidence-bound economic authority for AI agents on Solana.",
+    title: "PACTYRA — Verified Outcomes Become Enforceable Economic Authority",
+    description: "PACTYRA turns verified outcomes into enforceable economic authority on Solana.",
   },
 };
 

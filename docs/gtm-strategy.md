@@ -2,9 +2,9 @@
 
 ## Executive Summary
 
-PACTYRA is the economic authority layer for autonomous agents. It converts verified execution history into machine-enforceable economic authority on Solana. The protocol is open-source infrastructure; the business is hosted evidence indexing, enterprise controls, and managed verifier services.
+PACTYRA turns verified outcomes into enforceable economic authority on Solana. It is the consequence layer that sits after objective verification — converting evidence of execution into authority an agent is allowed to exercise, and revoking that authority the moment verified performance fails. The protocol is open-source infrastructure; the business is hosted verifier registry, monitoring, policy management, and enterprise integrations.
 
-**Tagline:** AI agents already have keys. PACTYRA makes them earn the right to use them.
+**Tagline:** PACTYRA turns verified outcomes into enforceable economic authority.
 
 **Core mechanic:** `$5 → $50 → $500 → $5`
 
@@ -12,15 +12,15 @@ PACTYRA is the economic authority layer for autonomous agents. It converts verif
 
 ## Problem
 
-Autonomous software is becoming an economic actor — AI agents manage treasuries, execute trades, make payments, and procure services. The dominant authorization abstraction is still a private key. A key proves control, not earned competence. Spending limits set ceilings. Reputation systems describe history. Nothing connects verified performance to enforceable authority.
+Autonomous software is becoming an economic actor — AI agents manage treasuries, execute trades, make payments, and procure services. The dominant authorization abstraction is still a private key. A key proves control, not earned authority. Spending limits set ceilings. Reputation systems describe history. Nothing turns verified outcomes into enforceable economic authority.
 
-**The missing layer:** Why did this agent earn the authority it currently has?
+**The missing layer:** What converts a verified outcome into authority an agent is allowed to exercise — and what revokes that authority the moment verification fails?
 
 ---
 
 ## Solution
 
-PACTYRA binds economic authority to verified evidence. An agent starts at $5 authority, earns $50 after 5 verified successes, earns $500 after 20+ successes at 95% rate with a bond, and on a critical verified failure its bond is slashed, authority collapses to $5, and all outstanding capabilities become stale.
+PACTYRA turns verified outcomes into enforceable economic authority. An agent starts at $5 authority, earns $50 after 5 verified successes, earns $500 after 20+ successes at 95% rate with a bond, and on a critical verified failure its bond is slashed, authority collapses to $5, and all outstanding capabilities become stale.
 
 ### Key differentiator
 
@@ -94,13 +94,13 @@ PACTYRA does not compete with:
 
 | Product | What they do | PACTYRA's relationship |
 |---|---|---|
-| Xona | Agent wallet with spend caps | Xona helps agents spend safely. PACTYRA determines how much authority was earned. |
-| brrr | Autonomous lending vaults | brrr moves money. PACTYRA governs whether agents can operate that infrastructure. |
-| tidex6 | Privacy infrastructure | tidex6 provides privacy. PACTYRA provides earned authority. |
-| Cessio | Payment/invoice product | Cessio moves commerce. PACTYRA governs whether agents have earned the right to conduct it. |
+| Xona | Agent wallet with spend caps | Xona caps how much an agent may spend. PACTYRA turns the agent's verified outcomes into the enforceable authority that those caps should be raised. |
+| brrr | Autonomous lending vaults | brrr moves money. PACTYRA turns verified execution into the authority an agent needs to operate that infrastructure. |
+| tidex6 | Privacy infrastructure | tidex6 provides privacy. PACTYRA turns verified outcomes into enforceable economic authority. |
+| Cessio | Payment/invoice product | Cessio moves commerce. PACTYRA turns verified outcomes into the authority an agent needs to conduct it. |
 | Squads | Multisig treasury | Squads secures keys. PACTYRA's protocol authority is backed by a Squads-style multisig. |
 
-**PACTYRA is the missing layer between identity/reputation and capability enforcement.**
+**PACTYRA is the consequence layer that turns verified outcomes into enforceable economic authority.**
 
 ---
 

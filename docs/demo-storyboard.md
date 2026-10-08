@@ -13,7 +13,7 @@
 
 **[Screen: Vercel app loaded, dark mode]**
 
-> "This is PACTYRA — the economic authority layer for autonomous agents. I'll demonstrate the full authority loop: five dollars to fifty to five hundred and back to five."
+> "This is PACTYRA — the consequence layer that turns verified outcomes into enforceable economic authority. I'll demonstrate the full authority loop: five dollars to fifty to five hundred and back to five."
 
 ---
 
@@ -85,7 +85,7 @@
 
 **[Screen: $5 → $50 → $500 → $5]**
 
-> "Five dollars. Fifty. Five hundred. Back to five. That's PACTYRA — verified performance becomes executable economic authority."
+> "Five dollars. Fifty. Five hundred. Back to five. That's PACTYRA — verified outcomes become enforceable economic authority."
 
 **[Screen: GitHub URL + Vercel URL]**
 
