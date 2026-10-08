@@ -354,6 +354,67 @@ const response = await adapter.fetch('https://service.example.com/api', {
 Without PACTYRA: any agent with a wallet can pay for any service.
 With PACTYRA: the agent must earn the authority to pay through verified performance. A new agent starts at $5 and must prove itself before spending more.
 
+## Verifier-Agnostic Architecture
+
+PACTYRA does not prescribe one definition of success. It provides the economic consequence layer that sits after objective verification.
+
+### Verifier A — Pyth (Price Freshness)
+
+Checks whether a Pyth price feed is fresh or stale. Deployed as `pactyra-verifier` on devnet.
+
+```text
+Pyth PriceUpdateV2
+  ↓
+Freshness check (≤30s = pass, 30-60s = ordinary fail, >60s = critical)
+  ↓
+record_outcome() via CPI
+  ↓
+Authority transition
+```
+
+### Verifier B — Service Outcome (Service Delivery)
+
+Checks whether an x402 service was actually delivered after payment. Live at `/api/verifier/service`.
+
+```text
+Agent pays for service via x402
+  ↓
+Service returns 200 (delivered) or non-200 (failed)
+  ↓
+Service Outcome Verifier checks delivery + payment on-chain
+  ↓
+Evidence hash computed (keccak256)
+  ↓
+record_outcome() via verifier
+  ↓
+Authority transition
+```
+
+### Run the verifier-agnostic demo
+
+```text
+https://pactyra-ui.vercel.app/api/verifier/demo
+```
+
+This endpoint chains: `assert_capability()` → real USDC payment → service delivery → Service Outcome Verifier → evidence hash. Both verifiers feed into the same PACTYRA authority engine.
+
+```text
+                    PACTYRA CORE
+                        │
+                Economic Authority
+                        │
+        ┌───────────────┼────────────────┐
+        │               │                │
+   Pyth Verifier   Service Verifier   Future...
+        │               │
+ market evidence    x402/service
+        │               │
+        └──────→ VERIFIED OUTCOME ←──────┘
+                       │
+                       ↓
+                AUTHORITY CHANGE
+```
+
 ## Test results
 
 ```
