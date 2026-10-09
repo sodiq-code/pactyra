@@ -10,7 +10,7 @@ const DEVNET_RPC = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com"
 const USDC_MINT = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
 const PAY_TO = process.env.PAY_TO || "4ZokQYezBqFkUUQVWi7axR2qT6SS3vm2Q37ZzdPwyiBN"
 const PAYMENT_AMOUNT = 10_000 // 0.01 USDC (6 decimals)
-const PACTYRA_CORE_PROGRAM_ID = "EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC"
+const PACTYRA_CORE_PROGRAM_ID = "FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf"
 
 /**
  * x402 V2 Facilitator — Resource Endpoint

@@ -2,7 +2,8 @@
   "address": "4VmhkonqadrxgJKt5eWYc2JEPuzCAf8YQnPm6wrGLEYu",
   "metadata": {
     "name": "pactyra_verifier",
-    "version": "0.1.0"
+    "version": "0.1.0",
+    "address": "4VmhkonqadrxgJKt5eWYc2JEPuzCAf8YQnPm6wrGLEYu"
   },
   "instructions": [
     {
@@ -65,7 +66,12 @@
       "args": [
         {
           "name": "feed_id",
-          "type": "[u8;32]"
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
         },
         {
           "name": "max_age_seconds",
@@ -131,7 +137,7 @@
         },
         {
           "name": "verifier_program_self",
-          "signer": true
+          "signer": false
         },
         {
           "name": "usdc_mint"
@@ -153,11 +159,21 @@
       "args": [
         {
           "name": "action_id",
-          "type": "[u8;32]"
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
         },
         {
           "name": "capability_id",
-          "type": "[u8;32]"
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
         }
       ]
     }

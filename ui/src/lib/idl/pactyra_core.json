@@ -4,7 +4,8 @@
     "name": "pactyra_core",
     "version": "0.1.0",
     "spec": "0.1.0",
-    "description": "Core protocol for evidence-bound economic authority"
+    "description": "Core protocol for evidence-bound economic authority",
+    "address": "FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf"
   },
   "instructions": [
     {

@@ -7,8 +7,8 @@ import { Connection, PublicKey } from '@solana/web3.js'
 import { Program, AnchorProvider, Idl } from '@coral-xyz/anchor'
 
 const DEVNET_RPC = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com"
-const PACTYRA_CORE_PROGRAM_ID = 'EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC'
-const PACTYRA_VERIFIER_PROGRAM_ID = '5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN'
+const PACTYRA_CORE_PROGRAM_ID = 'FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf'
+const PACTYRA_VERIFIER_PROGRAM_ID = '4VmhkonqadrxgJKt5eWYc2JEPuzCAf8YQnPm6wrGLEYu'
 
 /**
  * Verifier Abstraction Catalog

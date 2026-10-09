@@ -19,7 +19,7 @@ const USDC_MINT = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU")
 const PAY_TO = process.env.PAY_TO || "4ZokQYezBqFkUUQVWi7axR2qT6SS3vm2Q37ZzdPwyiBN"
 const PAYMENT_AMOUNT = 10_000
 const PERMANENT_AGENT = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2'
-const PACTYRA_CORE = new PublicKey('EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC')
+const PACTYRA_CORE = new PublicKey('FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf')
 
 export async function GET(request: NextRequest) {
   const steps: any[] = []

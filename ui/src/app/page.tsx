@@ -91,8 +91,8 @@ interface IrreversibleAction {
 const PERMANENT_AGENT_ID = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2'
 
 const PROGRAMS = [
-  { name: 'pactyra-core',        id: 'EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC', instructions: 21, size: 582, description: 'Authority root — bonds, tiers, capabilities, epochs, Execution PDA, governance' },
-  { name: 'pactyra-verifier',    id: '5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN', instructions: 3,  size: 299, description: 'Pyth price freshness verification & outcome CPI' },
+  { name: 'pactyra-core',        id: 'FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf', instructions: 21, size: 582, description: 'Authority root — bonds, tiers, capabilities, epochs, Execution PDA, governance' },
+  { name: 'pactyra-verifier',    id: '4VmhkonqadrxgJKt5eWYc2JEPuzCAf8YQnPm6wrGLEYu', instructions: 3,  size: 299, description: 'Pyth price freshness verification & outcome CPI' },
   { name: 'reference-treasury',  id: '6gAZR4omxMUWy5Fb6kCtdmaWASFFXr9WRCoWUcAz7UA9', instructions: 4,  size: 378, description: 'Reference treasury — CPI-gated USDC transfers' },
   { name: 'threshold-multisig',  id: 'FgfW1JkSknJpcCypbhuv531qvVu2z8sNVPH2kZXLpDKc', instructions: 7,  size: 221, description: '3-of-5 multisig backing the protocol authority' },
 ] as const
@@ -130,12 +130,12 @@ const ARCH_NODES = [
 ]
 
 const JUDGE_CLAIMS = [
-  { claim: '21 instructions in pactyra-core',        evidence: 'solana.fm program account',   link: 'https://solana.fm/address/EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC?cluster=devnet' },
+  { claim: '21 instructions in pactyra-core',        evidence: 'solana.fm program account',   link: 'https://solana.fm/address/FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf?cluster=devnet' },
   { claim: 'Real USDC bond escrow',                   evidence: 'lock_bond transfers to vault PDA', link: 'https://solana.fm/tx/5MqTqxj3aczMkcJh7aKsm5zNjrGxmhMM7vEVGacuBHG3PXKMBrTbhbhh5cnk9RKH6yzja21wuE5hnCGVekhY7GkE?cluster=devnet' },
   { claim: 'Execution PDA upgrade on devnet',        evidence: 'program upgrade tx',           link: 'https://solana.fm/tx/2GcKadnGSnAUh1hGq9VPdeJaDKraLhaHnizvMKQWeCk46X3ewhp9YsThx4WZLes6fx76x3PqXa7HozLZoqX5k96D?cluster=devnet' },
   { claim: 'Governance timelock (24h)',              evidence: 'propose_operation + execute_operation', link: 'https://solana.fm/address/FgfW1JkSknJpcCypbhuv531qvVu2z8sNVPH2kZXLpDKc?cluster=devnet' },
   { claim: '3-of-5 threshold multisig',              evidence: 'multisig PDA on devnet',       link: 'https://solana.fm/address/7vPjrrEEeszXDNiigpczbzNH376ak5EDfsxvT4UGSpkv?cluster=devnet' },
-  { claim: 'Pyth price freshness verification',     evidence: 'pactyra-verifier program',     link: 'https://solana.fm/address/5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN?cluster=devnet' },
+  { claim: 'Pyth price freshness verification',     evidence: 'pactyra-verifier program',     link: 'https://solana.fm/address/4VmhkonqadrxgJKt5eWYc2JEPuzCAf8YQnPm6wrGLEYu?cluster=devnet' },
 ] as const
 
 const MULTISIG_PDA = '7vPjrrEEeszXDNiigpczbzNH376ak5EDfsxvT4UGSpkv'

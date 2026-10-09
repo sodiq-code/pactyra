@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid agent ID' }, { status: 400 })
     }
 
-    const PACTYRA_CORE_PROGRAM_ID = 'EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC'
+    const PACTYRA_CORE_PROGRAM_ID = 'FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf'
     const [agentPda] = PublicKey.findProgramAddressSync(
       [Buffer.from('agent'), agentIdBuf],
       new PublicKey(PACTYRA_CORE_PROGRAM_ID)
