@@ -1,0 +1,167 @@
+{
+  "address": "4VmhkonqadrxgJKt5eWYc2JEPuzCAf8YQnPm6wrGLEYu",
+  "metadata": {
+    "name": "pactyra_verifier",
+    "version": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "initialize_config",
+      "discriminator": [
+        208,
+        127,
+        21,
+        1,
+        194,
+        190,
+        196,
+        70
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  114,
+                  101,
+                  115,
+                  104,
+                  110,
+                  101,
+                  115,
+                  115,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "feed_id",
+                "type": "[u8;32]"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "feed_id",
+          "type": "[u8;32]"
+        },
+        {
+          "name": "max_age_seconds",
+          "type": "u64"
+        },
+        {
+          "name": "critical_threshold_seconds",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "verify_and_record",
+      "discriminator": [
+        40,
+        101,
+        2,
+        207,
+        169,
+        185,
+        175,
+        102
+      ],
+      "accounts": [
+        {
+          "name": "config"
+        },
+        {
+          "name": "price_update"
+        },
+        {
+          "name": "pactyra_core_program"
+        },
+        {
+          "name": "agent",
+          "writable": true
+        },
+        {
+          "name": "receipt",
+          "writable": true
+        },
+        {
+          "name": "verifier_registry"
+        },
+        {
+          "name": "policy"
+        },
+        {
+          "name": "bond",
+          "writable": true
+        },
+        {
+          "name": "bond_vault",
+          "writable": true
+        },
+        {
+          "name": "slash_destination",
+          "writable": true
+        },
+        {
+          "name": "execution",
+          "writable": true
+        },
+        {
+          "name": "verifier_program_self",
+          "signer": true
+        },
+        {
+          "name": "usdc_mint"
+        },
+        {
+          "name": "verifier_operator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "action_id",
+          "type": "[u8;32]"
+        },
+        {
+          "name": "capability_id",
+          "type": "[u8;32]"
+        }
+      ]
+    }
+  ],
+  "types": [],
+  "accounts": []
+}

@@ -3,7 +3,7 @@
 
 use anchor_lang::prelude::*;
 
-declare_id!("5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN");
+declare_id!("4VmhkonqadrxgJKt5eWYc2JEPuzCAf8YQnPm6wrGLEYu");
 
 /// Pyth Pull Oracle program on Solana (creates and owns PriceUpdateV2 accounts).
 /// This is the real program ID on mainnet and devnet.

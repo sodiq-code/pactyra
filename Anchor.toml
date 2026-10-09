@@ -6,14 +6,14 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-pactyra_core = "EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC"
-pactyra_verifier = "5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN"
+pactyra_core = "FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf"
+pactyra_verifier = "4VmhkonqadrxgJKt5eWYc2JEPuzCAf8YQnPm6wrGLEYu"
 reference_treasury = "6gAZR4omxMUWy5Fb6kCtdmaWASFFXr9WRCoWUcAz7UA9"
 threshold_multisig = "FgfW1JkSknJpcCypbhuv531qvVu2z8sNVPH2kZXLpDKc"
 
 [programs.devnet]
-pactyra_core = "EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC"
-pactyra_verifier = "5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN"
+pactyra_core = "FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf"
+pactyra_verifier = "4VmhkonqadrxgJKt5eWYc2JEPuzCAf8YQnPm6wrGLEYu"
 reference_treasury = "6gAZR4omxMUWy5Fb6kCtdmaWASFFXr9WRCoWUcAz7UA9"
 threshold_multisig = "FgfW1JkSknJpcCypbhuv531qvVu2z8sNVPH2kZXLpDKc"
 

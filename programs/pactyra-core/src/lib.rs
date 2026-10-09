@@ -5,7 +5,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
-declare_id!("EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC");
+declare_id!("FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf");
 
 // ============================================================
 // Enums
@@ -714,21 +714,24 @@ pub mod pactyra_core {
             // Signer is a delegate — the DelegateScope must exist and be valid.
             // The account constraint on `agent` already ensures the delegate
             // matches, but we still need to check expiry and amount limit.
-            let delegate_scope = ctx
+            let delegate_scope_info = ctx
                 .accounts
                 .delegate_scope
                 .as_ref()
                 .ok_or(PactyraError::WrongAgent)?;
+            let ds_data = delegate_scope_info.try_borrow_data()?;
+            let ds: &DelegateScope = &DelegateScope::try_deserialize(&mut ds_data.as_ref())
+                .map_err(|_| PactyraError::WrongAgent)?;
             require!(
-                delegate_scope.delegate == signer_key,
+                ds.delegate == signer_key,
                 PactyraError::WrongAgent
             );
             require!(
-                clock.unix_timestamp < delegate_scope.expires_at,
+                clock.unix_timestamp < ds.expires_at,
                 PactyraError::DelegateScopeExpired
             );
             require!(
-                action.amount <= delegate_scope.max_amount_per_action,
+                action.amount <= ds.max_amount_per_action,
                 PactyraError::DelegateAmountExceedsScope
             );
         }
@@ -1477,7 +1480,7 @@ pub struct RequestCapability<'info> {
 pub struct AssertCapability<'info> {
     #[account(
         constraint = agent.authority_root == signer.key()
-            || (delegate_scope.is_some() && delegate_scope.as_ref().unwrap().delegate == signer.key()),
+            || delegate_scope.is_some(),
     )]
     pub agent: Account<'info, Agent>,
 
@@ -1516,12 +1519,8 @@ pub struct AssertCapability<'info> {
     /// Optional: if a delegate (session key) is signing instead of the authority
     /// root, this account must exist and be valid. When authority_root signs,
     /// this account is not required and can be None.
-    /// Seeds: [b"delegate_scope", agent_id]
-    #[account(
-        seeds = [b"delegate_scope", agent.agent_id.as_ref()],
-        bump,
-    )]
-    pub delegate_scope: Option<Account<'info, DelegateScope>>,
+    /// CHECK: Validated manually in the instruction body.
+    pub delegate_scope: Option<UncheckedAccount<'info>>,
 
     /// The signer — either the agent's authority_root (direct execution)
     /// or a delegated session key (delegated execution).

@@ -1,5 +1,5 @@
 {
-  "address": "EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC",
+  "address": "FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf",
   "metadata": {
     "name": "pactyra_core",
     "version": "0.1.0",
@@ -327,7 +327,7 @@
     {
       "name": "deprecate_verifier",
       "docs": [
-        "Deprecate a verifier — marks it as inactive in the registry."
+        "Deprecate a verifier \u2014 marks it as inactive in the registry."
       ],
       "discriminator": [
         165,
@@ -412,7 +412,7 @@
     {
       "name": "freeze_agent",
       "docs": [
-        "Freeze an agent — prevents all future capability assertions."
+        "Freeze an agent \u2014 prevents all future capability assertions."
       ],
       "discriminator": [
         142,
@@ -543,12 +543,55 @@
           }
         },
         {
+          "name": "agent_token",
+          "writable": true
+        },
+        {
+          "name": "bond_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  110,
+                  100,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "usdc_mint",
+                "account": "Mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "usdc_mint"
+        },
+        {
           "name": "authority_root",
           "writable": true,
           "signer": true,
           "relations": [
             "agent"
           ]
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWHFef3ANxh3gFdHC"
         },
         {
           "name": "system_program",
@@ -623,26 +666,7 @@
       "accounts": [
         {
           "name": "agent",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  97,
-                  103,
-                  101,
-                  110,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "agent.agent_id",
-                "account": "Agent"
-              }
-            ]
-          }
+          "writable": true
         },
         {
           "name": "receipt",
@@ -668,70 +692,49 @@
               },
               {
                 "kind": "arg",
-                "path": "action_id"
+                "path": "action_id",
+                "type": "[u8;32]"
               }
             ]
           }
         },
         {
-          "name": "verifier_registry",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  101,
-                  114,
-                  105,
-                  102,
-                  105,
-                  101,
-                  114,
-                  95,
-                  114,
-                  101,
-                  103,
-                  105,
-                  115,
-                  116,
-                  114,
-                  121
-                ]
-              }
-            ]
-          }
+          "name": "verifier_registry"
         },
         {
           "name": "policy"
         },
         {
+          "name": "execution",
+          "writable": true
+        },
+        {
           "name": "bond",
-          "writable": true,
-          "optional": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  98,
-                  111,
-                  110,
-                  100
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "agent.agent_id",
-                "account": "Agent"
-              }
-            ]
-          }
+          "writable": true
+        },
+        {
+          "name": "bond_vault",
+          "writable": true
+        },
+        {
+          "name": "slash_destination",
+          "writable": true
+        },
+        {
+          "name": "verifier_program",
+          "signer": true
+        },
+        {
+          "name": "usdc_mint"
         },
         {
           "name": "verifier_operator",
           "writable": true,
           "signer": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
           "name": "system_program",
@@ -927,7 +930,7 @@
     {
       "name": "replace_protocol_authority",
       "docs": [
-        "Replace the protocol authority — transfers control of the VerifierRegistry."
+        "Replace the protocol authority \u2014 transfers control of the VerifierRegistry."
       ],
       "discriminator": [
         128,
@@ -1168,7 +1171,7 @@
     {
       "name": "supersede_policy",
       "docs": [
-        "Supersede a policy — marks it as superseded and points to the new policy."
+        "Supersede a policy \u2014 marks it as superseded and points to the new policy."
       ],
       "discriminator": [
         76,
@@ -1202,7 +1205,7 @@
     {
       "name": "unfreeze_agent",
       "docs": [
-        "Unfreeze an agent — restores active status."
+        "Unfreeze an agent \u2014 restores active status."
       ],
       "discriminator": [
         31,
@@ -1226,6 +1229,41 @@
           "relations": [
             "agent"
           ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "mark_executed",
+      "discriminator": [
+        48,
+        99,
+        75,
+        230,
+        190,
+        61,
+        49,
+        134
+      ],
+      "accounts": [
+        {
+          "name": "execution",
+          "writable": true
+        },
+        {
+          "name": "capability"
+        },
+        {
+          "name": "agent",
+          "writable": true
+        },
+        {
+          "name": "authority_root",
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": []
@@ -1765,7 +1803,7 @@
     {
       "code": 6022,
       "name": "TimelockNotExpired",
-      "msg": "The operation is not yet executable — timelock not expired"
+      "msg": "The operation is not yet executable \u2014 timelock not expired"
     },
     {
       "code": 6023,
@@ -1805,7 +1843,7 @@
     {
       "code": 6030,
       "name": "UnauthorizedCancellation",
-      "msg": "Unauthorized — only the proposer can cancel"
+      "msg": "Unauthorized \u2014 only the proposer can cancel"
     },
     {
       "code": 6031,
@@ -2599,7 +2637,7 @@
     {
       "name": "DelegateScope",
       "docs": [
-        "Delegate scope for session keys — bounds what a delegate can do."
+        "Delegate scope for session keys \u2014 bounds what a delegate can do."
       ],
       "type": {
         "kind": "struct",
