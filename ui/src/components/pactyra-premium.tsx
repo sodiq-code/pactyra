@@ -817,7 +817,7 @@ export function AuthorityLoopDiagram({
           )
         })}
         {/* Center label */}
-        <text x={cx} y={cy - 4} textAnchor="middle" fill="#8A8F98" fontSize="9" fontFamily="ui-monospace, monospace" letterSpacing="0.15em" textTransform="uppercase">
+        <text x={cx} y={cy - 4} textAnchor="middle" fill="#8A8F98" fontSize="9" fontFamily="ui-monospace, monospace" letterSpacing="0.15em">
           AUTHORITY
         </text>
         <text x={cx} y={cy + 10} textAnchor="middle" fill="#E8EAED" fontSize="11" fontWeight="600" fontFamily="ui-monospace, monospace">
