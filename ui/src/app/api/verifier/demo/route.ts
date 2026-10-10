@@ -18,7 +18,7 @@ const DEVNET_RPC = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com'
 const USDC_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU')
 const PAY_TO = process.env.PAY_TO || '4ZokQYezBqFkUUQVWi7axR2qT6SS3vm2Q37ZzdPwyiBN'
 const PAYMENT_AMOUNT = 10_000
-const PERMANENT_AGENT = '3482807cb77c749b30a3743330e0096b0d19482708c55c21d085cdad835dff53'
+const PERMANENT_AGENT = '9148d130783998ef22593fa53d363d867a65a5c3c73ea3ae66e0bee64039e958'
 
 const PACTYRA_CORE = new PublicKey('FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf')
 const PACTYRA_VERIFIER = new PublicKey('4VmhkonqadrxgJKt5eWYc2JEPuzCAf8YQnPm6wrGLEYu')

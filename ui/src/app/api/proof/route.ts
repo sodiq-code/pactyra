@@ -7,7 +7,7 @@ import { Connection, PublicKey } from '@solana/web3.js'
 import { Program, AnchorProvider, Idl } from '@coral-xyz/anchor'
 
 const DEVNET_RPC = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com"
-const PERMANENT_AGENT = '3482807cb77c749b30a3743330e0096b0d19482708c55c21d085cdad835dff53'
+const PERMANENT_AGENT = '9148d130783998ef22593fa53d363d867a65a5c3c73ea3ae66e0bee64039e958'
 
 /**
  * Machine-Verifiable Proof Trail
