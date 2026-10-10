@@ -16,7 +16,11 @@ import * as borsh from 'borsh'
 
 const DEVNET_RPC = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com"
 const USDC_MINT = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU")
-const PAY_TO = process.env.PAY_TO || "4ZokQYezBqFkUUQVWi7axR2qT6SS3vm2Q37ZzdPwyiBN"
+// The x402 payment recipient — a different address from the payer wallet
+// so the USDC transfer has a real balance change that the resource
+// endpoint can verify. The capability's target_program stays as the
+// payer wallet (so mark_executed works), but the x402 payment goes here.
+const X402_PAY_TO = new PublicKey("A55wG1G5nLVxn9Ns91ogrqZ6cHVi2yPd7WRi8GCyc3PE")
 const PAYMENT_AMOUNT = 10_000
 const PERMANENT_AGENT = '9148d130783998ef22593fa53d363d867a65a5c3c73ea3ae66e0bee64039e958'
 const PACTYRA_CORE = new PublicKey('FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf')
@@ -172,13 +176,13 @@ export async function GET(request: NextRequest) {
       x402Version: paymentReq.x402Version, scheme: requirement.scheme, network: requirement.network,
       payTo: requirement.payTo, amount: parseInt(requirement.maxTotalAmount.value) / 1_000_000 + ' USDC' })
 
-    // USDC payment
+    // USDC payment — send to X402_PAY_TO (different from payer, so balance changes)
     const payerTokenAccount = await getAssociatedTokenAddress(USDC_MINT, payer.publicKey, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID)
-    const payeeTokenAccount = await getAssociatedTokenAddress(USDC_MINT, payToPubkey, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID)
+    const payeeTokenAccount = await getAssociatedTokenAddress(USDC_MINT, X402_PAY_TO, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID)
     const tx = new Transaction()
     const payeeInfo = await connection.getAccountInfo(payeeTokenAccount)
     if (!payeeInfo) {
-      tx.add(createAssociatedTokenAccountInstruction(payer.publicKey, payeeTokenAccount, payToPubkey, USDC_MINT, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID))
+      tx.add(createAssociatedTokenAccountInstruction(payer.publicKey, payeeTokenAccount, X402_PAY_TO, USDC_MINT, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID))
     }
     tx.add(createTransferInstruction(payerTokenAccount, payeeTokenAccount, payer.publicKey, PAYMENT_AMOUNT, [], TOKEN_PROGRAM_ID))
     const { blockhash: bh2 } = await connection.getLatestBlockhash('confirmed')

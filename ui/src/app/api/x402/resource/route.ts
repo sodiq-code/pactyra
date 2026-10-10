@@ -8,7 +8,8 @@ import { Program, AnchorProvider, Idl } from '@coral-xyz/anchor'
 
 const DEVNET_RPC = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com"
 const USDC_MINT = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
-const PAY_TO = process.env.PAY_TO || "4ZokQYezBqFkUUQVWi7axR2qT6SS3vm2Q37ZzdPwyiBN"
+// Must match X402_PAY_TO in the demo route — the x402 payment recipient
+const PAY_TO = "A55wG1G5nLVxn9Ns91ogrqZ6cHVi2yPd7WRi8GCyc3PE"
 const PAYMENT_AMOUNT = 10_000 // 0.01 USDC (6 decimals)
 const PACTYRA_CORE_PROGRAM_ID = "FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf"
 

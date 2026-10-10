@@ -16,7 +16,12 @@ import * as crypto from 'crypto'
 
 const DEVNET_RPC = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com'
 const USDC_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU')
+// The capability's target_program (used for assert_capability + mark_executed).
+// This must be the payer wallet so mark_executed's executor check passes.
 const PAY_TO = process.env.PAY_TO || '4ZokQYezBqFkUUQVWi7axR2qT6SS3vm2Q37ZzdPwyiBN'
+// The x402 payment recipient — a different address so the USDC transfer
+// has a real balance change that the x402 resource endpoint can verify.
+const X402_PAY_TO = new PublicKey('A55wG1G5nLVxn9Ns91ogrqZ6cHVi2yPd7WRi8GCyc3PE')
 const PAYMENT_AMOUNT = 10_000
 const PERMANENT_AGENT = '9148d130783998ef22593fa53d363d867a65a5c3c73ea3ae66e0bee64039e958'
 
@@ -218,11 +223,11 @@ export async function GET(request: NextRequest) {
     const requirement = paymentReq.requires?.[0]
 
     const payerTokenAccount = await getAssociatedTokenAddress(USDC_MINT, payer.publicKey, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID)
-    const payeeTokenAccount = await getAssociatedTokenAddress(USDC_MINT, payToPubkey, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID)
+    const payeeTokenAccount = await getAssociatedTokenAddress(USDC_MINT, X402_PAY_TO, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID)
     const tx = new Transaction()
     const payeeInfo = await connection.getAccountInfo(payeeTokenAccount)
     if (!payeeInfo) {
-      tx.add(createAssociatedTokenAccountInstruction(payer.publicKey, payeeTokenAccount, payToPubkey, USDC_MINT, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID))
+      tx.add(createAssociatedTokenAccountInstruction(payer.publicKey, payeeTokenAccount, X402_PAY_TO, USDC_MINT, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID))
     }
     tx.add(createTransferInstruction(payerTokenAccount, payeeTokenAccount, payer.publicKey, PAYMENT_AMOUNT, [], TOKEN_PROGRAM_ID))
     const { blockhash: bh2 } = await connection.getLatestBlockhash('confirmed')
