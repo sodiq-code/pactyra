@@ -102,22 +102,29 @@ export async function GET(request: NextRequest) {
       explorerUrl: `${SOLANA_FM_TX}/${sig.signature}?cluster=devnet`,
     }))
 
-    // Determine latest evidence and transition from tx history
-    const latestTx = signatures[0]
-    const latestEvidence = agentState.critical_failures > 0
-      ? { result: 'fail', severity: 'critical', description: 'Critical failure recorded' }
+    // Determine latest evidence — derive from the CURRENT tier and counters,
+    // not just the cumulative critical_failures counter. An agent that was
+    // re-bootstrapped to T3 after a prior critical failure should show its
+    // current state, not a stale "slashed" label.
+    const latestEvidence = agentState.tier === 'T1' && agentState.critical_failures > 0
+      ? { result: 'fail', severity: 'critical', description: 'Critical failure recorded — agent slashed to Probation' }
       : agentState.success_count > 0
       ? { result: 'pass', severity: 'none', description: 'Verified outcome recorded' }
       : { result: 'none', severity: 'none', description: 'No outcomes recorded yet' }
 
-    // Determine latest authority transition
+    // Determine latest authority transition — consistent with the CURRENT tier.
+    // A T3 agent (even with prior critical_failures that were recovered from)
+    // shows "T2 → T3 (earned)". Only a T1 agent with critical_failures shows
+    // the slash transition.
     let latestTransition = 'Initial registration'
-    if (agentState.critical_failures > 0) {
+    if (agentState.tier === 'T1' && agentState.critical_failures > 0) {
       latestTransition = `T3 → T1 (slashed, epoch ${agentState.epoch})`
     } else if (agentState.tier === 'T3') {
       latestTransition = `T2 → T3 (earned, epoch ${agentState.epoch})`
     } else if (agentState.tier === 'T2') {
       latestTransition = `T1 → T2 (earned, epoch ${agentState.epoch})`
+    } else if (agentState.tier === 'T1') {
+      latestTransition = `Registered (epoch ${agentState.epoch})`
     }
 
     // Fetch verifier registry
