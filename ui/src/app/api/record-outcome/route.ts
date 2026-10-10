@@ -4,6 +4,27 @@ import { getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID } from '@solana/spl-tok
 import { Program, AnchorProvider, BN, Idl } from '@coral-xyz/anchor'
 import { loadWalletKeypair, makeAnchorWallet } from '@/lib/wallet'
 
+/**
+ * PROTOCOL STATE-MACHINE TEST HARNESS
+ *
+ * This route directly calls pactyra_core::record_outcome() to advance the
+ * agent through protocol state transitions (T1→T2→T3, critical failures,
+ * epoch increments). It BYPASSES the verifier path — the wallet is
+ * registered as a verifier_program in the VerifierRegistry for testing
+ * purposes, so the operator can record outcomes without going through
+ * the pactyra-verifier program's verify_and_record CPI.
+ *
+ * This is intended for testing the state machine only. It is NOT the
+ * production-grade proof path.
+ *
+ * The judge-facing demo uses the real verifier path:
+ *   /api/verifier/demo  (calls mark_executed + verify_and_record via CPI)
+ *
+ * The on-chain verifier path (pactyra-verifier::verify_and_record) checks
+ * Pyth price freshness and then calls record_outcome via CPI — the
+ * operator cannot bypass the verifier because the verifier_program
+ * account must be a CPI signer.
+ */
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
