@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     }
 
     const url = new URL(request.url)
-    const attemptedAmount = parseInt(url.searchParams.get('amount') || '50000')
+    const attemptedAmount = parseInt(url.searchParams.get('amount') || '6000000')
 
     const secretKey = JSON.parse(process.env.SOLANA_WALLET_SECRET_KEY)
     const payer = Keypair.fromSecretKey(Buffer.from(secretKey))
