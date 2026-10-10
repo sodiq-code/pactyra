@@ -34,8 +34,8 @@ All four programs are deployed to Solana devnet and verified executable.
 
 | Program | Program ID | Deployed | Size |
 |---|---|---|---|
-| `pactyra-core` | `EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC` | ✅ Devnet | 418 KB |
-| `pactyra-verifier` | `5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN` | ✅ Devnet | 217 KB |
+| `pactyra-core` | `FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf` | ✅ Devnet | 582 KB |
+| `pactyra-verifier` | `4VmhkonqadrxgJKt5eWYc2JEPuzCAf8YQnPm6wrGLEYu` | ✅ Devnet | 299 KB |
 | `reference-treasury` | `6gAZR4omxMUWy5Fb6kCtdmaWASFFXr9WRCoWUcAz7UA9` | ✅ Devnet | 288 KB |
 | `threshold-multisig` | `FgfW1JkSknJpcCypbhuv531qvVu2z8sNVPH2kZXLpDKc` | ✅ Devnet | 221 KB |
 
@@ -63,9 +63,9 @@ Multisig PDA: 7vPjrrEEeszXDNiigpczbzNH376ak5EDfsxvT4UGSpkv (3-of-5 threshold)
 
 ## pactyra-core
 
-### Instructions (20)
+### Instructions (21)
 
-#### Core protocol (9)
+#### Core protocol (10)
 
 | Instruction | Description |
 |---|---|
@@ -75,7 +75,8 @@ Multisig PDA: 7vPjrrEEeszXDNiigpczbzNH376ak5EDfsxvT4UGSpkv (3-of-5 threshold)
 | `create_policy` | Creates an immutable policy defining capability requirements |
 | `lock_bond` | Locks a bond for an agent (re-lockable after slash) |
 | `request_capability` | Issues an evidence-bound capability with TTL, amount limit, target scope, and authority epoch binding |
-| `assert_capability` | The core enforcement instruction — validates 13 security checks before authorizing an action |
+| `assert_capability` | The core enforcement instruction — validates 14 security checks before authorizing an action |
+| `mark_executed` | Transitions an Execution PDA from Asserted to Executed; called by the target program after performing the authorized action |
 | `record_outcome` | Records a verified outcome from a registered verifier, triggers authority transitions |
 | `revoke_capability` | Revokes a capability (agent authority root only) |
 
@@ -118,7 +119,7 @@ Multisig PDA: 7vPjrrEEeszXDNiigpczbzNH376ak5EDfsxvT4UGSpkv (3-of-5 threshold)
 - Agent tier → Probation
 - Authority epoch incremented (invalidates all outstanding capabilities)
 
-### assert_capability security checks (13)
+### assert_capability security checks (14)
 
 1. Agent active
 2. Capability active
@@ -132,7 +133,8 @@ Multisig PDA: 7vPjrrEEeszXDNiigpczbzNH376ak5EDfsxvT4UGSpkv (3-of-5 threshold)
 10. Target account in scope
 11. Amount within limit
 12. Bond satisfied
-13. Delegate scope (if a delegate signs: verify delegate pubkey, scope expiry, per-action amount limit)
+13. Frequency limit not exceeded (capability use count versus max)
+14. Delegate scope (if a delegate signs: verify delegate pubkey, scope expiry, per-action amount limit)
 
 Replay protection is enforced via a `ConsumedNonce` PDA that is created on each successful assertion, making the same (agent, nonce) pair unusable twice.
 
@@ -355,7 +357,7 @@ The SDK includes an x402 adapter that gates agentic HTTP payments with PACTYRA c
 Agent → HTTP request to x402 service
        ← 402 Payment Required
 Adapter → assert_capability(agent, action, amount)
-         → 13 security checks
+         → 14 security checks
          → PASS: continue to payment
          → FAIL: reject, no payment made
 Adapter → SPL token transfer (USDC)
@@ -448,7 +450,7 @@ Authority transition
 
 - **Evidence source:** Pyth Pull Oracle account data
 - **Evidence hash:** `keccak256(pyth_account_data)`
-- **Program:** [`5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN`](https://solana.fm/address/5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN?cluster=devnet)
+- **Program:** [`4VmhkonqadrxgJKt5eWYc2JEPuzCAf8YQnPm6wrGLEYu`](https://solana.fm/address/4VmhkonqadrxgJKt5eWYc2JEPuzCAf8YQnPm6wrGLEYu?cluster=devnet)
 
 #### Verifier B — Service Outcome (Service Delivery)
 
@@ -558,7 +560,7 @@ See [`docs/architecture.md`](docs/architecture.md) for:
 - Protocol flow diagram
 - Program relationships (CPI between all 4 programs)
 - Authority transition state machine (T1 → T2 → T3 → T1)
-- Security boundary flow (13 checks in assert_capability)
+- Security boundary flow (14 checks in assert_capability)
 
 ## Documentation
 
@@ -742,4 +744,4 @@ MIT — see [LICENSE](LICENSE)
 - **GitHub:** [https://github.com/sodiq-code/pactyra](https://github.com/sodiq-code/pactyra)
 - **Live Demo:** [https://pactyra-ui.vercel.app](https://pactyra-ui.vercel.app)
 - **SDK:** `npm install @sodiq-code/pactyra-client` (GitHub Packages)
-- **Programs:** [pactyra-core](https://solana.fm/address/EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC?cluster=devnet) · [pactyra-verifier](https://solana.fm/address/5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN?cluster=devnet) · [reference-treasury](https://solana.fm/address/6gAZR4omxMUWy5Fb6kCtdmaWASFFXr9WRCoWUcAz7UA9?cluster=devnet) · [threshold-multisig](https://solana.fm/address/FgfW1JkSknJpcCypbhuv531qvVu2z8sNVPH2kZXLpDKc?cluster=devnet)
+- **Programs:** [pactyra-core](https://solana.fm/address/FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf?cluster=devnet) · [pactyra-verifier](https://solana.fm/address/4VmhkonqadrxgJKt5eWYc2JEPuzCAf8YQnPm6wrGLEYu?cluster=devnet) · [reference-treasury](https://solana.fm/address/6gAZR4omxMUWy5Fb6kCtdmaWASFFXr9WRCoWUcAz7UA9?cluster=devnet) · [threshold-multisig](https://solana.fm/address/FgfW1JkSknJpcCypbhuv531qvVu2z8sNVPH2kZXLpDKc?cluster=devnet)
