@@ -820,7 +820,7 @@ export default function Page() {
                 />
                 <div className="flex items-center gap-3">
                   <TierBadge tier={tier} size="lg" />
-                  <StatusPill status={status === 'Active' ? 'active' : 'deprecated'} label={status} />
+                  <StatusPill status={status === 'Active' ? 'active' : 'deprecated'} label={status.toLowerCase()} />
                 </div>
                 {/* Sparkline */}
                 <div className="flex items-center gap-2">
@@ -1753,7 +1753,7 @@ export default function Page() {
                     return (
                       <div key={p.name}
                         className="flex items-center gap-3 py-2.5 px-3 rounded-lg bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.03] transition-colors">
-                        <StatusPill status={deployed ? 'deployed' : 'missing'} label={deployed ? 'Devnet' : 'Missing'} />
+                        <StatusPill status={deployed ? 'deployed' : 'missing'} label={deployed ? 'Devnet' : 'missing'} />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
                             <code className="font-mono text-sm font-medium">{p.name}</code>
