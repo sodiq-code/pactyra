@@ -9,6 +9,7 @@ node_modules/
 dist/
 .next/
 .cache/
+*.tsbuildinfo
 
 # Environment
 .env
