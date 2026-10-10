@@ -10,7 +10,7 @@ const DEVNET_RPC = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com'
 const PACTYRA_CORE_PROGRAM_ID = 'FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf'
 const SOLANA_FM_TX = 'https://solana.fm/tx'
 const SOLANA_FM_ADDR = 'https://solana.fm/address'
-const PERMANENT_AGENT = 'cd2424c76e929ce957c0a02c19659c5e7f4e571929d656e3f32655f6c2ccc9d7'
+const PERMANENT_AGENT = 'b0697e66ae9fce21b5e8802d0cb93ed0dd34293a3ea5945a3560c5b02d8757b2'
 const idl: Idl = require('@/lib/idl/pactyra_core.json')
 
 /**
