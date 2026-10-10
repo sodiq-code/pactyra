@@ -722,10 +722,7 @@ pub mod pactyra_core {
             let ds_data = delegate_scope_info.try_borrow_data()?;
             let ds: &DelegateScope = &DelegateScope::try_deserialize(&mut ds_data.as_ref())
                 .map_err(|_| PactyraError::WrongAgent)?;
-            require!(
-                ds.delegate == signer_key,
-                PactyraError::WrongAgent
-            );
+            require!(ds.delegate == signer_key, PactyraError::WrongAgent);
             require!(
                 clock.unix_timestamp < ds.expires_at,
                 PactyraError::DelegateScopeExpired
