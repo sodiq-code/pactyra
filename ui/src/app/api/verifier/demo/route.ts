@@ -293,10 +293,14 @@ export async function GET(request: NextRequest) {
       })
 
       // Direct record_outcome (PASS — authority maintained)
+      // Read the STORED action_id from the Execution PDA (more reliable than computing it)
+      const execAccount = await connection.getAccountInfo(executionPda)
+      const storedActionId = execAccount.data.slice(8, 40) // skip 8-byte discriminator
+
       const [verifierRegistryPda] = PublicKey.findProgramAddressSync(
         [Buffer.from('verifier_registry')], PACTYRA_CORE)
       const [receiptPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from('receipt'), agentId, actionId], PACTYRA_CORE)
+        [Buffer.from('receipt'), agentId, storedActionId], PACTYRA_CORE)
       const [bondPda] = PublicKey.findProgramAddressSync(
         [Buffer.from('bond'), agentId], PACTYRA_CORE)
       const [bondVaultPda] = PublicKey.findProgramAddressSync(
@@ -306,7 +310,7 @@ export async function GET(request: NextRequest) {
       const forceCritical = url.searchParams.get('force') === 'critical'
       const recordDisc = Buffer.from([130, 121, 6, 102, 151, 160, 252, 6])
       const recordArgs = Buffer.alloc(32 + 32 + 1 + 1 + 32)
-      actionId.copy(recordArgs, 0)
+      storedActionId.copy(recordArgs, 0)
       capabilityId.copy(recordArgs, 32)
       recordArgs.writeUInt8(forceCritical ? 1 : 0, 64) // result: 0=Pass, 1=Fail
       recordArgs.writeUInt8(forceCritical ? 2 : 0, 65) // severity: 0=None, 2=Critical
