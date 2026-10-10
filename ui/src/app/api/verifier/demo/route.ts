@@ -23,7 +23,7 @@ const PAY_TO = process.env.PAY_TO || '4ZokQYezBqFkUUQVWi7axR2qT6SS3vm2Q37ZzdPwyi
 // has a real balance change that the x402 resource endpoint can verify.
 const X402_PAY_TO = new PublicKey('A55wG1G5nLVxn9Ns91ogrqZ6cHVi2yPd7WRi8GCyc3PE')
 const PAYMENT_AMOUNT = 10_000
-const PERMANENT_AGENT = '9148d130783998ef22593fa53d363d867a65a5c3c73ea3ae66e0bee64039e958'
+const PERMANENT_AGENT = 'c3e081b665887dc265469a1d5906c53e1beb633dcc5651b01e76a10796e771f9'
 
 const PACTYRA_CORE = new PublicKey('FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf')
 const PACTYRA_VERIFIER = new PublicKey('4VmhkonqadrxgJKt5eWYc2JEPuzCAf8YQnPm6wrGLEYu')
