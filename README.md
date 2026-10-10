@@ -513,6 +513,45 @@ Returns: thesis, architecture flow diagram, live verifiers (with severity matric
   57 total tests
 ```
 
+## Continuous Integration
+
+Every push to `main` and every pull request triggers the workflow in
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml). It runs three jobs:
+
+| Job | Command | Purpose |
+|---|---|---|
+| Build Solana Programs | `cargo build-sbf -- --all` | Compile every program and upload the `.so` binaries as artifacts. |
+| Lint | `cargo fmt --all -- --check` then `cargo clippy --all-targets -- --deny warnings` | Reject unformatted code and any clippy warning. |
+| Test TypeScript SDK | `npx ts-mocha -p ./tsconfig.json -t 1000000 sdk/tests/**/*.ts` | Run the SDK test suite against the built programs. |
+
+### Verification
+
+The workflow is green on `main`. Recent commits verified by GitHub Actions:
+
+| Commit | Subject | Build | Lint | Test SDK |
+|---|---|:---:|:---:|:---:|
+| `3763b15` | Ignore TypeScript incremental build info cache | pass | pass | pass |
+| `35688cc` | Apply rustfmt to pactyra-core to satisfy CI lint check | pass | pass | pass |
+
+The `35688cc` commit repaired the Lint job. It had been failing on every push
+since `262a07e` because a `require!` macro call in
+`programs/pactyra-core/src/lib.rs` was formatted across multiple lines while
+`rustfmt` collapses it onto a single line. Both lint checks now pass locally
+with the toolchain pinned by [`rust-toolchain.toml`](rust-toolchain.toml)
+(Rust 1.89.0, `rustfmt` and `clippy` components, minimal profile):
+
+```bash
+cargo fmt --all -- --check                      # exits 0
+cargo clippy --all-targets -- --deny warnings   # exits 0
+```
+
+### Workspace hygiene
+
+The repository ignores machine-local build caches via `.gitignore`:
+`target/`, `node_modules/`, `.next/`, `*.so` (except committed program
+binaries under `target/deploy/`), and `*.tsbuildinfo` (the TypeScript
+incremental compilation cache).
+
 ## Architecture
 
 See [`docs/architecture.md`](docs/architecture.md) for:
