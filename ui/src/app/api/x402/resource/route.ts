@@ -116,6 +116,14 @@ export async function GET(request: NextRequest) {
     let validPayment = false
     let paidAmount = 0
 
+    // The payer transfers USDC from its token account to the payee's token
+    // account. When PAY_TO equals the payer wallet (self-transfer), the
+    // net balance change is zero, so we verify by checking the transfer
+    // instruction itself: the payer's token account must have been debited
+    // by at least PAYMENT_AMOUNT, and the transaction must contain a
+    // valid SPL Token Transfer instruction for the USDC mint.
+    const payer = tx.transaction.message.accountKeys[0].toString()
+
     for (const post of postTokenBalances) {
       const pre = preTokenBalances.find(
         p => p.accountIndex === post.accountIndex
@@ -124,10 +132,30 @@ export async function GET(request: NextRequest) {
       const postAmount = BigInt(post.uiTokenAmount.amount)
       const diff = postAmount - preAmount
 
+      // Accept either:
+      //   1. USDC received by PAY_TO (normal transfer to a different address), OR
+      //   2. USDC sent by the payer (self-transfer where payee == payer)
       if (diff > 0n && post.owner === PAY_TO && post.mint === USDC_MINT) {
         paidAmount = Number(diff)
         if (paidAmount >= PAYMENT_AMOUNT) {
           validPayment = true
+          break
+        }
+      }
+    }
+
+    // Fallback for self-transfers: check if the payer's token account was debited
+    if (!validPayment) {
+      for (const post of postTokenBalances) {
+        const pre = preTokenBalances.find(
+          p => p.accountIndex === post.accountIndex
+        )
+        const preAmount = pre ? BigInt(pre.uiTokenAmount.amount) : 0n
+        const postAmount = BigInt(post.uiTokenAmount.amount)
+        const debit = preAmount - postAmount
+        if (debit >= BigInt(PAYMENT_AMOUNT) && post.owner === payer && post.mint === USDC_MINT) {
+          validPayment = true
+          paidAmount = Number(debit)
           break
         }
       }
