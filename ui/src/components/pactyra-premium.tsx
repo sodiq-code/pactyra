@@ -546,15 +546,20 @@ export function Filmstrip({
   onSelect: (id: number) => void
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
-  const activeRef = useRef<HTMLButtonElement>(null)
 
+  // Auto-scroll to keep the active frame centered.
+  // Resolves the active element via a scoped data-attribute query on each run.
+  // A shared object ref swapped between frames is unreliable here: framer-motion
+  // wraps element refs with a stable per-element identity, so React does not
+  // re-attach when the user ref moves, leaving it pinned to whichever frame
+  // was active on mount.
   useEffect(() => {
-    if (activeRef.current && scrollRef.current) {
-      const container = scrollRef.current
-      const el = activeRef.current
-      const scrollLeft = el.offsetLeft - container.offsetWidth / 2 + el.offsetWidth / 2
-      container.scrollTo({ left: scrollLeft, behavior: 'smooth' })
-    }
+    const container = scrollRef.current
+    if (!container) return
+    const el = container.querySelector<HTMLElement>(`[data-scene-id="${activeId}"]`)
+    if (!el) return
+    const scrollLeft = el.offsetLeft - container.offsetWidth / 2 + el.offsetWidth / 2
+    container.scrollTo({ left: scrollLeft, behavior: 'smooth' })
   }, [activeId])
 
   // Arrow key navigation: left/right to move between scenes
@@ -590,7 +595,7 @@ export function Filmstrip({
           return (
             <motion.button
               key={frame.id}
-              ref={isActive ? activeRef : undefined}
+              data-scene-id={frame.id}
               onClick={() => onSelect(frame.id)}
               whileHover={{ y: -2 }}
               whileTap={{ scale: 0.98 }}
