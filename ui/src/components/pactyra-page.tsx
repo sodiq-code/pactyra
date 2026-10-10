@@ -1126,7 +1126,7 @@ export default function Page() {
                   <ExternalLink className="h-3 w-3" />
                 </a>
                 <Button variant="ghost" size="sm" onClick={() => fetchVerifierCatalog()} disabled={verifierCatalogLoading}
-                  className="text-xs h-7 gap-1">
+                  className="min-h-[44px] sm:min-h-7 text-xs h-7 gap-1">
                   <RefreshCw className={cn('h-3 w-3', verifierCatalogLoading && 'animate-spin')} />
                   Refresh
                 </Button>
@@ -1427,10 +1427,10 @@ export default function Page() {
                     placeholder="64-char hex agent ID"
                     className="font-mono text-xs bg-white/[0.03] border-white/[0.06] rounded-lg" />
                   <Button variant="outline" onClick={() => setRegisterId(randomAgentId())}
-                    title="Generate random 32-byte agent ID" className="shrink-0 bg-white/[0.03] border-white/[0.06]">
+                    title="Generate random 32-byte agent ID" className="shrink-0 min-h-[44px] sm:min-h-9 bg-white/[0.03] border-white/[0.06]">
                     <RefreshCw className="h-3.5 w-3.5" />Generate
                   </Button>
-                  <Button onClick={handleRegister} disabled={registering || !registerId} className="shrink-0 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg">
+                  <Button onClick={handleRegister} disabled={registering || !registerId} className="shrink-0 min-h-[44px] sm:min-h-9 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg">
                     <Plus className="h-4 w-4" />
                     {registering ? 'Registering...' : 'Register'}
                   </Button>
@@ -1474,13 +1474,13 @@ export default function Page() {
                       disabled={govBusy === 'delegate' || !delegateKey}
                       onClick={() => handleGovernance('delegate',
                         { delegate: delegateKey, maxAmount: Number(delegateMax) * 1_000_000, expiresIn: 3600 }, 'Delegate')}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg">
+                      className="min-h-[44px] sm:min-h-8 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg">
                       {govBusy === 'delegate' ? '...' : 'Grant'}
                     </Button>
                     <Button variant="outline" size="sm"
                       disabled={govBusy === 'revoke_delegate'}
                       onClick={() => handleGovernance('revoke_delegate', {}, 'Revoke delegate')}
-                      className="bg-white/[0.03] border-white/[0.06] rounded-lg">
+                      className="min-h-[44px] sm:min-h-8 bg-white/[0.03] border-white/[0.06] rounded-lg">
                       Revoke
                     </Button>
                   </div>
@@ -1619,7 +1619,7 @@ export default function Page() {
               </div>
               <div className="flex items-center gap-3">
                 <Button onClick={runX402Demo} disabled={x402DemoLoading}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white gap-2 rounded-lg">
+                  className="min-h-[44px] sm:min-h-9 bg-emerald-600 hover:bg-emerald-500 text-white gap-2 rounded-lg">
                   <DollarSign className="h-4 w-4" />
                   {x402DemoLoading ? 'Running x402 V2 flow...' : 'Run Real x402 Payment'}
                 </Button>
@@ -1949,7 +1949,7 @@ export default function Page() {
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs text-muted-foreground">Recent on-chain activity for this agent PDA</span>
                 <Button variant="ghost" size="sm" onClick={() => { setShowTxHistory(!showTxHistory); fetchTxHistory(activeAgentId) }}
-                  className="text-xs h-7 gap-1">
+                  className="min-h-[44px] sm:min-h-7 text-xs h-7 gap-1">
                   <RefreshCw className={cn('h-3 w-3', txHistoryLoading && 'animate-spin')} />
                   {showTxHistory ? 'Hide' : 'Show'}
                 </Button>
