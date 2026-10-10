@@ -10,7 +10,7 @@ import {
 import { Program, AnchorProvider, BN, Idl } from '@coral-xyz/anchor'
 
 const DEVNET_RPC = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com'
-const PERMANENT_AGENT = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2'
+const PERMANENT_AGENT = '3579006b1b7860df68e76ff4f90a3954ebb7420e3b72a951330083e414bca5f4'
 const PACTYRA_CORE = new PublicKey('FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf')
 
 /**
