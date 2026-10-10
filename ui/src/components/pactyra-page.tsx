@@ -88,7 +88,7 @@ interface IrreversibleAction {
   label: string
 }
 
-const PERMANENT_AGENT_ID = 'b0697e66ae9fce21b5e8802d0cb93ed0dd34293a3ea5945a3560c5b02d8757b2'
+const PERMANENT_AGENT_ID = '2f4a1517cbc6b7a66c1f4f96354bce6740f422f4c86a95295787ae2d4a3b6050'
 
 const PROGRAMS = [
   { name: 'pactyra-core',        id: 'FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf', instructions: 21, size: 582, description: 'Authority root — bonds, tiers, capabilities, epochs, Execution PDA, governance' },
