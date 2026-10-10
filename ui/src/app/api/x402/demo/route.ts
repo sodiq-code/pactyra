@@ -53,18 +53,9 @@ export async function GET(request: NextRequest) {
     const agentData = await program.account.agent.fetch(agentPda)
     const epoch = agentData.currentEpoch.toNumber()
 
-    // Ensure capability exists
+    // Ensure capability exists (read raw account data — IDL has stale layout)
     const [capabilityPda] = PublicKey.findProgramAddressSync(
       [Buffer.from('capability'), agentId, new BN(epoch).toArrayLike(Buffer, 'le', 8), payToPubkey.toBuffer()], PACTYRA_CORE)
-    try { await program.account.capability.fetch(capabilityPda) } catch {
-      try {
-        await program.methods.requestCapability({
-          capabilityType: { payService: {} }, targetProgram: payToPubkey, targetAccount: payToPubkey,
-          amountLimit: new BN(5_000_000), frequencyLimit: new BN(1000), ttlSeconds: new BN(86400 * 30),
-        }).accounts({ agent: agentPda, policy: policyPda, capability: capabilityPda,
-          authorityRoot: payer.publicKey, systemProgram: SystemProgram.programId }).rpc()
-      } catch {}
-    }
 
     // Call assert_capability using a RAW transaction (bypass Anchor SDK)
     // delegate_scope is Optional — since authority_root is signing, we don't
@@ -80,16 +71,33 @@ export async function GET(request: NextRequest) {
     // ActionParams: action_type (1 byte enum), target_program (32), target_account (32), amount (8), action_nonce (8)
     const discriminator = Buffer.from([32, 167, 114, 216, 19, 22, 182, 218])
     
+    // Read target_account from the stored capability to ensure the assert matches
+    let capAccount = await connection.getAccountInfo(capabilityPda)
+    if (!capAccount) {
+      try {
+        await program.methods.requestCapability({
+          capabilityType: { payService: {} }, targetProgram: payToPubkey, targetAccount: payToPubkey,
+          amountLimit: new BN(5_000_000), frequencyLimit: new BN(1000), ttlSeconds: new BN(86400 * 30),
+        }).accounts({ agent: agentPda, policy: policyPda, capability: capabilityPda,
+          authorityRoot: payer.publicKey, systemProgram: SystemProgram.programId }).rpc()
+        capAccount = await connection.getAccountInfo(capabilityPda)
+      } catch {}
+    }
+    // Layout: disc(8) + cap_id(32) + agent_id(32) + cap_type(1) + target_program(32) + target_account(32)
+    const storedTargetAccount = capAccount
+      ? new PublicKey(capAccount.data.slice(8 + 32 + 32 + 1 + 32, 8 + 32 + 32 + 1 + 32 + 32))
+      : payToPubkey
+
     // ActionParams struct (borsh serialized)
     // action_type: PayService = 0 (1 byte)
     // target_program: 32 bytes
-    // target_account: 32 bytes
+    // target_account: 32 bytes (read from stored capability)
     // amount: 8 bytes (u64 LE)
     // action_nonce: 8 bytes (u64 LE)
     const actionData = Buffer.alloc(1 + 32 + 32 + 8 + 8)
     actionData.writeUInt8(0, 0) // PayService = 0
     payToPubkey.toBuffer().copy(actionData, 1) // target_program
-    payToPubkey.toBuffer().copy(actionData, 33) // target_account
+    storedTargetAccount.toBuffer().copy(actionData, 33) // target_account (from stored capability)
     actionData.writeBigUInt64LE(BigInt(PAYMENT_AMOUNT), 65) // amount
     actionData.writeBigUInt64LE(BigInt(actionNonce.toNumber()), 73) // action_nonce
 

@@ -91,19 +91,26 @@ export async function GET(request: NextRequest) {
 
     const [capabilityPda] = PublicKey.findProgramAddressSync(
       [Buffer.from('capability'), agentId, new BN(epoch).toArrayLike(Buffer, 'le', 8), payToPubkey.toBuffer()], PACTYRA_CORE)
-    try { await program.account.capability.fetch(capabilityPda) } catch {
+    // Check if capability exists by reading raw account data (IDL has stale layout)
+    let capAccount = await connection.getAccountInfo(capabilityPda)
+    if (!capAccount) {
       try {
         await program.methods.requestCapability({
           capabilityType: { payService: {} }, targetProgram: payToPubkey, targetAccount: payToPubkey,
           amountLimit: new BN(5_000_000), frequencyLimit: new BN(1000), ttlSeconds: new BN(86400 * 30),
         }).accounts({ agent: agentPda, policy: policyPda, capability: capabilityPda,
           authorityRoot: payer.publicKey, systemProgram: SystemProgram.programId }).rpc()
+        capAccount = await connection.getAccountInfo(capabilityPda)
       } catch {}
     }
 
-    // Fetch the capability_id (needed for action_id computation + verify_and_record)
-    const capData = await program.account.capability.fetch(capabilityPda)
-    const capabilityId = Buffer.from(capData.capabilityId)
+    // Read capability_id from raw account data (skip 8-byte discriminator)
+    // Layout: disc(8) + capability_id(32) + agent_id(32) + ...
+    if (!capAccount) {
+      steps.push({ step: 2, action: 'Capability setup', result: 'failed', error: 'Could not create or fetch capability' })
+      return NextResponse.json({ ok: false, message: 'Capability setup failed', steps })
+    }
+    const capabilityId = Buffer.from(capAccount.data.slice(8, 40))
 
     // --- Step 3: assert_capability() — REAL on-chain enforcement (14 checks) ---
     const actionNonce = new BN(Math.floor(Date.now() / 1000))
@@ -114,6 +121,10 @@ export async function GET(request: NextRequest) {
     const [delegateScopePda] = PublicKey.findProgramAddressSync(
       [Buffer.from('delegate_scope'), agentId], PACTYRA_CORE)
 
+    // Read target_account from the stored capability data to ensure consistency.
+    // Layout: disc(8) + capability_id(32) + agent_id(32) + cap_type(1) + target_program(32) + target_account(32)
+    const storedTargetAccount = new PublicKey(capAccount.data.slice(8 + 32 + 32 + 1 + 32, 8 + 32 + 32 + 1 + 32 + 32))
+
     // Compute action_id identically to the on-chain program:
     // keccak256(agent_id || capability_id || action_type(1) || target_program(32) || target_account(32) || amount(8 LE) || action_nonce(8 LE))
     const actionIdHashInput = Buffer.concat([
@@ -121,7 +132,7 @@ export async function GET(request: NextRequest) {
       capabilityId,
       Buffer.from([0]), // PayService = 0
       payToPubkey.toBuffer(),
-      payToPubkey.toBuffer(),
+      storedTargetAccount.toBuffer(),
       (() => { const b = Buffer.alloc(8); b.writeBigUInt64LE(BigInt(PAYMENT_AMOUNT)); return b })(),
       (() => { const b = Buffer.alloc(8); b.writeBigUInt64LE(BigInt(actionNonce.toNumber())); return b })(),
     ])
@@ -132,7 +143,7 @@ export async function GET(request: NextRequest) {
     const actionArgs = Buffer.alloc(1 + 32 + 32 + 8 + 8)
     actionArgs.writeUInt8(0, 0)
     payToPubkey.toBuffer().copy(actionArgs, 1)
-    payToPubkey.toBuffer().copy(actionArgs, 33)
+    storedTargetAccount.toBuffer().copy(actionArgs, 33)
     actionArgs.writeBigUInt64LE(BigInt(PAYMENT_AMOUNT), 65)
     actionArgs.writeBigUInt64LE(BigInt(actionNonce.toNumber()), 73)
     const assertIxData = Buffer.concat([assertDiscriminator, actionArgs])
