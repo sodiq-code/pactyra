@@ -185,6 +185,45 @@ With PACTYRA: the agent must earn the authority to pay through verified performa
 ## Verifier-agnostic architecture
 
 PACTYRA does not prescribe one definition of success. Any verifier that produces a deterministic outcome (pass/fail) with a cryptographic evidence hash can register in the VerifierRegistry and feed `record_outcome`. Two verifiers are live on devnet (Pyth price freshness, Service Outcome delivery); TEE, Multi-Sig, ZK, and Oracle Quorum verifiers are specified but not yet deployed. The full catalog, severity matrices, the single entry-point contract, the demo endpoint, and the machine-readable verifier API live in [`docs/architecture.md`](docs/architecture.md).
+
+## Security model
+
+- **Exact-action binding**: Every capability commits to agent, action type, target program, target account, amount limit, expiry, and authority epoch.
+- **Authority epochs**: Incrementing the epoch silently invalidates all outstanding capabilities.
+- **Short-lived capabilities**: Configurable TTL (default 30 minutes), bounded target scope, single-use nonces.
+- **Replay protection**: `ConsumedNonce` PDA prevents nonce reuse.
+- **Bond requirement**: Capabilities rejected if agent's bond is insufficient.
+- **Verifier-only outcomes**: Only registered verifier operators can submit receipts. Evidence hash must be non-zero.
+- **Tier-based limits**: $5 / $50 / $500 per capability based on agent tier.
+- **Delegate scope**: Session keys have bounded amount and expiry, enforced in `assert_capability`.
+- **Agent freeze**: Frozen agents cannot assert capabilities.
+- **Timelock**: 24-hour delay on all trust-root operations.
+- **Multisig**: 3-of-5 threshold for protocol authority operations.
+- **Immutable policies**: Policies can only be created or superseded, never mutated.
+- **Rent reclamation**: Old receipts from prior epochs can be closed.
+
+## Build
+
+### Prerequisites
+
+- Rust 1.89+
+- Solana CLI 4.x (Agave)
+- Anchor 1.2+
+- Node.js 18+
+
+### Install and build
+
+```bash
+npm install
+anchor build
+```
+
+### Run tests
+
+```bash
+anchor test --skip-build
+```
+
 ## Test results
 
 ```
@@ -255,43 +294,6 @@ See [`docs/architecture.md`](docs/architecture.md) for:
 ## Business model
 
 The protocol is open-source infrastructure (MIT, free forever); the business is the operated layer around it — hosted VerifierRegistry, monitoring, policy management, and enterprise integrations. The detailed three-tier model (Open-Source Core, Hosted Infrastructure, Enterprise), revenue streams, open-source commitment, and distribution plan live in [`docs/gtm-strategy.md`](docs/gtm-strategy.md). No token. No DAO. Pure infrastructure.
-## Security model
-
-- **Exact-action binding**: Every capability commits to agent, action type, target program, target account, amount limit, expiry, and authority epoch.
-- **Authority epochs**: Incrementing the epoch silently invalidates all outstanding capabilities.
-- **Short-lived capabilities**: Configurable TTL (default 30 minutes), bounded target scope, single-use nonces.
-- **Replay protection**: `ConsumedNonce` PDA prevents nonce reuse.
-- **Bond requirement**: Capabilities rejected if agent's bond is insufficient.
-- **Verifier-only outcomes**: Only registered verifier operators can submit receipts. Evidence hash must be non-zero.
-- **Tier-based limits**: $5 / $50 / $500 per capability based on agent tier.
-- **Delegate scope**: Session keys have bounded amount and expiry, enforced in `assert_capability`.
-- **Agent freeze**: Frozen agents cannot assert capabilities.
-- **Timelock**: 24-hour delay on all trust-root operations.
-- **Multisig**: 3-of-5 threshold for protocol authority operations.
-- **Immutable policies**: Policies can only be created or superseded, never mutated.
-- **Rent reclamation**: Old receipts from prior epochs can be closed.
-
-## Build
-
-### Prerequisites
-
-- Rust 1.89+
-- Solana CLI 4.x (Agave)
-- Anchor 1.2+
-- Node.js 18+
-
-### Install and build
-
-```bash
-npm install
-anchor build
-```
-
-### Run tests
-
-```bash
-anchor test --skip-build
-```
 
 ## License
 
