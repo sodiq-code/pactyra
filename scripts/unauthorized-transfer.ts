@@ -18,7 +18,6 @@ async function main() {
   const client = new PactyraClient(provider);
 
   const agentId = Buffer.from('deadbeefcafebabedeadbeefcafebabedeadbeefcafebabedeadbeefcafebabe', 'hex');
-  const 
   const targetProgram = Keypair.generate().publicKey;
   const targetAccount = Keypair.generate().publicKey;
 

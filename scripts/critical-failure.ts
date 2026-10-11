@@ -31,7 +31,6 @@ async function main() {
   const client = new PactyraClient(provider);
 
   const agentId = Buffer.from('deadbeefcafebabedeadbeefcafebabedeadbeefcafebabedeadbeefcafebabe', 'hex');
-  const 
 
   console.log("=== Critical Failure ===");
 

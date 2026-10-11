@@ -31,7 +31,6 @@ async function main() {
 
   // Generate agent ID
   const agentId = Buffer.from('deadbeefcafebabedeadbeefcafebabedeadbeefcafebabedeadbeefcafebabe', 'hex');
-  const 
 
   console.log("\n=== Bootstrap ===");
   console.log("Authority:", authority.publicKey.toString());
