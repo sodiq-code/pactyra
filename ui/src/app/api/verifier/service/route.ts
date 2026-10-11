@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
   const result = serviceDelivered && (!paymentSig || paymentVerified) ? 'pass' : 'fail'
 
   // Step 4: Compute evidence hash (keccak256 of the evidence data)
-  const crypto = require('crypto')
+  const { keccak_256 } = require('js-sha3')
   const evidenceData = JSON.stringify({
     resource: resourceUrl,
     payment_signature: paymentSig || 'none',
@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
     service_response_time_ms: serviceResponseTime,
     timestamp: Math.floor(Date.now() / 1000),
   })
-  const evidenceHash = crypto.createHash('sha3-256').update(evidenceData).digest('hex')
+  const evidenceHash = keccak_256(evidenceData)
 
   return NextResponse.json({
     valid: result === 'pass',
