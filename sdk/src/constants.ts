@@ -1,11 +1,11 @@
 import { PublicKey } from "@solana/web3.js";
 
 export const PACTYRA_CORE_PROGRAM_ID = new PublicKey(
-  "EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC"
+  "FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf"
 );
 
 export const PACTYRA_VERIFIER_PROGRAM_ID = new PublicKey(
-  "5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN"
+  "4VmhkonqadrxgJKt5eWYc2JEPuzCAf8YQnPm6wrGLEYu"
 );
 
 export const REFERENCE_TREASURY_PROGRAM_ID = new PublicKey(
