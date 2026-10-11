@@ -4,7 +4,7 @@
 [![Solana](https://img.shields.io/badge/Solana-Devnet-9945FF.svg?logo=solana&logoColor=white)](https://solana.com)
 [![Pyth](https://img.shields.io/badge/Pyth-Network-00D2FF.svg)](https://pyth.network)
 [![Deployed on Vercel](https://img.shields.io/badge/Vercel-Live-000000.svg?logo=vercel&logoColor=white)](https://pactyra-ui.vercel.app)
-[![Anchor](https://img.shields.io/badge/Anchor-1.2.0-2D2D2D.svg)](https://www.anchor-lang.com)
+[![Anchor](https://img.shields.io/badge/Anchor-0.31.1-2D2D2D.svg)](https://www.anchor-lang.com)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Rust](https://img.shields.io/badge/Rust-1.89-CE422B.svg?logo=rust&logoColor=white)](https://www.rust-lang.org)
 
@@ -245,14 +245,14 @@ Trust-root operations (`register_verifier`, `deprecate_verifier`, `replace_proto
 
 ## SDK
 
-The TypeScript SDK provides a typed interface to all programs. Published to GitHub Packages as `@sodiq-code/pactyra-client@0.1.0`.
+The TypeScript SDK provides a typed interface to all programs. Published to GitHub Packages as `@pactyra/client@0.1.0`.
 
 ### Installation
 
 ```bash
 # From GitHub Packages registry
 echo "@sodiq-code:registry=https://npm.pkg.github.com" >> ~/.npmrc
-npm install @sodiq-code/pactyra-client
+npm install @pactyra/client
 
 # Or from source (for development)
 cd sdk && npm install
@@ -298,7 +298,7 @@ Deployed to Vercel at [https://pactyra-ui.vercel.app](https://pactyra-ui.vercel.
 | `/api/deployment` | GET | Check all 4 program deployment status |
 | `/api/register-agent` | POST | Register a new agent on devnet |
 | `/api/lock-bond` | POST | Lock a bond for an agent |
-| `/api/record-outcome` | POST | Record a verified outcome |
+| `/api/record-outcome` | POST | State-machine test harness (bypasses verifier path) |
 | `/api/request-capability` | POST | Request a capability |
 | `/api/transaction-history?id=<hex>` | GET | Fetch recent transactions for an agent |
 | `/api/verifiers` | GET | Verifier abstraction catalog (live + planned verifiers, record_outcome contract, on-chain VerifierRegistry) |
@@ -469,6 +469,8 @@ Authority transition
 
 Checks whether an x402 service was actually delivered after payment. Live at `/api/verifier/service`.
 
+This is an off-chain evidence check. It verifies the payment transaction and the service response, computes an evidence hash, and returns the result as JSON. It does not itself invoke `pactyra_core::record_outcome`; an operator submits the recorded outcome separately using the evidence hash.
+
 ```text
 Agent pays for service via x402
   ↓
@@ -476,9 +478,11 @@ Service returns 200 (delivered) or non-200 (failed)
   ↓
 Service Outcome Verifier checks delivery + payment on-chain
   ↓
-Evidence hash computed (keccak256)
+Evidence hash computed
   ↓
-record_outcome() via verifier
+Returns JSON { result, severity, evidence_hash }
+  ↓
+Operator submits record_outcome separately with the evidence hash
   ↓
 Authority transition
 ```
@@ -506,7 +510,7 @@ Each planned verifier maps its evidence onto the same severity matrix (`none` / 
 https://pactyra-ui.vercel.app/api/verifier/demo
 ```
 
-This endpoint chains: `assert_capability()` → real USDC payment → service delivery → Service Outcome Verifier → evidence hash. Both live verifiers feed into the same PACTYRA authority engine.
+This endpoint chains: `assert_capability()` → real USDC payment → service delivery → Service Outcome Verifier → evidence hash. The Pyth verifier feeds `record_outcome` via on-chain CPI; the Service Outcome Verifier produces an off-chain evidence hash that an operator submits separately.
 
 ### Verifier catalog API
 
@@ -521,11 +525,12 @@ Returns: thesis, architecture flow diagram, live verifiers (with severity matric
 ## Test results
 
 ```
-  31 formal tests passing (44s)
-  19 SDK tests passing (71ms)
-  7 demo runner tests passing (16s)
+  38 integration tests defined (tests/)        require a localnet cluster
+  21 SDK tests passing in CI                     (sdk/tests/sdk.test.ts)
+   7 demo-runner steps defined                   (scripts/demo-runner.ts)
   ─────────────────────────────
-  57 total tests
+  66 total test cases defined
+  21 verified passing in CI
 ```
 
 ## Continuous Integration
@@ -756,5 +761,5 @@ MIT — see [LICENSE](LICENSE)
 
 - **GitHub:** [https://github.com/sodiq-code/pactyra](https://github.com/sodiq-code/pactyra)
 - **Live Demo:** [https://pactyra-ui.vercel.app](https://pactyra-ui.vercel.app)
-- **SDK:** `npm install @sodiq-code/pactyra-client` (GitHub Packages)
+- **SDK:** `npm install @pactyra/client` (GitHub Packages)
 - **Programs:** [pactyra-core](https://solana.fm/address/FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf?cluster=devnet) · [pactyra-verifier](https://solana.fm/address/4VmhkonqadrxgJKt5eWYc2JEPuzCAf8YQnPm6wrGLEYu?cluster=devnet) · [reference-treasury](https://solana.fm/address/6gAZR4omxMUWy5Fb6kCtdmaWASFFXr9WRCoWUcAz7UA9?cluster=devnet) · [threshold-multisig](https://solana.fm/address/FgfW1JkSknJpcCypbhuv531qvVu2z8sNVPH2kZXLpDKc?cluster=devnet)
