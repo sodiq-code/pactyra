@@ -53,7 +53,7 @@
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    PACTYRA CORE PROGRAM                      │
-│              EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC   │
+│              FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf   │
 │                                                             │
 │  Agent │ Policy │ Capability │ Bond │ Receipt │ VerifierRegistry
 │  ConsumedNonce                                              │
@@ -65,7 +65,7 @@
 │  - create_policy                                            │
 │  - lock_bond                                                │
 │  - request_capability                                       │
-│  - assert_capability (12 security checks)                   │
+│  - assert_capability (14 security checks)                   │
 │  - record_outcome (authority transitions)                   │
 │  - revoke_capability                                        │
 └─────────────────────────────────────────────────────────────┘
@@ -74,8 +74,8 @@
           ▼                                    ▼
 ┌──────────────────────────┐    ┌──────────────────────────┐
 │  REFERENCE TREASURY       │    │  PACTYRA VERIFIER        │
-│  6gAZR4omxMUWy5Fb6kCtd   │    │  5dK7xXDUSHDcP8qFxrLLFo  │
-│  maWASFFXr9WRCoWUcAz7UA9  │    │  4Nm2Xzn7rSKgDMmrFFLZsN  │
+│  6gAZR4omxMUWy5Fb6kCtd   │    │  4VmhkonqadrxgJKt5eWYc2  │
+│  maWASFFXr9WRCoWUcAz7UA9  │    │  JEPuzCAf8YQnPm6wrGLEYu  │
 │                          │    │                          │
 │  Instructions:           │    │  Instructions:           │
 │  - initialize_treasury   │    │  - initialize_config     │
