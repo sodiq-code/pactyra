@@ -286,10 +286,12 @@ See [`docs/architecture.md`](docs/architecture.md) for:
 
 | Document | Description |
 |---|---|
-| [Architecture](docs/architecture.md) | Protocol flow, program relationships, authority state machine, security boundary |
-| [GTM Strategy](docs/gtm-strategy.md) | Market analysis, business model, competitive positioning, 4-phase go-to-market |
-| [Pitch Script](docs/pitch-script.md) | 2-3 minute pitch video script with timestamps and key points |
-| [Demo Storyboard](docs/demo-storyboard.md) | ≤3 minute demo video storyboard with recording checklist |
+| [Architecture](docs/architecture.md) | Protocol flow, program relationships, authority state machine, verifier-agnostic catalog |
+| [Program instructions](docs/instructions.md) | Full instruction reference for all four programs, authority tiers, security checks |
+| [API routes](docs/api-routes.md) | Every HTTP route exposed by the web UI |
+| [Demo narrative](docs/demo-narrative.md) | The 8-scene lifecycle narrative and the test-harness script catalog |
+| [GTM strategy](docs/gtm-strategy.md) | Market analysis, business model, competitive positioning, distribution |
+| [Pitch script](docs/pitch-script.md) | 2-3 minute pitch narrative |
 
 ## Business model
 
