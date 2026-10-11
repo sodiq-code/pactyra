@@ -13,6 +13,7 @@ import {
 } from '@solana/spl-token'
 import { Program, AnchorProvider, BN, Idl } from '@coral-xyz/anchor'
 import { keccak_256 } from 'js-sha3'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 const DEVNET_RPC = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com'
 const USDC_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU')
@@ -59,6 +60,13 @@ const PYTH_PRICE_ACCOUNT = '575zhTafbMJZJSjtk3615gTBTCR39JdbH6ciz1aaRsh4'
  * GET /api/verifier/demo
  */
 export async function GET(request: NextRequest) {
+  const rl = checkRateLimit(getClientIp(request.headers))
+  if (!rl.ok) {
+    return NextResponse.json(
+      { ok: false, error: `rate limit exceeded; retry in ${rl.retryAfter}s` },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
+    )
+  }
   const steps: any[] = []
 
   try {

@@ -13,6 +13,7 @@ import {
 } from '@solana/spl-token'
 import { Program, AnchorProvider, BN, Idl } from '@coral-xyz/anchor'
 import * as borsh from 'borsh'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 const DEVNET_RPC = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com"
 const USDC_MINT = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU")
@@ -26,6 +27,13 @@ const PERMANENT_AGENT = 'c3e081b665887dc265469a1d5906c53e1beb633dcc5651b01e76a10
 const PACTYRA_CORE = new PublicKey('FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf')
 
 export async function GET(request: NextRequest) {
+  const rl = checkRateLimit(getClientIp(request.headers))
+  if (!rl.ok) {
+    return NextResponse.json(
+      { ok: false, error: `rate limit exceeded; retry in ${rl.retryAfter}s` },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
+    )
+  }
   const steps: any[] = []
   try {
     if (!process.env.SOLANA_WALLET_SECRET_KEY) {
