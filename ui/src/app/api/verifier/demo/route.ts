@@ -12,7 +12,7 @@ import {
   TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddress,
 } from '@solana/spl-token'
 import { Program, AnchorProvider, BN, Idl } from '@coral-xyz/anchor'
-import * as crypto from 'crypto'
+import { keccak_256 } from 'js-sha3'
 
 const DEVNET_RPC = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com'
 const USDC_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU')
@@ -49,9 +49,12 @@ const PYTH_PRICE_ACCOUNT = '575zhTafbMJZJSjtk3615gTBTCR39JdbH6ciz1aaRsh4'
  *           → if stale:  record_outcome(FAIL, Critical) → bond slashed, tier drops
  *        → AUTHORITY CHANGE visible on the Authority Proof panel
  *
- * The verifier determines the outcome — the demo does NOT force it.
+ * The verifier determines the outcome from the on-chain Pyth price feed.
  * If the Pyth price is stale (>60s), the verifier returns Critical and the
  * protocol slashes the bond. If fresh (<30s), the verifier returns PASS.
+ * When the Pyth account format is unavailable on devnet, the route falls
+ * back to an operator-submitted PASS outcome and labels it as such — it
+ * does not present the operator-submitted result as independently verified.
  *
  * GET /api/verifier/demo
  */
@@ -141,7 +144,7 @@ export async function GET(request: NextRequest) {
       (() => { const b = Buffer.alloc(8); b.writeBigUInt64LE(BigInt(PAYMENT_AMOUNT)); return b })(),
       (() => { const b = Buffer.alloc(8); b.writeBigUInt64LE(BigInt(actionNonce.toNumber())); return b })(),
     ])
-    const actionId = crypto.createHash('sha3-256').update(actionIdHashInput).digest()
+    const actionId = Buffer.from(keccak_256(actionIdHashInput), 'hex')
 
     // assert_capability discriminator
     const assertDiscriminator = Buffer.from([32, 167, 114, 216, 19, 22, 182, 218])
@@ -293,8 +296,8 @@ export async function GET(request: NextRequest) {
       // so record_outcome accepts it as the verifier_program.
       // This still produces a real on-chain authority transition.
       steps.push({
-        step: 6, action: 'Pyth account format check', result: 'fallback',
-        note: 'Pyth account on devnet has invalid format (verification_level=' + verifLevelByte + '). Falling back to direct record_outcome via the registered verifier operator path. This still produces a real on-chain authority transition.',
+        step: 6, action: 'Pyth account format check', result: 'fallback (operator-submitted)',
+        note: 'Pyth account on devnet has invalid format (verification_level=' + verifLevelByte + '. The independent Pyth verifier path cannot run. Falling back to an operator-submitted PASS outcome via the registered verifier operator. This is NOT an independently verified outcome — it is labelled as operator-submitted throughout the response.',
       })
 
       // Direct record_outcome (PASS — authority maintained)
@@ -312,16 +315,13 @@ export async function GET(request: NextRequest) {
         [Buffer.from('bond_vault'), USDC_MINT.toBuffer()], PACTYRA_CORE)
       const slashDestination = await getAssociatedTokenAddress(USDC_MINT, payer.publicKey, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID)
 
-      const forceCritical = url.searchParams.get('force') === 'critical'
       const recordDisc = Buffer.from([130, 121, 6, 102, 151, 160, 252, 6])
       const recordArgs = Buffer.alloc(32 + 32 + 1 + 1 + 32)
       storedActionId.copy(recordArgs, 0)
       capabilityId.copy(recordArgs, 32)
-      recordArgs.writeUInt8(forceCritical ? 1 : 0, 64) // result: 0=Pass, 1=Fail
-      recordArgs.writeUInt8(forceCritical ? 2 : 0, 65) // severity: 0=None, 2=Critical
-      const evidence = crypto.createHash('sha3-256').update(
-        forceCritical ? 'critical-stale-price-' : 'service-delivered-' + actionNonce.toString()
-      ).digest()
+      recordArgs.writeUInt8(0, 64) // result: 0=Pass (operator-submitted; Pyth path unavailable on devnet)
+      recordArgs.writeUInt8(0, 65) // severity: 0=None
+      const evidence = Buffer.from(keccak_256('service-delivered-' + actionNonce.toString()), 'hex')
       evidence.copy(recordArgs, 66)
 
       const recordKeys = [
@@ -349,13 +349,12 @@ export async function GET(request: NextRequest) {
 
         const updated = await program.account.agent.fetch(agentPda)
         const updatedTier = updated.tier.probation ? 'T1' : updated.tier.proven ? 'T2' : updated.tier.trusted ? 'T3' : 'Unknown'
-        const verifierResult = forceCritical ? 'CRITICAL — bond slashed, tier dropped, epoch incremented'
-          : 'PASS — authority maintained'
+        const verifierResult = 'PASS — authority maintained (operator-submitted)'
 
         steps.push({
           step: 7,
-          action: forceCritical ? 'record_outcome (CRITICAL) — bond slash + authority collapse' : 'record_outcome (PASS) — authority maintained',
-          result: forceCritical ? 'critical' : 'pass',
+          action: 'record_outcome (PASS) — operator-submitted, authority maintained',
+          result: 'pass',
           signature: recordSig,
           explorerUrl: `https://solana.fm/tx/${recordSig}?cluster=devnet`,
           agent_before: { tier: 'T3', authority: '$500', epoch, bond: '5 USDC' },
@@ -366,16 +365,12 @@ export async function GET(request: NextRequest) {
             bond: updated.bondAmount.toNumber() / 1_000_000 + ' USDC',
             critical_failures: updated.criticalFailures.toNumber(),
           },
-          note: forceCritical
-            ? 'The verifier recorded a critical failure on-chain. The protocol slashed the 5 USDC bond, dropped the agent from Trusted to Probation, and incremented the authority epoch. $500 authority becomes $5.'
-            : 'The verifier recorded the verified outcome on-chain. Authority maintained at T3/$500.',
+          note: 'The verifier operator recorded a PASS outcome on-chain. Pyth account format unavailable on devnet, so the independent verifier path could not run. Authority maintained at T3/$500. This is an operator-submitted outcome, not an independently verified one.',
         })
 
         return NextResponse.json({
           ok: true,
-          message: forceCritical
-            ? 'Closed-loop complete — critical failure recorded, authority slashed on-chain'
-            : 'Closed-loop complete — verified outcome recorded, authority maintained',
+          message: 'Closed-loop complete — operator-submitted PASS recorded on-chain (Pyth verifier path unavailable on devnet)',
           steps,
           assertSignature: assertSig,
           assertExplorerUrl: `https://solana.fm/tx/${assertSig}?cluster=devnet`,
@@ -386,7 +381,7 @@ export async function GET(request: NextRequest) {
           verifierSignature: recordSig,
           verifierExplorerUrl: `https://solana.fm/tx/${recordSig}?cluster=devnet`,
           verifierResult,
-          closedLoop: 'assert_capability → mark_executed → x402 payment → record_outcome (authority transition on-chain)',
+          closedLoop: 'assert_capability → mark_executed → x402 payment → record_outcome (operator-submitted PASS; authority maintained)',
         })
       } catch (e: any) {
         steps.push({
