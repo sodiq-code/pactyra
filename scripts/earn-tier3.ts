@@ -41,7 +41,7 @@ async function main() {
     const evidenceHash = Keypair.generate().publicKey.toBytes();
 
     await client.recordOutcome(
-      agentId, actionId, capabilityId,
+      agentId, actionId, capabilityId, 2000 + i,
       "pass" as any, "none" as any, evidenceHash
     );
   }
@@ -52,7 +52,7 @@ async function main() {
   const failCapId = Keypair.generate().publicKey.toBytes();
   const failEvidence = Keypair.generate().publicKey.toBytes();
   await client.recordOutcome(
-    agentId, failActionId, failCapId,
+    agentId, failActionId, failCapId, 2999,
     "fail" as any, "ordinary" as any, failEvidence
   );
   console.log("  1 ordinary failure recorded");

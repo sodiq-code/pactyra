@@ -48,7 +48,7 @@ async function main() {
   const evidenceHash = Keypair.generate().publicKey.toBytes();
 
   await client.recordOutcome(
-    agentId, actionId, capabilityId,
+    agentId, actionId, capabilityId, 9999,
     "fail" as any, "critical" as any, evidenceHash
   );
 

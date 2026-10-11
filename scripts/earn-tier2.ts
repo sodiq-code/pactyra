@@ -43,6 +43,7 @@ async function main() {
       agentId,
       actionId,
       capabilityId,
+      1000 + i,
       "pass" as any,
       "none" as any,
       evidenceHash
