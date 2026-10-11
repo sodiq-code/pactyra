@@ -18,7 +18,7 @@ import {
   deriveVerifierRegistryPda,
 } from "../sdk/src/pdas";
 
-const DEVNET_RPC = "process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com"";
+const DEVNET_RPC = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com";
 const EXPLORER = "https://solana.fm/tx";
 
 async function main() {
@@ -116,8 +116,8 @@ async function main() {
   }
 
   console.log("\n=== Program IDs ===");
-  console.log("  pactyra-core:       EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC");
-  console.log("  pactyra-verifier:   5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN");
+  console.log("  pactyra-core:       FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf");
+  console.log("  pactyra-verifier:   4VmhkonqadrxgJKt5eWYc2JEPuzCAf8YQnPm6wrGLEYu");
   console.log("  reference-treasury: 6gAZR4omxMUWy5Fb6kCtdmaWASFFXr9WRCoWUcAz7UA9");
 
   console.log("\n=== Devnet Verification Complete ===");

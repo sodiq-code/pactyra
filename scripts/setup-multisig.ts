@@ -10,9 +10,9 @@ import { AnchorProvider, BN } from "@coral-xyz/anchor";
 import { Keypair, PublicKey } from "@solana/web3.js";
 import fs from "fs";
 
-const DEVNET_RPC = "process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com"";
+const DEVNET_RPC = process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com";
 const MULTISIG_PROGRAM_ID = new PublicKey("FgfW1JkSknJpcCypbhuv531qvVu2z8sNVPH2kZXLpDKc");
-const PACTYRA_CORE_ID = new PublicKey("EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC");
+const PACTYRA_CORE_ID = new PublicKey("FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf");
 
 async function main() {
   const connection = new anchor.web3.Connection(DEVNET_RPC, "confirmed");
@@ -120,7 +120,7 @@ async function main() {
   // Note: This requires the solana CLI to set the upgrade authority
   // We'll do this via a system program transfer instruction
   console.log("  (Program upgrade authority transfer requires CLI)");
-  console.log("  Run: solana program set-upgrade-authority EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC --new-upgrade-authority " + multisigPda.toString());
+  console.log("  Run: solana program set-upgrade-authority FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf --new-upgrade-authority " + multisigPda.toString());
   console.log("");
 
   console.log("=== Multisig Integration Complete ===");
