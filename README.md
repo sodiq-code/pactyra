@@ -21,7 +21,7 @@ AI agents already have keys. PACTYRA is the consequence layer that sits after ob
 
 [![PACTYRA Pitch Video](https://img.youtube.com/vi/N2GhBWl1TIw/0.jpg)](https://youtu.be/N2GhBWl1TIw)
 
-### Protocol Demo
+### Demo Video
 
 Full authority loop live on Solana devnet — `$5 → $50 → $500 → $5`.
 
