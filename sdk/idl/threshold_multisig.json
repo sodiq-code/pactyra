@@ -4,7 +4,8 @@
     "name": "threshold_multisig",
     "version": "0.1.0",
     "spec": "0.1.0",
-    "description": "3-of-5 threshold multisig for protocol authority"
+    "description": "3-of-5 threshold multisig for protocol authority",
+    "address": "FgfW1JkSknJpcCypbhuv531qvVu2z8sNVPH2kZXLpDKc"
   },
   "instructions": [
     {

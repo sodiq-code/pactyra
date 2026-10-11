@@ -4,7 +4,8 @@
     "name": "reference_treasury",
     "version": "0.1.0",
     "spec": "0.1.0",
-    "description": "Reference treasury enforcing capabilities before transfers"
+    "description": "Reference treasury enforcing capabilities before transfers",
+    "address": "6gAZR4omxMUWy5Fb6kCtdmaWASFFXr9WRCoWUcAz7UA9"
   },
   "instructions": [
     {

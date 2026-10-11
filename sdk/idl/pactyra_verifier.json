@@ -4,7 +4,8 @@
     "name": "pactyra_verifier",
     "version": "0.1.0",
     "spec": "0.1.0",
-    "description": "Objective verifier for Pyth price freshness"
+    "description": "Objective verifier for Pyth price freshness",
+    "address": "4VmhkonqadrxgJKt5eWYc2JEPuzCAf8YQnPm6wrGLEYu"
   },
   "instructions": [
     {
