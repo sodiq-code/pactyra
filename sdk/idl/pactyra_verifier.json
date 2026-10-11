@@ -1,5 +1,5 @@
 {
-  "address": "5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN",
+  "address": "4VmhkonqadrxgJKt5eWYc2JEPuzCAf8YQnPm6wrGLEYu",
   "metadata": {
     "name": "pactyra_verifier",
     "version": "0.1.0",
@@ -120,7 +120,7 @@
         },
         {
           "name": "pactyra_core_program",
-          "address": "EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC"
+          "address": "FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf"
         },
         {
           "name": "agent",

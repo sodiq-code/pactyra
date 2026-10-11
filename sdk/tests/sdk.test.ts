@@ -69,10 +69,10 @@ describe("@pactyra/client SDK", () => {
 
   it("Exports correct program IDs", async () => {
     expect(PACTYRA_CORE_PROGRAM_ID.toString()).to.equal(
-      "EjF7VXPMk5bcDBVWfkcpN9sL93Srpo2y8zs7j7vedwSC"
+      "FoZa1E3b6LUeGJSAPLS57h7EQktvg3f46DWynDJxowTf"
     );
     expect(PACTYRA_VERIFIER_PROGRAM_ID.toString()).to.equal(
-      "5dK7xXDUSHDcP8qFxrLLFo4Nm2Xzn7rSKgDMmrFFLZsN"
+      "4VmhkonqadrxgJKt5eWYc2JEPuzCAf8YQnPm6wrGLEYu"
     );
     expect(REFERENCE_TREASURY_PROGRAM_ID.toString()).to.equal(
       "6gAZR4omxMUWy5Fb6kCtdmaWASFFXr9WRCoWUcAz7UA9"
