@@ -12,11 +12,16 @@ import {
   Idl,
   Wallet,
 } from "@coral-xyz/anchor";
-import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import {
+  TOKEN_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  getAssociatedTokenAddress,
+} from "@solana/spl-token";
 import {
   PACTYRA_CORE_PROGRAM_ID,
   PACTYRA_VERIFIER_PROGRAM_ID,
   REFERENCE_TREASURY_PROGRAM_ID,
+  DEVNET_USDC_MINT,
   TIER_1_MAX_AMOUNT,
   TIER_2_MAX_AMOUNT,
   TIER_3_MAX_AMOUNT,
@@ -359,7 +364,8 @@ export class PactyraClient {
     actionNonce: number | BN,
     result: OutcomeResult,
     severity: Severity,
-    evidenceHash: Uint8Array
+    evidenceHash: Uint8Array,
+    options?: { usdcMint?: PublicKey; slashDestination?: PublicKey }
   ): Promise<string> {
     const [agentPda] = deriveAgentPda(agentId);
     const [receiptPda] = deriveReceiptPda(agentId, actionId);
@@ -367,6 +373,20 @@ export class PactyraClient {
     const [policyPda] = derivePolicyPda("PAY-V1");
     const [bondPda] = deriveBondPda(agentId);
     const [executionPda] = deriveExecutionPda(agentId, new BN(actionNonce));
+
+    // The current record_outcome instruction requires the bond vault,
+    // slash destination, USDC mint, and token program in addition to
+    // the agent, receipt, registry, policy, execution, and bond PDAs.
+    // The bond vault is a PDA seeded by the USDC mint; the slash
+    // destination defaults to the verifier operator's associated token
+    // account so that slashed USDC returns to the operator that signed.
+    const usdcMint = options?.usdcMint ?? DEVNET_USDC_MINT;
+    const [bondVaultPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("bond_vault"), usdcMint.toBuffer()],
+      PACTYRA_CORE_PROGRAM_ID
+    );
+    const slashDestination = options?.slashDestination
+      ?? (await getAssociatedTokenAddress(usdcMint, this.provider.wallet.publicKey));
 
     const resultObj = result === OutcomeResult.Pass ? { pass: {} } : { fail: {} };
     const severityObj = { [severity]: {} };
@@ -386,8 +406,12 @@ export class PactyraClient {
         policy: policyPda,
         execution: executionPda,
         bond: bondPda,
+        bondVault: bondVaultPda,
+        slashDestination,
         verifierProgram: PACTYRA_VERIFIER_PROGRAM_ID,
+        usdcMint,
         verifierOperator: this.provider.wallet.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
       })
       .rpc();
