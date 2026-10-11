@@ -134,26 +134,9 @@ Deployed to Vercel at [https://pactyra-ui.vercel.app](https://pactyra-ui.vercel.
 - Copy-to-clipboard on all addresses
 - Authority Proof screen — compressed lifecycle view (tier, authority, epoch, bond, verified outcomes, latest evidence, registered verifiers, 3 proof transactions with explorer links)
 
-### API Routes (15)
+### API routes
 
-| Route | Method | Description |
-|---|---|---|
-| `/api/agent?id=<hex>` | GET | Fetch live agent state from devnet |
-| `/api/deployment` | GET | Check all 4 program deployment status |
-| `/api/register-agent` | POST | Register a new agent on devnet |
-| `/api/lock-bond` | POST | Lock a bond for an agent |
-| `/api/record-outcome` | POST | State-machine test harness (bypasses verifier path) |
-| `/api/request-capability` | POST | Request a capability |
-| `/api/transaction-history?id=<hex>` | GET | Fetch recent transactions for an agent |
-| `/api/verifiers` | GET | Verifier abstraction catalog (live + planned verifiers, record_outcome contract, on-chain VerifierRegistry) |
-| `/api/verifier/service?resource=<url>&payment_sig=<sig>` | GET | Run Service Outcome Verifier |
-| `/api/verifier/demo` | GET | Verifier-agnostic demo (assert → pay → verify → record) |
-| `/api/x402/demo` | GET | x402 V2 demo (assert → real USDC payment → resource delivery) |
-| `/api/proof` | GET | Machine-verifiable proof trail (agent state + transactions + claims) |
-| `/api/business-model` | GET | Three-tier business model (open-source core, hosted, enterprise) |
-| `/api/demo-narrative` | GET | 8-scene demo narrative with live agent state |
-| `/api/authority-proof?id=<hex>` | GET | Compressed authority proof — agent state, latest evidence, registered verifiers, and 3 recent proof transactions with explorer links |
-
+The web UI exposes 15 HTTP routes covering agent state, capability lifecycle, verifier demos, proof trails, and the business model. The full route catalog lives in [`docs/api-routes.md`](docs/api-routes.md).
 ## Demo orchestration
 
 ### 8-Scene Demo Narrative
