@@ -13,6 +13,19 @@
 AI agents already have keys. PACTYRA is the consequence layer that sits after objective verification — converting evidence of execution into authority an agent is allowed to exercise, and revoking that authority the moment verified performance fails.
 
 **Live Demo:** [https://pactyra-ui.vercel.app](https://pactyra-ui.vercel.app) · **GitHub:** [https://github.com/sodiq-code/pactyra](https://github.com/sodiq-code/pactyra)
+## Demo Videos
+
+### Pitch Video
+
+> "The agent didn't lose its key. It lost its authority."
+
+[![PACTYRA Pitch Video](https://img.youtube.com/vi/N2GhBWl1TIw/0.jpg)](https://youtu.be/N2GhBWl1TIw)
+
+### Protocol Demo
+
+Full authority loop live on Solana devnet — `$5 → $50 → $500 → $5`.
+
+[![PACTYRA Demo Video](https://img.youtube.com/vi/1m_YR4vTjho/0.jpg)](https://youtu.be/1m_YR4vTjho)
 
 ## Overview
 
